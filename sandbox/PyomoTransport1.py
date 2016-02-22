@@ -9,10 +9,10 @@ import pprint
 
 # Replace the API key below with a valid API key.
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
- 
+
 # Creation of a Concrete Model TEST
 model = ConcreteModel()
- 
+
 ## Define sets ##
 #  Sets
 #       i   canning plants   / seattle, san-diego /
@@ -27,7 +27,7 @@ model.j = Set(initialize=destinations, doc='Markets')
 
 print sources
 print destinations
- 
+
 ## Define parameters ##
 #   Parameters
 #       a(i)  capacity of plant i in cases
@@ -61,26 +61,26 @@ model.f = Param(initialize=90, doc='Freight in dollars per case per thousand mil
 def c_init(model, i, j):
   return model.f * model.d[i,j] / 1
 model.c = Param(model.i, model.j, initialize=c_init, doc='Transport cost in thousands of dollar per case')
- 
+
 ## Define variables ##
 #  Variables
 #       x(i,j)  shipment quantities in cases
 #       z       total transportation costs in thousands of dollars ;
 #  Positive Variable x ;
 model.x = Var(model.i, model.j, bounds=(0.0,None), doc='Shipment quantities in case')
- 
+
 ## Define contrains ##
 # supply(i)   observe supply limit at plant i
 # supply(i) .. sum (j, x(i,j)) =l= a(i)
 def supply_rule(model, i):
   return sum(model.x[i,j] for j in model.j) <= model.a[i]
 model.supply = Constraint(model.i, rule=supply_rule, doc='Observe supply limit at plant i')
-# demand(j)   satisfy demand at market j ;  
+# demand(j)   satisfy demand at market j ;
 # demand(j) .. sum(i, x(i,j)) =g= b(j);
 def demand_rule(model, j):
-  return sum(model.x[i,j] for i in model.i) >= model.b[j]  
+  return sum(model.x[i,j] for i in model.i) >= model.b[j]
 model.demand = Constraint(model.j, rule=demand_rule, doc='Satisfy demand at market j')
- 
+
 ## Define Objective and solve ##
 #  cost        define objective function
 #  cost ..        z  =e=  sum((i,j), c(i,j)*x(i,j)) ;
@@ -89,12 +89,12 @@ model.demand = Constraint(model.j, rule=demand_rule, doc='Satisfy demand at mark
 def objective_rule(model):
   return sum(model.c[i,j]*model.x[i,j] for i in model.i for j in model.j)
 model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
- 
+
 ## Display of the output ##
 # Display x.l, x.m ;
 def pyomo_postprocess(options=None, instance=None, results=None):
   model.x.display()
- 
+
 # This is an optional code path that allows the script to be run outside of
 # pyomo command-line.  For example:  python transport.py
 if __name__ == '__main__':

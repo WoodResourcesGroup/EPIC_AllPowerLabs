@@ -5,7 +5,6 @@
 
 # Import
 from pyomo.environ import *
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
 import googlemaps
 import datetime
 import pprint
@@ -14,16 +13,13 @@ import pprint
 
 # Replace the API key below with a valid API key.
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
-=======
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
+
 
 # Creation of a Concrete Model
 model = ConcreteModel()
 
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
-=======
 ## Define sets ##
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
+
 #  Sets
 # Read the data for the set definition from files
 sources_file = open('sources.dat','r')
@@ -53,7 +49,7 @@ model.sources.pprint()
 
 ##Define Parameters
 # Cost related parameters
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
+
 model.installation_cost_var = Param(initialize=15, doc='Cost of installing units per kW')
 model.installation_cost_fix = Param(initialize=500, doc='Fixed cost of installing the unit')
 model.OM_cost_fix = Param(initialize=1, doc='Fixed cost of operation per kW')
@@ -64,7 +60,6 @@ model.FIT_tariff = Param(model.substations, initialize={'New York, NY, USA':12,'
 
 #Limits related parameters
 model.source_biomass_max = Param(model.sources, initialize={'Seattle, WA, USA':2350,'San Diego, CA, USA':2600}, doc='Capacity of supply in tons')
-=======
 model.installation_cost_var=Param(initialize=150, doc='Cost of installing units per kW')
 model.installation_cost_fix=Param(initialize=5000, doc='Fixed cost of installing the unit')
 model.OM_cost_fix=Param(initialize=1, doc='Fixed cost of operation per kW')
@@ -75,7 +70,6 @@ model.FIT_tariff = Param(model.substations, initialize={'new-york': 12,'chicago'
 
 #Limits related parameters
 model.source_biomass_max = Param(model.sources, initialize={'seattle': 2350, 'san-diego': 2600}, doc='Capacity of supply in tons')
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
 model.max_power = Param(initialize=1000, doc='Max installation per site kW')
 model.min_power = Param(initialize=100, doc='Min installation per site kW')
 model.capacity_factor = Param(initialize=0.85, doc='Capacity factor of the gasifier')
@@ -111,23 +105,14 @@ model.route_transport_cost = Param(model.ROUTES,
 model.P_s_max = Var(model.substations, within=NonNegativeReals, doc='Installed Capacity kW')
 model.P_s = Var(model.substations, model.time_n, within=NonNegativeReals, doc='Power generated kW')
 model.U_s = Var(model.substations, within=Binary, doc='Decision to install or not')
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
 model.S_b = Var(model.sources, within=NonNegativeReals, doc='Total Biomass supplied from source in tons')
-=======
 model.S_b = Var(model.sources, within=NonNegativeReals, doc='Total Biomass supplied from source')
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
 model.flow_biomass = Var(model.sources, model.substations, within=NonNegativeReals, doc='Biomass shipment quantities in tons')
 
 ## Define contraints ##
 def balance(model):
   return sum(model.P_s[s,t]*model.delta_t for s in model.substations for t in model.time_n) == sum(model.heat_rate*model.S_b[b] for b in model.sources)
 model.e_balance = Constraint(rule=balance, doc='Energy Balance in the system')
-
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
-=======
-Node wise balance!!!!!
-
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
 def capacity_factor_limit(model, substations):
   return sum(model.P_s[s,t]*model.delta_t for s in model.substations for t in model.time_n) <= sum(model.capacity_factor*model.P_s_max[s] for s in model.substations)
 model.cap_factor_limit = Constraint(model.substations, rule=capacity_factor_limit, doc='Capacity factor limitation')
@@ -142,7 +127,6 @@ model.maxm_power=Constraint(model.substations, model.time_n, rule=maximum_power,
 
 def maximum_power_limit(model, s):
 	return model.P_s_max[s] <= model.U_s[s]*model.max_power
-<<<<<<< HEAD:Allocation model/Transmodel_v1.py
 model.maxm_power_limit = Constraint(model.substations, rule=maximum_power_limit, doc='Limit to Max Power')
 
 def maximum_biomass(mdl, b):
@@ -156,7 +140,6 @@ model.maxm_power_limit=Constraint(model.substations, rule=maximum_power_limit, d
 def maximum_biomass(model, b):
 	return model.S_b[b] <= model.source_biomass_max[b]
 model.maxm_biomass=Constraint(model.sources, rule=maximum_biomass, doc='Max biomass in source')
->>>>>>> 5af44ea2529e2e6076a9999ba2f713130321a3c1:Transmodel_v1.py
 
 def demand_rule(model, b):
   return sum(model.flow_biomass[b,s] for s in model.substations) == model.S_b[b]

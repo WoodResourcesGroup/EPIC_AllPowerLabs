@@ -13,12 +13,12 @@ gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 # Creation of a Concrete Model TEST
 model = ConcreteModel()
 
-## Define sets ##
+# Define sets ##
 #  Sets
 #       i   canning plants   / seattle, san-diego /
 #       j   markets          / new-york, chicago, topeka / ;
-sources_file = open('sources.dat','r')
-destinations_file = open('destinations.dat','r')
+sources_file = open('sources.dat', 'r')
+destinations_file = open('destinations.dat', 'r')
 sources = sources_file.read().splitlines()
 destinations = destinations_file.read().splitlines()
 

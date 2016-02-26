@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#Deployment model for distributed gasifiers
-#Jose Daniel Lara
+# Deployment model for distributed gasifiers
+# Jose Daniel Lara
 
 # Import
+from __future__ import division
 from pyomo.environ import *
 import googlemaps
 import datetime
-import pprint
+from pprint import pprint
 
 # Replace the API key below with a valid API key.
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
@@ -16,9 +17,10 @@ gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 model = ConcreteModel()
 
 # Load the data from files
-sources_file = open('sources.dat','r')
-destinations_file = open('destinations.dat','r')
+sources_file = open('sources.dat', 'r')
+destinations_file = open('destinations.dat', 'r')
 substation_list = destinations_file.read().splitlines()
+exception_list = zip(substation_list, substation_list)
 biomass_list = sources_file.read().splitlines()
 sources_file.close()
 destinations_file.close()
@@ -30,75 +32,98 @@ destinations_file.close()
 #   Constraints_Words_Capitalized_With_Underscores
 # SET_time_system
 
-## Define sets from the data read##
+# Define sets from the data read##
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
 model.SUBS = Set(initialize=substation_list, doc='Location of Substations')
+model.EXCEPTION_LIST = Set(initialize=exception_list, doc='Temp Set')
 model.ROUTES = Set(dimen=2, doc='Allows routes from sources to sinks',
-                   initialize=lambda mdl: (mdl.sources+mdl.substations) * mdl.substations)
-model.TIME_n = Set(initialize=range(1,25), doc='Time set')
+                   initialize=lambda mdl:
+                   ((mdl.SOURCES | mdl.SUBS) * mdl.SUBS) - mdl.EXCEPTION_LIST)
+model.TIME_n = Set(initialize=range(1, 25), doc='Time set')
 
-pprint.pprint(model.SOURCES)
-model.SOURCES.pprint()
-
-##Define Parameters
+# Define Parameters
 # Cost related parameters
 
-model.installation_cost_var = Param(initialize=15, doc='Cost of installing units per kW')
-model.installation_cost_fix = Param(initialize=500, doc='Fixed cost of installing the unit')
-model.OM_cost_fix = Param(initialize=1, doc='Fixed cost of operation per kW')
-model.OM_cost_var = Param(initialize=0.04, doc='Fixed cost of operation per kW')
-model.biomass_cost = Param(model.SOURCES, initialize={'Seattle, WA, USA':28,'San Diego, CA, USA':28}, doc='Cost of biomass per ton')
-model.transport_cost = Param(initialize=90, doc='Freight in dollars per case per thousand miles')
-model.FIT_tariff = Param(model.SUBS, initialize={'New York, NY, USA':12,'Chicago, IL, USA':14,'Topeka, KY, USA':12}, doc='Payment FIT $/kWh')
+model.installation_cost_var = Param(initialize=15,
+                                    doc='Variable installation cost per kW')
+model.installation_cost_fix = Param(initialize=500,
+                                    doc='Fixed cost of installing in the site')
+model.om_cost_fix = Param(initialize=1,
+                          doc='Fixed cost of operation per installed kW')
+model.om_cost_var = Param(initialize=0.04,
+                          doc='Variable cost of operation per installed kW')
+model.biomass_cost = Param(model.SOURCES,
+                           initialize={'Seattle, WA, USA': 28,
+                                       'San Diego, CA, USA': 28},
+                           doc='Cost of biomass per ton')
+model.transport_cost = Param(initialize=90,
+                             doc='Freight in dollars per ton per km')
+model.fit_tariff = Param(model.SUBS,
+                         initialize={'New York, NY, USA': 12,
+                                     'Chicago, IL, USA': 14,
+                                     'Topeka, KY, USA': 12},
+                         doc='Payment FIT $/kWh')
 
-#Limits related parameters
-model.source_biomass_max = Param(model.SOURCES, initialize={'Seattle, WA, USA':2350,'San Diego, CA, USA':2600}, doc='Capacity of supply in tons')
-model.installation_cost_var=Param(initialize=150, doc='Cost of installing units per kW')
-model.installation_cost_fix=Param(initialize=5000, doc='Fixed cost of installing the unit')
-model.OM_cost_fix=Param(initialize=1, doc='Fixed cost of operation per kW')
-model.OM_cost_var=Param(initialize=0.04, doc='Fixed cost of operation per kW')
-model.biomass_cost = Param(model.SOURCES, initialize={'seattle':28, 'san-diego':28}, doc='Cost of biomass per ton')
-model.transport_cost = Param(initialize=90, doc='Freight in dollars per case per thousand miles')
-model.FIT_tariff = Param(model.SUBS, initialize={'new-york': 12,'chicago':14,'topeka': 12}, doc='Payment FIT $/kWh')
-
-#Limits related parameters
-model.source_biomass_max = Param(model.SOURCES, initialize={'seattle': 2350, 'san-diego': 2600}, doc='Capacity of supply in tons')
+# Limits related parameters
+model.source_biomass_max = Param(model.SOURCES,
+                                 initialize={'Seattle, WA, USA': 2350,
+                                             'San Diego, CA, USA': 2600},
+                                 doc='Capacity of supply in tons')
+model.installation_cost_var = Param(initialize=150,
+                                    doc='Cost of installing units per kW')
+model.installation_cost_fix = Param(initialize=5000,
+                                    doc='Fixed cost of installing the unit')
+model.om_cost_fix = Param(initialize=1, doc='Fixed cost of operation per kW')
+model.om_cost_var = Param(initialize=0.04, doc='Fixed operation cost per kW')
+model.biomass_cost = Param(model.SOURCES,
+                           initialize={'seattle': 28,
+                                       'san-diego': 28},
+                           doc='Cost of biomass per ton')
+model.transport_cost = Param(initialize=90,
+                             doc='Freight in dollars per case-thousand-miles')
+model.fit_tariff = Param(model.SUBS,
+                         initialize={'new-york': 12,
+                                     'chicago': 14,
+                                     'topeka': 12},
+                         doc='Payment FIT $/kWh')
 model.max_power = Param(initialize=1000, doc='Max installation per site kW')
 model.min_power = Param(initialize=100, doc='Min installation per site kW')
-model.capacity_factor = Param(initialize=0.85, doc='Capacity factor of the gasifier')
+model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 
-#Operational parameters
-model.heat_rate = Param(initialize=0.8333, doc='Heat rate of the gasifier kWh/Kg')
-model.delta_t=Param(initialize=1, doc='Time step of analysis')
-model.total_time=Param(initialize=24, doc='Max timeframe for analysis') #calculate as the max of time_n. Avoid duplicates
+# Operational parameters
+model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
+model.delta_t = Param(initialize=1, doc='Time step of analysis')
+model.total_time = Param(initialize=24, doc='Max timeframe for analysis')
 
-#  Distances from googleAPI
-matrix_distance = gmaps.distance_matrix(biomass_list, substation_list, mode="driving")
-dtab={}
+
+#  Distances from googleAPI, matrx_distance is a dictionary, first it extends
+# the biomass list to include the substations for the distance calculations
+biomass_list.extend(substation_list)
+matrx_distance = gmaps.distance_matrix(biomass_list,
+                                       substation_list, mode="driving")
+
+# This loop goes over the results from the google API to extract the distances
+# the n and k indexes are used to iterate over the contents of the biomass_list
+# kk is the same as nn but saving the index in the list.
+
+distance_table = {}
 for n in biomass_list:
-	k=biomass_list.index(n)
-	for nn in substation_list:
-		kk=substation_list.index(nn)
-		dtab[biomass_list[k],substation_list[kk]]=matrix_distance['rows'][k]['elements'][kk]['distance']['value']
+    k = biomass_list.index(n)
+    for nn in substation_list:
+        kk = substation_list.index(nn)
+        if n != nn:
+            distance_table[biomass_list[k], substation_list[kk]] = (
+                matrx_distance['rows'][k]['elements'][kk]['distance']['value'])
 model.distances = Param(model.SOURCES, model.SUBS,
-                        initialize=dtab, doc='Distance in meters')
+                        initialize=distance_table, doc='Distance in meters')
 
-def c_init(model, b, s):
-  return model.transport_cost * model.distances[b,s] / 1000
-model.matrix_transport_cost = Param(model.SOURCES, model.SUBS,
-    initialize=c_init, doc='Transport cost in thousands of dollar per case')
+# Define variables
+# Generator Variables
 
-model.route_transport_cost = Param(model.ROUTES,
-    doc='Transport cost for each route in dollars per ton',
-    initialize=lambda mdl, b, s: mdl.transport_cost * mdl.distances[b,s] / 1000)
-
-## Define variables
-#Variables
-
-model.P_s_max = Var(model.SUBS, within=NonNegativeReals, doc='Installed Capacity kW')
-model.P_s = Var(model.SUBS, model.TIME_n, within=NonNegativeReals, doc='Power generated kW')
-model.U_s = Var(model.SUBS, within=Binary, doc='Decision to install or not')
-model.S_b = Var(model.SOURCES, within=NonNegativeReals, doc='Total Biomass supplied from source in tons')
+model.CapInstalled = Var(model.SUBS, within=NonNegativeReals,
+                         doc='Installed Capacity kW')
+model.InstallorNot = Var(model.SUBS, within=Binary,
+                         doc='Decision to install or not')
 model.S_b = Var(model.SOURCES, within=NonNegativeReals, doc='Total Biomass supplied from source')
 model.flow_biomass = Var(model.SOURCES, model.SUBS, within=NonNegativeReals, doc='Biomass shipment quantities in tons')
 
@@ -106,6 +131,13 @@ model.flow_biomass = Var(model.SOURCES, model.SUBS, within=NonNegativeReals, doc
 def balance(model):
   return sum(model.P_s[s,t]*model.delta_t for s in model.SUBS for t in model.TIME_n) == sum(model.heat_rate*model.S_b[b] for b in model.SOURCES)
 model.e_balance = Constraint(rule=balance, doc='Energy Balance in the system')
+
+def flow_rule(mdl, k):
+    inFlow = sum(mdl.flow[i, j] for (i, j) in mdl.routes if j == k)
+    outFlow = sum(mdl.flow[i, j] for (i, j) in mdl.routes if i == k)
+    return inFlow+mdl.supply[k] == outFlow+mdl.demand[k]
+model.flowconstraint = Constraint(model.nodes, rule=flow_rule)
+
 def capacity_factor_limit(model, substations):
   return sum(model.P_s[s,t]*model.delta_t for s in model.SUBS for t in model.TIME_n) <= sum(model.capacity_factor*model.P_s_max[s] for s in model.SUBS)
 model.cap_factor_limit = Constraint(model.SUBS, rule=capacity_factor_limit, doc='Capacity factor limitation')

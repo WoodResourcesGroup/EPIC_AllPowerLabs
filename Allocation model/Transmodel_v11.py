@@ -24,11 +24,17 @@ biomass_list = sources_file.read().splitlines()
 sources_file.close()
 destinations_file.close()
 
-# data for the PW approximation
+# data for the PW approximation of installation costs
 size = [1, 2, 3, 5, 10]
 cost = [4000, 6500, 7500, 9300, 13000]
 
-# Components:
+# data for the PW approximation of biomass supply curve
+
+# pending
+
+# Beginning of the optimization model
+
+# Standard for Component definition:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
 #   params_lower_case_with_underscores
@@ -201,7 +207,7 @@ def objective_rule(mdl):
         sum((model.om_cost_fix) * mdl.InstallorNot[s]
             for s in mdl.SUBS) +
         sum(mdl.distances[r] * model.BiomassTransported[r]
-            for r in mdl.ROUTES) -
+            for r in mdl.ROUTES) +
         sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBS)
             for b in mdl.SOURCES) -
         sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * 30 * 24
@@ -213,8 +219,8 @@ model.objective = Objective(rule=objective_rule, sense=minimize,
 
 # Display of the output #
 
-# plt.plot(size, cost)
-# plt.show()
+plt.plot(size, cost)
+plt.show()
 
 
 def pyomo_postprocess(options=None, instance=None, results=None):

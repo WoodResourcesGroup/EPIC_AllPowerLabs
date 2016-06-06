@@ -7,7 +7,6 @@
 from __future__ import division
 from pyomo.environ import *
 import googlemaps
-import numpy as np
 import matplotlib.pyplot as plt
 
 # Replace the API key below with a valid API key.

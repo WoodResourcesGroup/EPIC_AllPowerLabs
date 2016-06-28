@@ -23,8 +23,8 @@ substation_df = pd.read_csv('subs_v1.dat', encoding='UTF-8', delimiter = ',')
 substation_df = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
 substation_coord = substation_df.values.tolist()
 
-biomass_list = biomass_coord[10:20]
-substation_list = substation_coord[1:11]
+biomass_list = biomass_coord[1:5]
+substation_list = substation_coord[1:10]
 
 # Data for the piecewise approximation
 # What are the units? Are they generator size (kW) and total cost ($/kW)?

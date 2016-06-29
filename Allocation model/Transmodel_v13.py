@@ -9,65 +9,98 @@ import googlemaps
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Replace the API key below with a valid API key.
-gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
-
-model = ConcreteModel()
-
-# Load data from files and turn into lists.
-biomass_df = pd.read_csv('biomass_v1.dat', encoding='UTF-8', delimiter = ',')
-biomass_coord = biomass_df.st_y.astype(str).str.cat(biomass_df.st_x.astype(str), sep=',')
-biomass_coord = biomass_coord.values.tolist()
-
-substation_df = pd.read_csv('subs_v1.dat', encoding='UTF-8', delimiter = ',')
-substation_df = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
-substation_coord = substation_df.values.tolist()
-
-biomass_list = biomass_coord[1:5]
-substation_list = substation_coord[1:10]
-
-# Data for the piecewise approximation
-# What are the units? Are they generator size (kW) and total cost ($/kW)?
-size = [1, 2, 3, 5, 10]
-cost = [4000, 6500, 7500, 9300, 13000]
-# A more "python" style way of specifying this data is with tuples:
-# unit_cost_data = [(size_mw, unit_cost_d_per_mw), ...]
-unit_cost_data = [
-    (1, 4000),
-    (2, 6500),
-    (3, 7500),
-    (5, 9300),
-    (10, 13000)
-]
-# The x and y are two parts of a single record. The tuple-based list 
-# ensures that each record is complete. Iteration would proceed like so:
-# for (size, cost) in unit_cost_data:
-#     print(size, cost)
-
 # Conventions for naming model components:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
 #   params_pothole_case
 #   Constraints_Words_Capitalized_With_Underscores
 
-# Define sets and initialize them from data above.
+# Initialize the model
+model = ConcreteModel()
+
+# Load data from files and turn into lists for processing, later this can be updated
+# directly from the database.
+
+# File biomass_v1.dat contains the data from the biomass stocks and their location
+# All the data is loaded in to a dataframe
+# File subs_v1.dat contains the data from the electrical nodes and their location
+# All the data is loaded in to a dataframe
+biomass_df = pd.read_csv('biomass_v1.dat', encoding='UTF-8', delimiter=',')
+substation_df = pd.read_csv('subs_v1.dat', encoding='UTF-8', delimiter=',')
+
+"""
+This portion of the code is somewhat difficult to follow. In the Database the
+coordinates Y and X of the sites are independent columns, both the substations
+and the biomass. However,from the optimization point of view each "point" is a
+single location. So, what it does is that it merges the Y and X coordinates into
+a single colum as a string. Later on this will also be used to generate the
+dictionaries with some limits.
+"""
+biomass_coord = biomass_df.st_y.astype(str).str.cat(biomass_df.st_x.astype(str), sep=',')
+biomass_coord = biomass_coord.values.tolist()
+substation_df = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
+substation_coord = substation_df.values.tolist()
+
+# This portion of the code is temporary, only used to limit the amount of data during
+# development.
+biomass_list = biomass_coord[1:5]
+substation_list = substation_coord[1:10]
+
+# Data for the piecewise approximation of installation costs
+"""
+The data for the piecewise cost of installation is given in # of gasifiers per
+substation. This is why the sizes are integers. The cost is the total cost in $
+of installing the amount N of gasifiers. Given that the gasifiers can only be
+installed in integer number, this is a better approximation of the costs than
+using a cost per kw.
+"""
+size = [1, 2, 3, 5, 10]
+cost = [4000, 6500, 7500, 9300, 13000]
+
+# Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
 model.SUBSTATIONS = Set(initialize=substation_list, doc='Location of Substations')
 model.ROUTES = Set(dimen=2, doc='Allows routes from sources to sinks',
                    initialize=lambda mdl: (mdl.SOURCES * mdl.SUBSTATIONS))
-model.PW = Set(initialize=range(1, len(size) + 1), doc='Set for the PW approx')
+
+# Define sets of the piecewise approximations. For now there is only one.
+model.Pw_Install_Cost = Set(initialize=range(1, len(size) + 1),
+                            doc='Set for the Piecewise approx of the installation cost')
 
 # Define Parameters
-# Cost related parameters
+"""
+All the parameters are subject to be modified later when doing MonteCarlo simulations
+for now, they are fixed during the development stage. This first set of parameters
+are not read from the files or database.
+"""
 
+# Cost related parameters, most of them to be replaced with cost curves
 model.installation_cost_var = Param(initialize=150,
                                     doc='Variable installation cost per kW')
-model.installation_cost_fix = Param(initialize=5000,
-                                    doc='Fixed cost of installing in the site')
 model.om_cost_fix = Param(initialize=100,
                           doc='Fixed cost of operation per installed kW')
 model.om_cost_var = Param(initialize=40,
                           doc='Variable cost of operation per installed kW')
+
+
+model.transport_cost = Param(initialize=25,
+                             doc='Freight in dollars per ton per km')
+
+# Limits related parameters, read from the database/files
+
+biomass_prod = pd.DataFrame(biomass_coord)
+
+
+biomass_prod['production'] = biomass_df.production
+biomass_prod = biomass_prod.set_index('st_y').to_dict()
+
+model.source_biomass_max = Param(model.SOURCES,
+                                 initialize=biomass_prod,
+                                 doc='Capacity of supply in tons')
+
+model.max_capacity = Param(initialize=1000, doc='Max installation per site kW')
+model.min_capacity = Param(initialize=100, doc='Min installation per site kW')
+
 model.biomass_cost = Param(model.SOURCES,
                            initialize={'Seattle, WA, USA': 12,
                                        'San Diego, CA, USA': 32,
@@ -76,8 +109,7 @@ model.biomass_cost = Param(model.SOURCES,
                                        'salt-lake-city': 23,
                                        'washington-dc': 25},
                            doc='Cost of biomass per ton')
-model.transport_cost = Param(initialize=25,
-                             doc='Freight in dollars per ton per km')
+
 model.fit_tariff = Param(model.SUBSTATIONS,
                          initialize={'New York, NY, USA': 1,
                                      'Chicago, IL, USA': 2.4,
@@ -88,30 +120,17 @@ model.fit_tariff = Param(model.SUBSTATIONS,
                                      'los-angeles': 1.0},
                          doc='Payment FIT $/kWh')
 
-# Limits related parameters
-model.source_biomass_max = Param(model.SOURCES,
-                                 initialize={'Seattle, WA, USA': 2350,
-                                             'San Diego, CA, USA': 2600,
-                                             'memphis': 1200,
-                                             'portland': 2000,
-                                             'salt-lake-city': 2100,
-                                             'washington-dc': 2500},
-                                 doc='Capacity of supply in tons')
-                                 
-model.max_capacity = Param(initialize=1000, doc='Max installation per site kW')
-model.min_capacity = Param(initialize=100, doc='Min installation per site kW')
-
-
 # Operational parameters
 model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 
 #  Distances from googleAPI, matrx_distance is a dictionary, first it extends
 # the biomass list to include the substations for the distance calculations
+gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 matrx_distance = gmaps.distance_matrix(biomass_list,
                                        substation_list, mode="driving")
 
-# Extract distances from the google maps API results
+# Extract distances and travel times from the google maps API results
 
 distance_table = {}
 time_table = {}
@@ -121,28 +140,25 @@ for (bio_idx, biomass_source) in enumerate(biomass_list):
         matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
         distance_table[biomass_source, substation_dest] = 0.001 * (
             matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-        time_table[biomass_source, substation_dest] = (1/3600)*(  
-            matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+        time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
 
-model.distances = Param(model.ROUTES,
-                        initialize=distance_table, doc='Distance in km')
-                        
-model.times = Param(model.ROUTES,
-                        initialize=time_table, doc='Time in Hours')                        
+model.distances = Param(model.ROUTES, initialize=distance_table, doc='Distance in km')
+model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
+
 
 def calculate_lines(x, y):
     """
     Calculate lines to connect a series of points, given matching vectors
     of x,y coordinates. This only makes sense for monotolically increasing
-    values. 
-    
+    values.
+
     This function does not perform a data integrity check.
     """
     slope_list = {}
     intercept_list = {}
     for i in range(0, len(x) - 1):
-        slope_list[i+1] = (y[i] - y[i+1]) / (x[i] - x[i+1])
-        intercept_list[i+1] = y[i+1] - slope_list[i+1] * x[i+1]
+        slope_list[i + 1] = (y[i] - y[i + 1]) / (x[i] - x[i + 1])
+        intercept_list[i + 1] = y[i + 1] - slope_list[i + 1] * x[i + 1]
     return slope_list, intercept_list
 
 install_cost_slope, install_cost_intercept = calculate_lines(size, cost)
@@ -169,11 +185,13 @@ model.z_i = Var(model.SUBSTATIONS, within=NonNegativeReals,
 
 # This set of constraints define the energy balances in the system
 
-# It is confusing & potentially problematic that your function for the 
+# It is confusing & potentially problematic that your function for the
 # constraint is named identically to the constraint itself. A standard
 # Pyomo convention is to use the suffix "_rule", like Subs_Nodal_Balance_rule.
+
+
 def Subs_Nodal_Balance(mdl, s):
-    # The units don't make sense here unless you include a time duration 
+    # The units don't make sense here unless you include a time duration
     # on the left side
     # Left side: kW * %_cap_factor -> kW
     # Right side: kWh/kg * kg -> kWh
@@ -189,7 +207,7 @@ def Subs_Nodal_Balance(mdl, s):
     # You could also process the routes in advance and have an indexed set of
     # suppliers for each substation_dest that you could access like so:
     #       for b in mdl.BIOMASS_SUPPLIERS[s]
-    # You could also define BiomassTransported[] for every combination of 
+    # You could also define BiomassTransported[] for every combination of
     # biomass source & substation, then constrain ones that lack routes to be 0.
 
 model.Subs_Nodal_Balance = Constraint(model.SUBSTATIONS, rule=Subs_Nodal_Balance,
@@ -197,9 +215,10 @@ model.Subs_Nodal_Balance = Constraint(model.SUBSTATIONS, rule=Subs_Nodal_Balance
 
 
 def Sources_Nodal_Limit(mdl, b):
-  return sum(mdl.BiomassTransported[b, s] for s in model.SUBSTATIONS) <= (
-      model.source_biomass_max[b])
-  # This logic will be buggy if routes don't connect everything. See note above.
+    return sum(mdl.BiomassTransported[b, s] for s in model.SUBSTATIONS) <= (
+        model.source_biomass_max[b])
+
+# This logic will be buggy if routes don't connect everything. See note above.
 model.Sources_Nodal_Limit = Constraint(model.SOURCES, rule=Sources_Nodal_Limit,
                                        doc='Limit of biomass supply at source')
 
@@ -223,7 +242,7 @@ model.Install_Decision_Min = Constraint(model.SUBSTATIONS, rule=Install_Decision
 # installation cost
 
 def Pw_Install_Cost(mdl, s):
-    # Logic is confusing! You accept substation s as an argument, then 
+    # Logic is confusing! You accept substation s as an argument, then
     # ignore that value and iterate over all substations.
     # The for loops below will always return values for the first substation
     # & the first line segment .. calling return inside a loop will exit the loop.

@@ -1,0 +1,31 @@
+* California Energy Commission EPIC: All-Power Labs Powertainer
+
+California Energy Commission has funded a project through the Electric Program Investment Charge (EPIC) to evaluate the viability of the All Power Labs Powertainer.
+
+** Forest biomass supply
+
+California's forests provide biomass for energy in the form of logging and other forest management residuals (fuels reduction, etc.) as well as milling, processing, and construction residuals and wood demolition material from the construction sector cite:Williams2008a. The use of wood in energy 
+
+
+*** BioSUM Results
+
+The results database from the BioSUM analysis contains cost and volume of merchantable and chipped material based on FIA plot data across forested areas of northern CA. For our analysis we are interested in the cost and quantity of chipped materials for power generation. 
+
+We assume that if the value for merchantable material is greater than that cost of harvest, then the biomass can be considered to be free of cost. Its unclear if we can assume that the material still needs to be chipped or if the chipping costs are already included. [fn:1]
+
+Biomass cost is calculated as
+
+#+BEGIN_SRC 
+if:
+    (merch_val_dpa + chip_val_dpa) - harvest_onsite_cpa >= 0
+then:
+    chip_price = 0
+else:
+    chip_price_dpa = (merch_val_dpa + chip_val_dpa) - harvest_onsite_cpa
+#+END_SRC
+ 
+
+
+* Footnotes
+
+[fn:1] [[ncparker@asu.edu][Nathan Parker]] or [[mailto:loreno@pdx.edu][Sara Loreno]] will know the answer here.

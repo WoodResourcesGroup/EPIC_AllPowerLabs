@@ -17,11 +17,11 @@ Biomass cost is calculated as
 
 #+BEGIN_SRC 
 if:
-    (merch_val_dpa + chip_val_dpa) - harvest_onsite_cpa >= 0
+    merch_val_dpa - (harvest_onsite_cpa + haul_merch_cpa) >= 0
 then:
     chip_price_dpa = 0
 else:
-    chip_price_dpa = (merch_val_dpa + chip_val_dpa) - harvest_onsite_cpa
+    chip_price_dpa = merch_val_dpa - (harvest_onsite_cpa + haul_merch_cpa)
 #+END_SRC
  
 

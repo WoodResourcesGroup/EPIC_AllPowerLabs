@@ -33,7 +33,7 @@ This portion of the code is somewhat difficult to follow. In the Database the
 coordinates Y and X of the sites are independent columns, both the substations
 and the biomass. However,from the optimization point of view each "point" is a
 single location. So, what it does is that it merges the Y and X coordinates into
-a single colum as a string. Later on this will also be used to generate the
+a single colum as a string. Later on, this will also be used to generate the
 dictionaries with some limits.
 """
 biomass_coord = biomass_df.st_y.astype(str).str.cat(biomass_df.st_x.astype(str), sep=',')
@@ -43,8 +43,8 @@ substation_coord = substation_df.values.tolist()
 
 # This portion of the code is temporary, only used to limit the amount of data during
 # development.
-biomass_list = biomass_coord[1:5]
-substation_list = substation_coord[1:10]
+biomass_list = biomass_coord[0:10]
+substation_list = substation_coord[0:10]
 
 # Data for the piecewise approximation of installation costs
 """
@@ -81,33 +81,28 @@ model.om_cost_fix = Param(initialize=100,
                           doc='Fixed cost of operation per installed kW')
 model.om_cost_var = Param(initialize=40,
                           doc='Variable cost of operation per installed kW')
-
-
 model.transport_cost = Param(initialize=25,
                              doc='Freight in dollars per ton per km')
 
 # Limits related parameters, read from the database/files
 
-biomass_prod = pd.DataFrame(biomass_coord)
-
-
+biomass_prod = pd.DataFrame(biomass_list)
 biomass_prod['production'] = biomass_df.production
-biomass_prod = biomass_prod.set_index('st_y').to_dict()
-
+biomass_prod = biomass_prod.set_index(0).to_dict()['production']
 model.source_biomass_max = Param(model.SOURCES,
                                  initialize=biomass_prod,
                                  doc='Capacity of supply in tons')
 
+# TO BE READ FROM DATABASE IN THE NEAR FUTURE
 model.max_capacity = Param(initialize=1000, doc='Max installation per site kW')
-model.min_capacity = Param(initialize=100, doc='Min installation per site kW')
 
+model.min_capacity = Param(initialize=150, doc='Min installation per site kW')
+
+biomass_price = pd.DataFrame(biomass_list)
+biomass_price['price_trgt'] = biomass_df.price_trgt
+biomass_price = biomass_price.set_index(0).to_dict()['price_trgt']
 model.biomass_cost = Param(model.SOURCES,
-                           initialize={'Seattle, WA, USA': 12,
-                                       'San Diego, CA, USA': 32,
-                                       'memphis': 20,
-                                       'portland': 22,
-                                       'salt-lake-city': 23,
-                                       'washington-dc': 25},
+                           initialize=biomass_price,
                            doc='Cost of biomass per ton')
 
 model.fit_tariff = Param(model.SUBSTATIONS,
@@ -118,7 +113,7 @@ model.fit_tariff = Param(model.SUBSTATIONS,
                                      'dallas': 1.65,
                                      'kansas-cty': 1.65,
                                      'los-angeles': 1.0},
-                         doc='Payment FIT $/kWh')
+                         doc='Payment depending on the location $/kWh')
 
 # Operational parameters
 model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')

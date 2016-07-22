@@ -18,13 +18,16 @@ import matplotlib.pyplot as plt
 # Initialize the model
 model = ConcreteModel()
 
-# Load data from files and turn into lists for processing, later this can be updated
-# directly from the database.
+"""
+Load data from files and turn into lists for processing, later this can be updated
+directly from the database.
 
-# File biomass_v1.dat contains the data from the biomass stocks and their location
-# All the data is loaded in to a dataframe
-# File subs_v1.dat contains the data from the electrical nodes and their location
-# All the data is loaded in to a dataframe
+File biomass_v1.dat contains the data from the biomass stocks and their location
+All the data is loaded in to a dataframe
+File subs_v1.dat contains the data from the electrical nodes and their location
+All the data is loaded in to a dataframe
+"""
+
 biomass_df = pd.read_csv('biomass_v1.dat', encoding='UTF-8', delimiter=',')
 substation_df = pd.read_csv('subs_v1.dat', encoding='UTF-8', delimiter=',')
 
@@ -54,7 +57,7 @@ of installing the amount N of gasifiers. Given that the gasifiers can only be
 installed in integer number, this is a better approximation of the costs than
 using a cost per kw.
 """
-size = [1, 2, 3, 5, 10]
+number_of_containers = [1, 2, 3, 5, 10]
 cost = [4000, 6500, 7500, 9300, 13000]
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
@@ -63,11 +66,10 @@ model.SUBSTATIONS = Set(initialize=substation_list, doc='Location of Substations
 model.ROUTES = Set(dimen=2, doc='Allows routes from sources to sinks',
                    initialize=lambda mdl: (mdl.SOURCES * mdl.SUBSTATIONS))
 
-# Define sets of the piecewise approximations. For now there is only one.
-model.Pw_Install_Cost = Set(initialize=range(1, len(size) + 1),
+# Define sets of the piecewise approximations. For now there is only one PWA
+model.Pw_Install_Cost = Set(initialize=range(1, len(number_of_containers) + 1),
                             doc='Set for the Piecewise approx of the installation cost')
 
-# Define Parameters
 """
 All the parameters are subject to be modified later when doing MonteCarlo simulations
 for now, they are fixed during the development stage. This first set of parameters
@@ -120,6 +122,7 @@ model.fit_tariff = Param(model.SUBSTATIONS,
 # Operational parameters
 model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
+model.total_hours = Param(initialize=8760, doc='Total amount of hours in the analysis period')
 
 
 """
@@ -171,11 +174,11 @@ model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
 
 
 def calculate_lines(x, y):
-
     """
-    Calculate lines to connect a series of points, given matching vectors
-    of x,y coordinates. This only makes sense for monotolically increasing
-    values.
+    Calculate lines to connect a series of points.
+
+    Given matching vectors of x,y coordinates. This only makes sense for
+    monotolically increasing values.
 
     This function does not perform a data integrity check.
     """
@@ -187,13 +190,15 @@ def calculate_lines(x, y):
     return slope_list, intercept_list
 
 install_cost_slope, install_cost_intercept = calculate_lines(size, cost)
-
-# Add meaningful doc for the components below.
 model.install_cost_slope = Param(model.PW, initialize=install_cost_slope, doc='PW c_i')
 model.install_cost_intercept = Param(model.PW, initialize=install_cost_intercept, doc='PW d_i')
 
-# Define variables
-# Generator Variables
+"""
+This portion of the code defines the decision making variables, in general the
+model will solve for the capacity installed per substation, the decision to
+install or not, the amount of biomass transported per route and variable for
+the total install cost resulting from the piecewise approximation
+"""
 
 model.CapInstalled = Var(model.SUBSTATIONS, within=NonNegativeReals,
                          doc='Installed Capacity kW')
@@ -201,66 +206,48 @@ model.InstallorNot = Var(model.SUBSTATIONS, within=Binary,
                          doc='Decision to install or not')
 model.BiomassTransported = Var(model.ROUTES, within=NonNegativeReals,
                                doc='Biomass shipment quantities in tons')
-# What is z_i ?
-model.z_i = Var(model.SUBSTATIONS, within=NonNegativeReals,
-                doc='Variable for PW of installation cost')
+model.total_install_cost = Var(model.SUBSTATIONS, within=NonNegativeReals,
+                               doc='Variable for PW of installation cost')
 
-# Define contraints
-# Here b is the index for sources and s the index for substations
-
-# This set of constraints define the energy balances in the system
-
-# It is confusing & potentially problematic that your function for the
-# constraint is named identically to the constraint itself. A standard
-# Pyomo convention is to use the suffix "_rule", like Subs_Nodal_Balance_rule.
+"""
+Define contraints
+Here b is the index for sources and s the index for substations
+"""
 
 
-def Subs_Nodal_Balance(mdl, s):
-    # The units don't make sense here unless you include a time duration
-    # on the left side
-    # Left side: kW * %_cap_factor -> kW
-    # Right side: kWh/kg * kg -> kWh
-    #   kW != kWh
-    return mdl.CapInstalled[s] * mdl.capacity_factor == (
+def Subs_Nodal_Balance_rule(mdl, s):
+    return mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours == (
         sum(mdl.heat_rate * mdl.BiomassTransported[b, s]
             for b in mdl.SOURCES))
-    # This logic will be buggy if your routes don't connect every biomass
-    # sources to every substation. There are multiple ways to address this
-    # one of which is to iterate over the list of routes and filter it to
-    # suppliers of this substation.
-    #       for (b, s2) in mdl.ROUTES if s == s2
-    # You could also process the routes in advance and have an indexed set of
-    # suppliers for each substation_dest that you could access like so:
-    #       for b in mdl.BIOMASS_SUPPLIERS[s]
-    # You could also define BiomassTransported[] for every combination of
-    # biomass source & substation, then constrain ones that lack routes to be 0.
 
-model.Subs_Nodal_Balance = Constraint(model.SUBSTATIONS, rule=Subs_Nodal_Balance,
+model.Subs_Nodal_Balance = Constraint(model.SUBSTATIONS,
+                                      rule=Subs_Nodal_Balance_rule,
                                       doc='Energy Balance at the substation')
 
 
-def Sources_Nodal_Limit(mdl, b):
+def Sources_Nodal_Limit_rule(mdl, b):
     return sum(mdl.BiomassTransported[b, s] for s in model.SUBSTATIONS) <= (
         model.source_biomass_max[b])
 
-# This logic will be buggy if routes don't connect everything. See note above.
-model.Sources_Nodal_Limit = Constraint(model.SOURCES, rule=Sources_Nodal_Limit,
+model.Sources_Nodal_Limit = Constraint(model.SOURCES,
+                                       rule=Sources_Nodal_Limit_rule,
                                        doc='Limit of biomass supply at source')
 
-# This set of constraints define the limits to the power at the substation
 
-
-def Install_Decision_Max(mdl, s):
+def Install_Decision_Max_rule(mdl, s):
     return mdl.CapInstalled[s] <= mdl.InstallorNot[s] * mdl.max_capacity
+
 model.Install_Decision_Max = Constraint(
-    model.SUBSTATIONS, rule=Install_Decision_Max,
+    model.SUBSTATIONS, rule=Install_Decision_Max_rule,
     doc='Limit the maximum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
 
 
-def Install_Decision_Min(mdl, s):
+def Install_Decision_Min_rule(mdl, s):
     return mdl.min_capacity * mdl.InstallorNot[s] <= mdl.CapInstalled[s]
-model.Install_Decision_Min = Constraint(model.SUBSTATIONS, rule=Install_Decision_Min,
-                                        doc='Installed capacity must exceed the minimum threshold.')
+
+model.Install_Decision_Min = Constraint(
+    model.SUBSTATIONS, rule=Install_Decision_Min_rule,
+    doc='Installed capacity must exceed the minimum capacity and bind the continuous decision to the binary InstallorNot variable.')
 
 
 # This set of constraints define the piece-wise linear approximation of

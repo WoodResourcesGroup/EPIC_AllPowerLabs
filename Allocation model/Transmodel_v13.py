@@ -121,26 +121,57 @@ model.fit_tariff = Param(model.SUBSTATIONS,
 model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 
-#  Distances from googleAPI, matrx_distance is a dictionary, first it extends
-# the biomass list to include the substations for the distance calculations
-# Extract distances and travel times from the google maps API results
 
+"""
+Distances from googleAPI, matrx_distance is a dictionary, first it extends
+the biomass list to include the substations for the distance calculations
+Extract distances and travel times from the google maps API results
+
+As of now, the code checks if the matrices already exist, this protection is
+quite unrefined and will need better practices in the future, like comparing the
+lists loaded in the model with the list in the files. For testing purposes, it
+will work and avoid constant queries to the google API.
+"""
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 distance_table = {}
 time_table = {}
 
-for (bio_idx, biomass_source) in enumerate(biomass_list):
-    for (sub_idx, substation_dest) in enumerate(substation_list):
-        matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
-        distance_table[biomass_source, substation_dest] = 0.001 * (
-            matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-        time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+if os.path.isfile('distance_table.dat') and os.path.isfile('time_table.dat'):
+    print "matrices exist at this time"
+
+    f = open('time_table.dat', 'r')
+    time_table = f.read()
+    f.close()
+    time_table = ast.literal_eval(time_table)
+
+    f = open('distance_table.dat', 'r')
+    distance_table = f.read()
+    f.close()
+    distance_table = ast.literal_eval(distance_table)
+else:
+    print "no such file"
+
+    for (bio_idx, biomass_source) in enumerate(biomass_list):
+        for (sub_idx, substation_dest) in enumerate(substation_list):
+            matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
+            distance_table[biomass_source, substation_dest] = 0.001 * (
+                matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+            time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+
+    f = open('time_table.dat', 'w')
+    f.write(str(time_table))
+    f.close()
+
+    f = open('distance_table.dat', 'w')
+    f.write(str(distance_table))
+    f.close()
 
 model.distances = Param(model.ROUTES, initialize=distance_table, doc='Distance in km')
 model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
 
 
 def calculate_lines(x, y):
+
     """
     Calculate lines to connect a series of points, given matching vectors
     of x,y coordinates. This only makes sense for monotolically increasing

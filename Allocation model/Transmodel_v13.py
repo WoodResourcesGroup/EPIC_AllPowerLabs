@@ -94,9 +94,14 @@ model.source_biomass_max = Param(model.SOURCES,
                                  doc='Capacity of supply in tons')
 
 # TO BE READ FROM DATABASE IN THE NEAR FUTURE
-model.max_capacity = Param(initialize=1000, doc='Max installation per site kW')
-
-model.min_capacity = Param(initialize=150, doc='Min installation per site kW')
+substation_capacity = pd.DataFrame(substation_list)
+substation_capacity['sbs_cap'] = 1000  # substation_df.sbs_cap'
+substation_capacity = substation_capacity.set_index(0).to_dict()['sbs_cap']
+model.max_capacity = Param(model.SUBSTATIONS,
+                           initialize=substation_capacity,
+                           doc='Max installation per site kW')
+model.min_capacity = Param(initialize=150,
+                           doc='Min installation per site kW')
 
 biomass_price = pd.DataFrame(biomass_list)
 biomass_price['price_trgt'] = biomass_df.price_trgt
@@ -105,14 +110,11 @@ model.biomass_cost = Param(model.SOURCES,
                            initialize=biomass_price,
                            doc='Cost of biomass per ton')
 
+substation_price = pd.DataFrame(substation_list)
+substation_price['sbs_price'] = 0.6  # substation_df.sbs_price'
+substation_price = substation_price.set_index(0).to_dict()['sbs_price']
 model.fit_tariff = Param(model.SUBSTATIONS,
-                         initialize={'New York, NY, USA': 1,
-                                     'Chicago, IL, USA': 2.4,
-                                     'Topeka, KY, USA': 1.5,
-                                     'boston': 1.4,
-                                     'dallas': 1.65,
-                                     'kansas-cty': 1.65,
-                                     'los-angeles': 1.0},
+                         initialize=substation_price,
                          doc='Payment depending on the location $/kWh')
 
 # Operational parameters
@@ -121,12 +123,9 @@ model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 
 #  Distances from googleAPI, matrx_distance is a dictionary, first it extends
 # the biomass list to include the substations for the distance calculations
-gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
-matrx_distance = gmaps.distance_matrix(biomass_list,
-                                       substation_list, mode="driving")
-
 # Extract distances and travel times from the google maps API results
 
+gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 distance_table = {}
 time_table = {}
 

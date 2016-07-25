@@ -57,8 +57,8 @@ of installing the amount N of gasifiers. Given that the gasifiers can only be
 installed in integer number, this is a better approximation of the costs than
 using a cost per kw.
 """
-number_of_containers = [1, 2, 3, 5, 10]
-cost = [4000, 6500, 7500, 9300, 13000]
+number_of_containers = [0, 1, 2, 3, 5, 10]
+cost = [0, 4000, 6500, 7500, 9300, 13000]
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
@@ -190,8 +190,8 @@ def calculate_lines(x, y):
     return slope_list, intercept_list
 
 install_cost_slope, install_cost_intercept = calculate_lines(size, cost)
-model.install_cost_slope = Param(model.PW, initialize=install_cost_slope, doc='PW c_i')
-model.install_cost_intercept = Param(model.PW, initialize=install_cost_intercept, doc='PW d_i')
+model.install_cost_slope = Param(model.Pw_Install_Cost, initialize=install_cost_slope, doc='PW c_i')
+model.install_cost_intercept = Param(model.Pw_Install_Cost, initialize=install_cost_intercept, doc='PW d_i')
 
 """
 This portion of the code defines the decision making variables, in general the
@@ -206,7 +206,7 @@ model.InstallorNot = Var(model.SUBSTATIONS, within=Binary,
                          doc='Decision to install or not')
 model.BiomassTransported = Var(model.ROUTES, within=NonNegativeReals,
                                doc='Biomass shipment quantities in tons')
-model.total_install_cost = Var(model.SUBSTATIONS, within=NonNegativeReals,
+model.Fixed_Install_Cost = Var(model.SUBSTATIONS, within=NonNegativeReals,
                                doc='Variable for PW of installation cost')
 
 """
@@ -253,48 +253,36 @@ model.Install_Decision_Min = Constraint(
 # This set of constraints define the piece-wise linear approximation of
 # installation cost
 
-def Pw_Install_Cost(mdl, s):
-    # Logic is confusing! You accept substation s as an argument, then
-    # ignore that value and iterate over all substations.
-    # The for loops below will always return values for the first substation
-    # & the first line segment .. calling return inside a loop will exit the loop.
-    for s in mdl.SUBSTATIONS:
-        for p in mdl.PW:
-            return mdl.z_i[s] == (mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
-                                  mdl.install_cost_intercept[p])
+def Pwapprox_InstallCost_rule(mdl, s, p):
+    return mdl.z_i[s] == (mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
+                          mdl.install_cost_intercept[p])
 
-model.Pw_Install_Cost = Constraint(model.SUBSTATIONS, rule=Pw_Install_Cost,
+model.Pw_Install_Cost = Constraint(model.SUBSTATIONS,
+                                   rule=Pwapprox_InstallCost_rule,
                                    doc='PW constraint')
 
 
 # Define Objective Function.
-def objective_rule(mdl):
+def net_profits_rule(mdl):
     return (
-        # Capacity costs
-        sum(mdl.z_i[s] for s in mdl.SUBSTATIONS)
+        # Fixed capacity installtion costs
+        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS)
         # O&M costs (variable & fixed)
         + sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
-            for s in mdl.SUBSTATIONS)
-        # The next line is buggy; uses same om_cost_fix param as previous line, but
-        # units don't cancel out: $/kw-installed * [unitless binary value] != $
-        + sum((model.om_cost_fix) * mdl.InstallorNot[s]
-            for s in mdl.SUBSTATIONS)
+              for s in mdl.SUBSTATIONS)
         # Transportation costs
         + sum(mdl.distances[r] * model.BiomassTransported[r]
-            for r in mdl.ROUTES)
-        # Biomass acquisition costs. These will be buggy if routes aren't the
-        # entire cross product. See note in Subs_Nodal_Balance.
-        # Why are these costs subtracted instead of added?
-        - sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
-            for b in mdl.SOURCES)
-        # Gross profits (per month?)
-        - sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * 30 * 24
-            for s in mdl.SUBSTATIONS)
-    )
+              for r in mdl.ROUTES)
+        # Biomass acquisition costs.
+        + sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
+              for b in mdl.SOURCES)
+        # Gross profits during the period
+        - sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
+              for s in mdl.SUBSTATIONS)
+        )
 
-# Rename objective to be more descriptive. Maybe "net_profits"
-model.objective = Objective(rule=objective_rule, sense=minimize,
-                            doc='Define objective function')
+model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
+                              doc='Define objective function')
 
 # Display of the output #
 

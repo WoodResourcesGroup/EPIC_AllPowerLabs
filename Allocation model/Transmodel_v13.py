@@ -192,8 +192,7 @@ def calculate_lines(x, y):
 
 install_cost_slope, install_cost_intercept = calculate_lines(number_of_containers, cost)
 
-model.install_cost_slope = Param(model.Pw_Install_Cost, initialize=install_cost_slope,
-                                 doc='PW c_i')
+model.install_cost_slope = Param(model.Pw_Install_Cost, initialize=install_cost_slope, doc='PW c_i')
 model.install_cost_intercept = Param(model.Pw_Install_Cost, initialize=install_cost_intercept, doc='PW d_i')
 
 """
@@ -249,7 +248,7 @@ model.Install_Decision_Max = Constraint(
 # installation cost
 
 
-def Pwapprox_InstallCost_rule(mdl, s):
+def Pwapprox_InstallCost_rule(mdl, s, p):
     """
     This rule is used to approximate picewise non-linear cost functions. It uses
     the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
@@ -259,33 +258,35 @@ def Pwapprox_InstallCost_rule(mdl, s):
     min z &\\
     s.t. & z \ge c_i x + d_i forall i
 
-    where z is a slack variable, i is the set of lines that approximate the non-linear convex function, c_i is the slope of the line, and d_i is the intercept.
+    where z is a slack variable, i is the set of lines that approximate the non-linear convex function,
+    c_i is the slope of the line, and d_i is the intercept.
 
     """
-    return mdl.installation_cost[s] == (mdl.install_cost_slope[p] * mdl.CapInstalled[s] + mdl.install_cost_intercept[p] for p in )
+    return (mdl.Fixed_Install_Cost[s] == mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
+            mdl.install_cost_intercept[p])
 
-model.Pw_Install_Cost = Constraint(model.SUBSTATIONS,
-                                   rule=Pwapprox_InstallCost_rule,
-                                   doc='PW constraint')
+model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
+                                     rule=Pwapprox_InstallCost_rule,
+                                     doc='PW constraint')
 
 
 # Define Objective Function.
 def net_profits_rule(mdl):
     return (
         # Fixed capacity installtion costs
-        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS)
+        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) +
         # O&M costs (variable & fixed)
-        + sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
-              for s in mdl.SUBSTATIONS)
+        sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
+            for s in mdl.SUBSTATIONS) +
         # Transportation costs
-        + sum(mdl.distances[r] * model.BiomassTransported[r]
-              for r in mdl.ROUTES)
+        sum(mdl.distances[r] * model.BiomassTransported[r]
+            for r in mdl.ROUTES) +
         # Biomass acquisition costs.
-        + sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
-              for b in mdl.SOURCES)
+        sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
+            for b in mdl.SOURCES) -
         # Gross profits during the period
-        - sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
-              for s in mdl.SUBSTATIONS)
+        sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
+            for s in mdl.SUBSTATIONS)
         )
 
 model.net_profits = Objective(rule=net_profits_rule, sense=minimize,

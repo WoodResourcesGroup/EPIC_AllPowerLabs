@@ -8,7 +8,9 @@ from pyomo.environ import *
 import googlemaps
 import numpy as np
 import matplotlib.pyplot as plt
-
+import pandas as pd
+import os
+import ast
 # Conventions for naming model components:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
@@ -29,7 +31,7 @@ All the data is loaded in to a dataframe
 """
 
 biomass_df = pd.read_csv('biomass_v1.dat', encoding='UTF-8', delimiter=',')
-substation_df = pd.read_csv('subs_v1.dat', encoding='UTF-8', delimiter=',')
+substation_df = pd.read_csv('subs_v2.dat', encoding='UTF-8', delimiter=',')
 
 """
 This portion of the code is somewhat difficult to follow. In the Database the
@@ -41,13 +43,12 @@ dictionaries with some limits.
 """
 biomass_coord = biomass_df.st_y.astype(str).str.cat(biomass_df.st_x.astype(str), sep=',')
 biomass_coord = biomass_coord.values.tolist()
-substation_df = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
-substation_coord = substation_df.values.tolist()
+substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
+substation_coord = substation_coord.values.tolist()
 
-# This portion of the code is temporary, only used to limit the amount of data during
-# development.
-biomass_list = biomass_coord[0:10]
-substation_list = substation_coord[0:10]
+# This portion of the code is temporary, only used to limit the amount of data during development.
+biomass_list = biomass_coord[32:39]
+substation_list = substation_coord[1774:1789]
 
 # Data for the piecewise approximation of installation costs
 """
@@ -55,7 +56,7 @@ The data for the piecewise cost of installation is given in # of gasifiers per
 substation. This is why the sizes are integers. The cost is the total cost in $
 of installing the amount N of gasifiers. Given that the gasifiers can only be
 installed in integer number, this is a better approximation of the costs than
-using a cost per kw.
+using a cost per kw. This explicit calculation needs to be replaced with a file.
 """
 number_of_containers = [0, 1, 2, 3, 5, 10]
 cost = [0, 4000, 6500, 7500, 9300, 13000]
@@ -66,7 +67,9 @@ model.SUBSTATIONS = Set(initialize=substation_list, doc='Location of Substations
 model.ROUTES = Set(dimen=2, doc='Allows routes from sources to sinks',
                    initialize=lambda mdl: (mdl.SOURCES * mdl.SUBSTATIONS))
 
-# Define sets of the piecewise approximations. For now there is only one PWA
+"""
+Each piecewise approximation requires and independent set for each one of the lines in the approximation. In this case, this is the piecewise approximation for the installations costs, and more maybe required soon.
+"""
 model.Pw_Install_Cost = Set(initialize=range(1, len(number_of_containers) + 1),
                             doc='Set for the Piecewise approx of the installation cost')
 
@@ -97,7 +100,7 @@ model.source_biomass_max = Param(model.SOURCES,
 
 # TO BE READ FROM DATABASE IN THE NEAR FUTURE
 substation_capacity = pd.DataFrame(substation_list)
-substation_capacity['sbs_cap'] = 1000  # substation_df.sbs_cap'
+substation_capacity['sbs_cap'] = substation_df.limit
 substation_capacity = substation_capacity.set_index(0).to_dict()['sbs_cap']
 model.max_capacity = Param(model.SUBSTATIONS,
                            initialize=substation_capacity,
@@ -152,7 +155,7 @@ if os.path.isfile('distance_table.dat') and os.path.isfile('time_table.dat'):
     f.close()
     distance_table = ast.literal_eval(distance_table)
 else:
-    print "no such file"
+    print "There are no matrix files stored"
 
     for (bio_idx, biomass_source) in enumerate(biomass_list):
         for (sub_idx, substation_dest) in enumerate(substation_list):
@@ -169,16 +172,14 @@ else:
     f.write(str(distance_table))
     f.close()
 
+
 model.distances = Param(model.ROUTES, initialize=distance_table, doc='Distance in km')
 model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
 
 
 def calculate_lines(x, y):
     """
-    Calculate lines to connect a series of points.
-
-    Given matching vectors of x,y coordinates. This only makes sense for
-    monotolically increasing values.
+    Calculate lines to connect a series of points. This is used for the PW approximations. Given matching vectors of x,y coordinates. This only makes sense for monotolically increasing values.
 
     This function does not perform a data integrity check.
     """
@@ -189,8 +190,10 @@ def calculate_lines(x, y):
         intercept_list[i + 1] = y[i + 1] - slope_list[i + 1] * x[i + 1]
     return slope_list, intercept_list
 
-install_cost_slope, install_cost_intercept = calculate_lines(size, cost)
-model.install_cost_slope = Param(model.Pw_Install_Cost, initialize=install_cost_slope, doc='PW c_i')
+install_cost_slope, install_cost_intercept = calculate_lines(number_of_containers, cost)
+
+model.install_cost_slope = Param(model.Pw_Install_Cost, initialize=install_cost_slope,
+                                 doc='PW c_i')
 model.install_cost_intercept = Param(model.Pw_Install_Cost, initialize=install_cost_intercept, doc='PW d_i')
 
 """
@@ -235,27 +238,31 @@ model.Sources_Nodal_Limit = Constraint(model.SOURCES,
 
 
 def Install_Decision_Max_rule(mdl, s):
-    return mdl.CapInstalled[s] <= mdl.InstallorNot[s] * mdl.max_capacity
+    return mdl.CapInstalled[s] <= mdl.InstallorNot[s] * mdl.max_capacity[s]
 
 model.Install_Decision_Max = Constraint(
     model.SUBSTATIONS, rule=Install_Decision_Max_rule,
     doc='Limit the maximum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
 
 
-def Install_Decision_Min_rule(mdl, s):
-    return mdl.min_capacity * mdl.InstallorNot[s] <= mdl.CapInstalled[s]
-
-model.Install_Decision_Min = Constraint(
-    model.SUBSTATIONS, rule=Install_Decision_Min_rule,
-    doc='Installed capacity must exceed the minimum capacity and bind the continuous decision to the binary InstallorNot variable.')
-
-
 # This set of constraints define the piece-wise linear approximation of
 # installation cost
 
-def Pwapprox_InstallCost_rule(mdl, s, p):
-    return mdl.z_i[s] == (mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
-                          mdl.install_cost_intercept[p])
+
+def Pwapprox_InstallCost_rule(mdl, s):
+    """
+    This rule is used to approximate picewise non-linear cost functions. It uses
+    the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
+
+    The model is as follows (as per Bersimas Introduction to linear optimization, page 17)
+
+    min z &\\
+    s.t. & z \ge c_i x + d_i forall i
+
+    where z is a slack variable, i is the set of lines that approximate the non-linear convex function, c_i is the slope of the line, and d_i is the intercept.
+
+    """
+    return mdl.installation_cost[s] == (mdl.install_cost_slope[p] * mdl.CapInstalled[s] + mdl.install_cost_intercept[p] for p in )
 
 model.Pw_Install_Cost = Constraint(model.SUBSTATIONS,
                                    rule=Pwapprox_InstallCost_rule,

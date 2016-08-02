@@ -70,7 +70,7 @@ model.ROUTES = Set(dimen=2, doc='Allows routes from sources to sinks',
 """
 Each piecewise approximation requires and independent set for each one of the lines in the approximation. In this case, this is the piecewise approximation for the installations costs, and more maybe required soon.
 """
-model.Pw_Install_Cost = Set(initialize=range(1, len(number_of_containers) + 1),
+model.Pw_Install_Cost = Set(initialize=range(1, len(number_of_containers)),
                             doc='Set for the Piecewise approx of the installation cost')
 
 """
@@ -249,9 +249,10 @@ model.Install_Decision_Max = Constraint(
 
 
 def Pwapprox_InstallCost_rule(mdl, s, p):
-    """
-    This rule is used to approximate picewise non-linear cost functions. It uses
-    the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
+    r"""
+    This rule approximates picewise non-linear cost functions.
+
+    It has a input from the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
 
     The model is as follows (as per Bersimas Introduction to linear optimization, page 17)
 

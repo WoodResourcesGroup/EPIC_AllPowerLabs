@@ -1,4 +1,6 @@
--- Move raster into database
-$ raster2pgsql -I -t 100x100 -s 26910 ~/Box\ Sync/EPIC-Biomass/GIS\ Data/Gonzalez\ Data/California_above_biomass_2010.tif sandbox.California_biomass_2010 | psql -d apl_cec -h switch-db2.erg.berkeley.edu -U ctubbesing
-$ raster2pgsql -I -t 100x100 -s 5070 ~/Box\ Sync/EPIC-Biomass/GIS\ Data/LEMMA_gnn_sppsz_2014_08_28/mr200_2012 sandbox.LEMMA | psql -d apl_cec -h switch-db2.erg.berkeley.edu -U ctubbesing
+# Move raster into database
+raster2pgsql -I -t 100x100 -s 5070 ~/Box\ Sync/EPIC-Biomass/GIS\ Data/Gonzalez\ Data/California_above_biomass_2010.tif sandbox.California_biomass_2010 | psql -d apl_cec -h switch-db2.erg.berkeley.edu -U ctubbesing
+# raster2pgsql -I -t 100x100 -s 5070 ~/Box\ Sync/EPIC-Biomass/GIS\ Data/LEMMA_gnn_sppsz_2014_08_28/mr200_2012 sandbox.LEMMA | psql -d apl_cec -h switch-db2.erg.berkeley.edu -U ctubbesing
 
+# Switch to psql
+psql -U ctubbesing -h switch-db2.erg.berkeley.edu

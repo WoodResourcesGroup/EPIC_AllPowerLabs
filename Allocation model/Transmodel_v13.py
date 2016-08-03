@@ -47,7 +47,7 @@ substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.ast
 substation_coord = substation_coord.values.tolist()
 
 # This portion of the code is temporary, only used to limit the amount of data during development.
-biomass_list = biomass_coord  # 32:39]
+biomass_list = biomass_coord[32:39]
 substation_list = substation_coord[1774:1789]
 
 # Data for the piecewise approximation of installation costs
@@ -160,8 +160,9 @@ else:
             matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
             error = matrx_distance['rows'][0]['elements'][0]['status']
             if error != 'OK':
-                print("Route data unavailable for" + biomass_coord[bio_idx], substation_coord[sub_idx])
+                print "Route data unavailable for " + biomass_coord[bio_idx], substation_coord[sub_idx]
             else:
+                print "Route data available for " + biomass_coord[bio_idx], substation_coord[sub_idx]
                 distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
                 time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
 

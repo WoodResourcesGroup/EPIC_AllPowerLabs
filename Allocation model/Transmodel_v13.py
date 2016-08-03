@@ -47,7 +47,7 @@ substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.ast
 substation_coord = substation_coord.values.tolist()
 
 # This portion of the code is temporary, only used to limit the amount of data during development.
-biomass_list = biomass_coord[32:39]
+biomass_list = biomass_coord  # 32:39]
 substation_list = substation_coord[1774:1789]
 
 # Data for the piecewise approximation of installation costs
@@ -80,13 +80,11 @@ are not read from the files or database.
 """
 
 # Cost related parameters, most of them to be replaced with cost curves
-model.installation_cost_var = Param(initialize=150,
-                                    doc='Variable installation cost per kW')
-model.om_cost_fix = Param(initialize=100,
+model.om_cost_fix = Param(initialize=0,
                           doc='Fixed cost of operation per installed kW')
-model.om_cost_var = Param(initialize=40,
+model.om_cost_var = Param(initialize=0,
                           doc='Variable cost of operation per installed kW')
-model.transport_cost = Param(initialize=25,
+model.transport_cost = Param(initialize=0,
                              doc='Freight in dollars per ton per km')
 
 # Limits related parameters, read from the database/files
@@ -109,21 +107,21 @@ model.min_capacity = Param(initialize=150,
                            doc='Min installation per site kW')
 
 biomass_price = pd.DataFrame(biomass_list)
-biomass_price['price_trgt'] = biomass_df.price_trgt
+biomass_price['price_trgt'] = 0  # biomass_df.price_trgt
 biomass_price = biomass_price.set_index(0).to_dict()['price_trgt']
 model.biomass_cost = Param(model.SOURCES,
                            initialize=biomass_price,
                            doc='Cost of biomass per ton')
 
 substation_price = pd.DataFrame(substation_list)
-substation_price['sbs_price'] = 0.6  # substation_df.sbs_price'
+substation_price['sbs_price'] = 0.9  # substation_df.sbs_price'
 substation_price = substation_price.set_index(0).to_dict()['sbs_price']
 model.fit_tariff = Param(model.SUBSTATIONS,
                          initialize=substation_price,
                          doc='Payment depending on the location $/kWh')
 
 # Operational parameters
-model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
+model.heat_rate = Param(initialize=833.3, doc='Heat rate kWh/TON')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 model.total_hours = Param(initialize=8760, doc='Total amount of hours in the analysis period')
 
@@ -160,9 +158,12 @@ else:
     for (bio_idx, biomass_source) in enumerate(biomass_list):
         for (sub_idx, substation_dest) in enumerate(substation_list):
             matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
-            distance_table[biomass_source, substation_dest] = 0.001 * (
-                matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-            time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+            error = matrx_distance['rows'][0]['elements'][0]['status']
+            if error != 'OK':
+                print("Route data unavailable for" + biomass_coord[bio_idx], substation_coord[sub_idx])
+            else:
+                distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+                time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
 
     f = open('time_table.dat', 'w')
     f.write(str(time_table))
@@ -263,7 +264,7 @@ def Pwapprox_InstallCost_rule(mdl, s, p):
     c_i is the slope of the line, and d_i is the intercept.
 
     """
-    return (mdl.Fixed_Install_Cost[s] == mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
+    return (mdl.Fixed_Install_Cost[s] >= mdl.install_cost_slope[p] * (mdl.CapInstalled[s] / 150) +
             mdl.install_cost_intercept[p])
 
 model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
@@ -275,16 +276,16 @@ model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
 def net_profits_rule(mdl):
     return (
         # Fixed capacity installtion costs
-        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) +
+        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) -
         # O&M costs (variable & fixed)
-        sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
-            for s in mdl.SUBSTATIONS) +
+        #sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
+        #    for s in mdl.SUBSTATIONS) +
         # Transportation costs
-        sum(mdl.distances[r] * model.BiomassTransported[r]
-            for r in mdl.ROUTES) +
+        #sum(mdl.distances[r] * model.BiomassTransported[r]
+        #    for r in mdl.ROUTES) +
         # Biomass acquisition costs.
-        sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
-            for b in mdl.SOURCES) -
+        #sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
+        #    for b in mdl.SOURCES) -
         # Gross profits during the period
         sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
             for s in mdl.SUBSTATIONS)
@@ -301,7 +302,7 @@ model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
 
 def pyomo_postprocess(options=None, instance=None, results=None):
     model.CapInstalled.display()
-    model.BiomassTransported.display()
+    #model.BiomassTransported.display()
 
 # This is an optional code path that allows the script to be run outside of
 # pyomo command-line.  For example:  python transport.py

@@ -58,8 +58,8 @@ of installing the amount N of gasifiers. Given that the gasifiers can only be
 installed in integer number, this is a better approximation of the costs than
 using a cost per kw. This explicit calculation needs to be replaced with a file.
 """
-number_of_containers = [0, 1, 2, 3, 5, 10]
-cost = [0, 4000, 6500, 7500, 9300, 13000]
+number_of_containers = [0, 1, 2, 3, 5, 10, 20]
+cost = [0, 4000, 6500, 7500, 9300, 13000, 17000]
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
@@ -84,13 +84,13 @@ model.om_cost_fix = Param(initialize=0,
                           doc='Fixed cost of operation per installed kW')
 model.om_cost_var = Param(initialize=0,
                           doc='Variable cost of operation per installed kW')
-model.transport_cost = Param(initialize=0,
-                             doc='Freight in dollars per ton per km')
+model.transport_cost = Param(initialize=0.1343,
+                             doc='Freight in dollars per BDT per km')
 
 # Limits related parameters, read from the database/files
 
 biomass_prod = pd.DataFrame(biomass_list)
-biomass_prod['production'] = biomass_df.production
+biomass_prod['production'] = biomass_df.production * 100
 biomass_prod = biomass_prod.set_index(0).to_dict()['production']
 model.source_biomass_max = Param(model.SOURCES,
                                  initialize=biomass_prod,
@@ -103,18 +103,19 @@ substation_capacity = substation_capacity.set_index(0).to_dict()['sbs_cap']
 model.max_capacity = Param(model.SUBSTATIONS,
                            initialize=substation_capacity,
                            doc='Max installation per site kW')
-model.min_capacity = Param(initialize=150,
+model.min_capacity = Param(model.SUBSTATIONS,
+                           initialize=150,
                            doc='Min installation per site kW')
 
 biomass_price = pd.DataFrame(biomass_list)
-biomass_price['price_trgt'] = 0  # biomass_df.price_trgt
+biomass_price['price_trgt'] = biomass_df.price_trgt
 biomass_price = biomass_price.set_index(0).to_dict()['price_trgt']
 model.biomass_cost = Param(model.SOURCES,
                            initialize=biomass_price,
                            doc='Cost of biomass per ton')
 
 substation_price = pd.DataFrame(substation_list)
-substation_price['sbs_price'] = 0.9  # substation_df.sbs_price'
+substation_price['sbs_price'] = 0.09  # substation_df.sbs_price'
 substation_price = substation_price.set_index(0).to_dict()['sbs_price']
 model.fit_tariff = Param(model.SUBSTATIONS,
                          initialize=substation_price,
@@ -246,26 +247,34 @@ model.Install_Decision_Max = Constraint(
     doc='Limit the maximum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
 
 
+def Install_Decision_Min_rule(mdl, s):
+    return mdl.CapInstalled[s] >= mdl.InstallorNot[s] * mdl.min_capacity[s]
+
+model.Install_Decision_Min = Constraint(
+    model.SUBSTATIONS, rule=Install_Decision_Min_rule,
+    doc='Limit the mininum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
+
+
 # This set of constraints define the piece-wise linear approximation of
 # installation cost
 
 
 def Pwapprox_InstallCost_rule(mdl, s, p):
     r"""
-    This rule approximates picewise non-linear cost functions.
+    This rule approximates picewise non-linear concave cost functions.
 
     It has a input from the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
 
     The model is as follows (as per Bersimas Introduction to linear optimization, page 17)
 
     min z &\\
-    s.t. & z \ge c_i x + d_i forall i
+    s.t. & z \le c_i x + d_i forall i
 
     where z is a slack variable, i is the set of lines that approximate the non-linear convex function,
     c_i is the slope of the line, and d_i is the intercept.
 
     """
-    return (mdl.Fixed_Install_Cost[s] >= mdl.install_cost_slope[p] * (mdl.CapInstalled[s] / 150) +
+    return (mdl.Fixed_Install_Cost[s] <= mdl.install_cost_slope[p] * (mdl.CapInstalled[s] / 150) +
             mdl.install_cost_intercept[p])
 
 model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
@@ -274,25 +283,25 @@ model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
 
 
 # Define Objective Function.
-def net_profits_rule(mdl):
+def net_revenue_rule(mdl):
     return (
         # Fixed capacity installtion costs
-        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) -
+        sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) +
         # O&M costs (variable & fixed)
-        #sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
-        #    for s in mdl.SUBSTATIONS) +
+        sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
+            for s in mdl.SUBSTATIONS) +
         # Transportation costs
-        #sum(mdl.distances[r] * model.BiomassTransported[r]
-        #    for r in mdl.ROUTES) +
+        sum(mdl.distances[r] * model.BiomassTransported[r] * mdl.transport_cost
+            for r in mdl.ROUTES) +
         # Biomass acquisition costs.
-        #sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
-        #    for b in mdl.SOURCES) -
+        sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
+            for b in mdl.SOURCES) -
         # Gross profits during the period
         sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
             for s in mdl.SUBSTATIONS)
-        )
+          )
 
-model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
+model.net_profits = Objective(rule=net_revenue_rule, sense=minimize,
                               doc='Define objective function')
 
 # Display of the output #
@@ -303,7 +312,7 @@ model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
 
 def pyomo_postprocess(options=None, instance=None, results=None):
     model.CapInstalled.display()
-    #model.BiomassTransported.display()
+    # model.BiomassTransported.display()
 
 # This is an optional code path that allows the script to be run outside of
 # pyomo command-line.  For example:  python transport.py

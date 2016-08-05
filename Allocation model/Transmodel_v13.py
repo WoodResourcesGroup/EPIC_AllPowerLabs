@@ -5,6 +5,7 @@
 
 from __future__ import division
 from pyomo.environ import *
+from pyomo.opt import SolverFactory
 import googlemaps
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,11 +47,6 @@ biomass_coord = biomass_coord.values.tolist()
 substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
 substation_coord = substation_coord.values.tolist()
 
-# This portion of the code is temporary, only used to limit the amount of data during development.
-biomass_list = biomass_coord[32:39]
-substation_list = substation_coord[1774:1789]
-
-# Data for the piecewise approximation of installation costs
 """
 The data for the piecewise cost of installation is given in # of gasifiers per
 substation. This is why the sizes are integers. The cost is the total cost in $
@@ -60,6 +56,82 @@ using a cost per kw. This explicit calculation needs to be replaced with a file.
 """
 number_of_containers = [0, 1, 2, 3, 5, 10, 20]
 cost = [0, 4000, 6500, 7500, 9300, 13000, 17000]
+
+"""
+Distances from googleAPI, matrx_distance is a dictionary, first it extends
+the biomass list to include the substations for the distance calculations
+Extract distances and travel times from the google maps API results
+
+As of now, the code checks if the matrices already exist, this protection is
+quite unrefined and will need better practices in the future, like comparing the
+lists loaded in the model with the list in the files. For testing purposes, it
+will work and avoid constant queries to the google API.
+
+This portion of the code is run before the definition of the sets, to avoid
+issues when some routes are not available.
+"""
+gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
+distance_table = {}
+time_table = {}
+biomass_list = []
+substation_list = []
+
+if os.path.isfile('distance_table.dat') and os.path.isfile('substation_list.dat'):
+    print "matrices exist at this time"
+
+    f = open('biomass_list.dat', 'r')
+    biomass_list = f.read()
+    f.close()
+    biomass_list = ast.literal_eval(biomass_list)
+
+    f = open('substation_list.dat', 'r')
+    substation_list = f.read()
+    f.close()
+    substation_list = ast.literal_eval(substation_list)
+
+    f = open('time_table.dat', 'r')
+    time_table = f.read()
+    f.close()
+    time_table = ast.literal_eval(time_table)
+
+    f = open('distance_table.dat', 'r')
+    distance_table = f.read()
+    f.close()
+    distance_table = ast.literal_eval(distance_table)
+
+else:
+    print "There are no matrix files stored"
+
+    for (bio_idx, biomass_source) in enumerate(biomass_coord):
+        for (sub_idx, substation_dest) in enumerate(substation_coord):
+            matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
+            error = matrx_distance['rows'][0]['elements'][0]['status']
+            if error != 'OK':
+                print "Route data unavailable for " + biomass_coord[bio_idx], substation_coord[sub_idx]
+            else:
+                print "Route data available for " + biomass_coord[bio_idx], substation_coord[sub_idx]
+                if str(biomass_coord[bio_idx]) not in biomass_list:
+                    biomass_list.extend([str(biomass_coord[bio_idx])])
+                if str(substation_coord[sub_idx]) not in substation_list:
+                    substation_list.extend([str(substation_coord[sub_idx])])
+                distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+                time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+
+    f = open('biomass_list.dat', 'w')
+    f.write(str(biomass_list))
+    f.close()
+
+    f = open('substation_list.dat', 'w')
+    f.write(str(substation_list))
+    f.close()
+
+    f = open('distance_table.dat', 'w')
+    f.write(str(distance_table))
+    f.close()
+
+    f = open('time_table.dat', 'w')
+    f.write(str(time_table))
+    f.close()
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
@@ -90,7 +162,7 @@ model.transport_cost = Param(initialize=0.1343,
 # Limits related parameters, read from the database/files
 
 biomass_prod = pd.DataFrame(biomass_list)
-biomass_prod['production'] = biomass_df.production * 100
+biomass_prod['production'] = biomass_df.production
 biomass_prod = biomass_prod.set_index(0).to_dict()['production']
 model.source_biomass_max = Param(model.SOURCES,
                                  initialize=biomass_prod,
@@ -125,57 +197,6 @@ model.fit_tariff = Param(model.SUBSTATIONS,
 model.heat_rate = Param(initialize=833.3, doc='Heat rate kWh/TON')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 model.total_hours = Param(initialize=8760, doc='Total amount of hours in the analysis period')
-
-
-"""
-Distances from googleAPI, matrx_distance is a dictionary, first it extends
-the biomass list to include the substations for the distance calculations
-Extract distances and travel times from the google maps API results
-
-As of now, the code checks if the matrices already exist, this protection is
-quite unrefined and will need better practices in the future, like comparing the
-lists loaded in the model with the list in the files. For testing purposes, it
-will work and avoid constant queries to the google API.
-"""
-gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
-distance_table = {}
-time_table = {}
-
-if os.path.isfile('distance_table.dat') and os.path.isfile('time_table.dat'):
-    print "matrices exist at this time"
-
-    f = open('time_table.dat', 'r')
-    time_table = f.read()
-    f.close()
-    time_table = ast.literal_eval(time_table)
-
-    f = open('distance_table.dat', 'r')
-    distance_table = f.read()
-    f.close()
-    distance_table = ast.literal_eval(distance_table)
-else:
-    print "There are no matrix files stored"
-
-    for (bio_idx, biomass_source) in enumerate(biomass_list):
-        for (sub_idx, substation_dest) in enumerate(substation_list):
-            matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
-            error = matrx_distance['rows'][0]['elements'][0]['status']
-            if error != 'OK':
-                print "Route data unavailable for " + biomass_coord[bio_idx], substation_coord[sub_idx]
-            else:
-                print "Route data available for " + biomass_coord[bio_idx], substation_coord[sub_idx]
-                distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-                time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
-
-    f = open('time_table.dat', 'w')
-    f.write(str(time_table))
-    f.close()
-
-    f = open('distance_table.dat', 'w')
-    f.write(str(distance_table))
-    f.close()
-
-
 model.distances = Param(model.ROUTES, initialize=distance_table, doc='Distance in km')
 model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
 
@@ -309,20 +330,11 @@ model.net_profits = Objective(rule=net_revenue_rule, sense=minimize,
 # plt.plot(size, cost)
 # plt.show()
 
+opt = SolverFactory("gurobi")
+results = opt.solve(model, tee=True)
 
-def pyomo_postprocess(options=None, instance=None, results=None):
-    model.CapInstalled.display()
-    # model.BiomassTransported.display()
-
-# This is an optional code path that allows the script to be run outside of
-# pyomo command-line.  For example:  python transport.py
-if __name__ == '__main__':
-    # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
-    opt = SolverFactory("gurobi")
-    results = opt.solve(model, tee=True)
-    # sends results to stdout
-    results.write()
-    print("\nDisplaying Solution\n" + '-' * 60)
-    pyomo_postprocess(None, None, results)
+f = open('results.txt', 'w')
+for v_data in model.component_data_objects(Var):
+    if value(v_data) > 1:
+        f.write(v_data.cname(True) + ", value = " + str(value(v_data)) + "\n")
+f.close()

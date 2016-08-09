@@ -5,6 +5,7 @@
 
 from __future__ import division
 from pyomo.environ import *
+from pyomo.opt import SolverFactory
 import googlemaps
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,11 +47,6 @@ biomass_coord = biomass_coord.values.tolist()
 substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
 substation_coord = substation_coord.values.tolist()
 
-# This portion of the code is temporary, only used to limit the amount of data during development.
-biomass_list = biomass_coord[32:39]
-substation_list = substation_coord[1774:1789]
-
-# Data for the piecewise approximation of installation costs
 """
 The data for the piecewise cost of installation is given in # of gasifiers per
 substation. This is why the sizes are integers. The cost is the total cost in $
@@ -58,8 +54,84 @@ of installing the amount N of gasifiers. Given that the gasifiers can only be
 installed in integer number, this is a better approximation of the costs than
 using a cost per kw. This explicit calculation needs to be replaced with a file.
 """
-number_of_containers = [0, 1, 2, 3, 5, 10]
-cost = [0, 4000, 6500, 7500, 9300, 13000]
+number_of_containers = [0, 1, 2, 3, 5, 10, 20]
+cost = [0, 4000, 6500, 7500, 9300, 13000, 17000]
+
+"""
+Distances from googleAPI, matrx_distance is a dictionary, first it extends
+the biomass list to include the substations for the distance calculations
+Extract distances and travel times from the google maps API results
+
+As of now, the code checks if the matrices already exist, this protection is
+quite unrefined and will need better practices in the future, like comparing the
+lists loaded in the model with the list in the files. For testing purposes, it
+will work and avoid constant queries to the google API.
+
+This portion of the code is run before the definition of the sets, to avoid
+issues when some routes are not available.
+"""
+gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
+distance_table = {}
+time_table = {}
+biomass_list = []
+substation_list = []
+
+if os.path.isfile('distance_table.dat') and os.path.isfile('substation_list.dat'):
+    print "matrices exist at this time"
+
+    f = open('biomass_list.dat', 'r')
+    biomass_list = f.read()
+    f.close()
+    biomass_list = ast.literal_eval(biomass_list)
+
+    f = open('substation_list.dat', 'r')
+    substation_list = f.read()
+    f.close()
+    substation_list = ast.literal_eval(substation_list)
+
+    f = open('time_table.dat', 'r')
+    time_table = f.read()
+    f.close()
+    time_table = ast.literal_eval(time_table)
+
+    f = open('distance_table.dat', 'r')
+    distance_table = f.read()
+    f.close()
+    distance_table = ast.literal_eval(distance_table)
+
+else:
+    print "There are no matrix files stored"
+
+    for (bio_idx, biomass_source) in enumerate(biomass_coord):
+        for (sub_idx, substation_dest) in enumerate(substation_coord):
+            matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
+            error = matrx_distance['rows'][0]['elements'][0]['status']
+            if error != 'OK':
+                print "Route data unavailable for " + biomass_coord[bio_idx], substation_coord[sub_idx]
+            else:
+                print "Route data available for " + biomass_coord[bio_idx], substation_coord[sub_idx]
+                if str(biomass_coord[bio_idx]) not in biomass_list:
+                    biomass_list.extend([str(biomass_coord[bio_idx])])
+                if str(substation_coord[sub_idx]) not in substation_list:
+                    substation_list.extend([str(substation_coord[sub_idx])])
+                distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+                time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+
+    f = open('biomass_list.dat', 'w')
+    f.write(str(biomass_list))
+    f.close()
+
+    f = open('substation_list.dat', 'w')
+    f.write(str(substation_list))
+    f.close()
+
+    f = open('distance_table.dat', 'w')
+    f.write(str(distance_table))
+    f.close()
+
+    f = open('time_table.dat', 'w')
+    f.write(str(time_table))
+    f.close()
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')
@@ -80,14 +152,12 @@ are not read from the files or database.
 """
 
 # Cost related parameters, most of them to be replaced with cost curves
-model.installation_cost_var = Param(initialize=150,
-                                    doc='Variable installation cost per kW')
-model.om_cost_fix = Param(initialize=100,
+model.om_cost_fix = Param(initialize=0,
                           doc='Fixed cost of operation per installed kW')
-model.om_cost_var = Param(initialize=40,
+model.om_cost_var = Param(initialize=0,
                           doc='Variable cost of operation per installed kW')
-model.transport_cost = Param(initialize=25,
-                             doc='Freight in dollars per ton per km')
+model.transport_cost = Param(initialize=0.1343,
+                             doc='Freight in dollars per BDT per km')
 
 # Limits related parameters, read from the database/files
 
@@ -105,7 +175,8 @@ substation_capacity = substation_capacity.set_index(0).to_dict()['sbs_cap']
 model.max_capacity = Param(model.SUBSTATIONS,
                            initialize=substation_capacity,
                            doc='Max installation per site kW')
-model.min_capacity = Param(initialize=150,
+model.min_capacity = Param(model.SUBSTATIONS,
+                           initialize=150,
                            doc='Min installation per site kW')
 
 biomass_price = pd.DataFrame(biomass_list)
@@ -116,63 +187,16 @@ model.biomass_cost = Param(model.SOURCES,
                            doc='Cost of biomass per ton')
 
 substation_price = pd.DataFrame(substation_list)
-substation_price['sbs_price'] = 0.6  # substation_df.sbs_price'
+substation_price['sbs_price'] = 0.09  # substation_df.sbs_price'
 substation_price = substation_price.set_index(0).to_dict()['sbs_price']
 model.fit_tariff = Param(model.SUBSTATIONS,
                          initialize=substation_price,
                          doc='Payment depending on the location $/kWh')
 
 # Operational parameters
-model.heat_rate = Param(initialize=0.8333, doc='Heat rate kWh/Kg')
+model.heat_rate = Param(initialize=833.3, doc='Heat rate kWh/TON')
 model.capacity_factor = Param(initialize=0.85, doc='Gasifier capacity factor')
 model.total_hours = Param(initialize=8760, doc='Total amount of hours in the analysis period')
-
-
-"""
-Distances from googleAPI, matrx_distance is a dictionary, first it extends
-the biomass list to include the substations for the distance calculations
-Extract distances and travel times from the google maps API results
-
-As of now, the code checks if the matrices already exist, this protection is
-quite unrefined and will need better practices in the future, like comparing the
-lists loaded in the model with the list in the files. For testing purposes, it
-will work and avoid constant queries to the google API.
-"""
-gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
-distance_table = {}
-time_table = {}
-
-if os.path.isfile('distance_table.dat') and os.path.isfile('time_table.dat'):
-    print "matrices exist at this time"
-
-    f = open('time_table.dat', 'r')
-    time_table = f.read()
-    f.close()
-    time_table = ast.literal_eval(time_table)
-
-    f = open('distance_table.dat', 'r')
-    distance_table = f.read()
-    f.close()
-    distance_table = ast.literal_eval(distance_table)
-else:
-    print "There are no matrix files stored"
-
-    for (bio_idx, biomass_source) in enumerate(biomass_list):
-        for (sub_idx, substation_dest) in enumerate(substation_list):
-            matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
-            distance_table[biomass_source, substation_dest] = 0.001 * (
-                matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-            time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
-
-    f = open('time_table.dat', 'w')
-    f.write(str(time_table))
-    f.close()
-
-    f = open('distance_table.dat', 'w')
-    f.write(str(distance_table))
-    f.close()
-
-
 model.distances = Param(model.ROUTES, initialize=distance_table, doc='Distance in km')
 model.times = Param(model.ROUTES, initialize=time_table, doc='Time in Hours')
 
@@ -244,26 +268,34 @@ model.Install_Decision_Max = Constraint(
     doc='Limit the maximum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
 
 
+def Install_Decision_Min_rule(mdl, s):
+    return mdl.CapInstalled[s] >= mdl.InstallorNot[s] * mdl.min_capacity[s]
+
+model.Install_Decision_Min = Constraint(
+    model.SUBSTATIONS, rule=Install_Decision_Min_rule,
+    doc='Limit the mininum installed capacity and bind the continuous decision to the binary InstallorNot variable.')
+
+
 # This set of constraints define the piece-wise linear approximation of
 # installation cost
 
 
 def Pwapprox_InstallCost_rule(mdl, s, p):
     r"""
-    This rule approximates picewise non-linear cost functions.
+    This rule approximates picewise non-linear concave cost functions.
 
     It has a input from the output from the function calculate_lines and the set PW. The installation cost is calculated by substation.
 
     The model is as follows (as per Bersimas Introduction to linear optimization, page 17)
 
     min z &\\
-    s.t. & z \ge c_i x + d_i forall i
+    s.t. & z \le c_i x + d_i forall i
 
     where z is a slack variable, i is the set of lines that approximate the non-linear convex function,
     c_i is the slope of the line, and d_i is the intercept.
 
     """
-    return (mdl.Fixed_Install_Cost[s] == mdl.install_cost_slope[p] * mdl.CapInstalled[s] +
+    return (mdl.Fixed_Install_Cost[s] <= mdl.install_cost_slope[p] * (mdl.CapInstalled[s] / 150) +
             mdl.install_cost_intercept[p])
 
 model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
@@ -272,7 +304,7 @@ model.Installation_Cost = Constraint(model.SUBSTATIONS, model.Pw_Install_Cost,
 
 
 # Define Objective Function.
-def net_profits_rule(mdl):
+def net_revenue_rule(mdl):
     return (
         # Fixed capacity installtion costs
         sum(mdl.Fixed_Install_Cost[s] for s in mdl.SUBSTATIONS) +
@@ -280,7 +312,7 @@ def net_profits_rule(mdl):
         sum((mdl.om_cost_fix + mdl.capacity_factor * mdl.om_cost_var) * mdl.CapInstalled[s]
             for s in mdl.SUBSTATIONS) +
         # Transportation costs
-        sum(mdl.distances[r] * model.BiomassTransported[r]
+        sum(mdl.distances[r] * model.BiomassTransported[r] * mdl.transport_cost
             for r in mdl.ROUTES) +
         # Biomass acquisition costs.
         sum(mdl.biomass_cost[b] * sum(mdl.BiomassTransported[b, s] for s in mdl.SUBSTATIONS)
@@ -288,9 +320,9 @@ def net_profits_rule(mdl):
         # Gross profits during the period
         sum(mdl.fit_tariff[s] * mdl.CapInstalled[s] * mdl.capacity_factor * mdl.total_hours
             for s in mdl.SUBSTATIONS)
-        )
+          )
 
-model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
+model.net_profits = Objective(rule=net_revenue_rule, sense=minimize,
                               doc='Define objective function')
 
 # Display of the output #
@@ -298,20 +330,11 @@ model.net_profits = Objective(rule=net_profits_rule, sense=minimize,
 # plt.plot(size, cost)
 # plt.show()
 
+opt = SolverFactory("gurobi")
+results = opt.solve(model, tee=True)
 
-def pyomo_postprocess(options=None, instance=None, results=None):
-    model.CapInstalled.display()
-    model.BiomassTransported.display()
-
-# This is an optional code path that allows the script to be run outside of
-# pyomo command-line.  For example:  python transport.py
-if __name__ == '__main__':
-    # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
-    opt = SolverFactory("gurobi")
-    results = opt.solve(model, tee=True)
-    # sends results to stdout
-    results.write()
-    print("\nDisplaying Solution\n" + '-' * 60)
-    pyomo_postprocess(None, None, results)
+f = open('results.txt', 'w')
+for v_data in model.component_data_objects(Var):
+    if value(v_data) > 1:
+        f.write(v_data.cname(True) + ", value = " + str(value(v_data)) + "\n")
+f.close()

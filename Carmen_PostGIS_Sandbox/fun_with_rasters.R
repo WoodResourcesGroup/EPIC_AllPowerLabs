@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 library(rgdal)
 library(raster)
 library(rgeos)

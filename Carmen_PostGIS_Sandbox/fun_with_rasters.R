@@ -29,7 +29,7 @@ LEMMA <- raster("LEMMA.gri")
 
 ### DROUGHT MORTALITY POLYGONS
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-drought.test <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
+drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
 # drought <- spTransform(drought, crs(LEMMA)) #change it to CRS of Gonzalez and LEMMA data - this takes a while
@@ -41,16 +41,13 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 highhaz <- readOGR(dsn = "HighHazardZones.gdb", layer = "HHZ_Tier2")
 crs(highhaz)
 highhaz <- spTransform(highhaz, crs(drought))
-# test intersection
-drought.test <- gIntersection(drought.s, highhaz)
-plot(highhaz, ext = extent(drought.s), col='blue')
-plot(drought.test, col='red', add=T)
-plot(highhaz, add=T, col='blue')
-plot(drought.s, add=T)
-drought <- drought.test
+
+#drought.test <- gIntersection(drought.s, highhaz)
+#drought.s.gIntersection <- drought.test
+# Intersection is too hard for now - ask Jose to do it on QGIS
 
 # narrow drought down to large-ish polygons
-drought <- 
+drought <- subset(drought, drought$ACRES > 2)
 
 ### RAMIREZ DATA
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")

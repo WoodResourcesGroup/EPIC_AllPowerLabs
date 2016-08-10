@@ -29,7 +29,7 @@ LEMMA <- raster("LEMMA.gri")
 
 ### DROUGHT MORTALITY POLYGONS
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
+#drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
 # drought <- spTransform(drought, crs(LEMMA)) #change it to CRS of Gonzalez and LEMMA data - this takes a while
@@ -38,9 +38,9 @@ drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortali
 drought <- readOGR("tempdir", "drought")
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 # take out areas not in high hazard zones
-highhaz <- readOGR(dsn = "HighHazardZones.gdb", layer = "HHZ_Tier2")
-crs(highhaz)
-highhaz <- spTransform(highhaz, crs(drought))
+#highhaz <- readOGR(dsn = "HighHazardZones.gdb", layer = "HHZ_Tier2")
+#crs(highhaz)
+#highhaz <- spTransform(highhaz, crs(drought))
 
 #drought.test <- gIntersection(drought.s, highhaz)
 #drought.s.gIntersection <- drought.test
@@ -98,6 +98,7 @@ result.trial <- read.csv("Trial_Biomass_Polygons.csv")
 sample <- sample(nrow(drought), 500, replace =F)
 plot(drought[sample,]) #?
 result.sample <- data.frame()
+# Use this for loop to figure out what the species are in the sample
 for (i in sample) {
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
@@ -106,19 +107,58 @@ for (i in sample) {
   tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are 
   s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
-  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","CONPLBA","ABGRC_BA","CADE27_BA")]
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA")]
   if (is.na(L.in.mat[1,1])) {
     next
   }
   result.sample <- rbind(L.in.mat, result.sample)
 }
-sort(summary(result.sample$TREEPLBA)) # Find most common species
-plot(tail(sort(summary(result.sample$TREEPLBA)), n=20))
-  
-  
+
+# Try biomass with just conifers first
+sort(summary(result.sample$CONPLBA)) # Find most common species
+plot(tail(sort(summary(result.sample$CONPLBA)), n=20)) # It looks like there's a cutoff, zoom in:
+plot(tail(sort(summary(result.sample$CONPLBA)), n=20), ylim=c(0,500)) # The cutoff is at around 300, meaning PIMO
+spp.names <- names(tail(sort(summary(result.sample$CONPLBA)), n=13))
+
+# Create table based on Jenkins paper - for now only broken down by broad category, but I could do it by individual species later if we want
+types <- c("Cedar", "Dougfir", "Fir", "Pine", "Spruce")
+B0 <- as.numeric(c(-2.0336, -2.2304, -2.5384, -2.5356, -2.0773))
+B1 <- as.numeric(c(2.2592, 2.4435, 2.4814, 2.4349, 2.3323))
+BM_eqns <- cbind(types, B0, B1)
+BM_eqns <- as.data.frame(BM_eqns)
+class(BM_eqns$B0) <- "numeric"
+all.species <- sort(levels(unique(result.sample$CONPLBA)))
+
+Cedars <- c("CADE27", "THPL", "CHLA", "CHNO") # all have been checked for genus
+Dougfirs <- c("PSMA", "PSMA") # all have been checked for genus
+Firs <- c("ABAM", "ABBR", "ABGRC", "ABLA", "ABPRSH", "TSHE", "TSME")
+Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") # all have been checked for genus
+Spruces <- c("PIEN", "PISI") # all have been checked for genus
+
+# Test inner for loop
+L.in.mat$BA_tree_kg <- 0
+for (i in 1:nrow(L.in.mat)) {
+  cell <- L.in.mat[i,]
+  if (cell$CONPLBA %in% Cedars) {
+    num <- (B0[1] + B1[1]*log(cell$QMDC_DOM))
+  } else if (cell$CONPLBA %in% Dougfirs) {
+    num <- (B0[2] + B1[2]*log(cell$QMDC_DOM))
+  } else if (cell$CONPLBA %in% Firs) {
+    num <- (B0[3] + B1[3]*log(cell$QMDC_DOM))
+  } else if (cell$CONPLBA %in% Pines) {
+    num <- (B0[4] + B1[4]*log(cell$QMDC_DOM))
+  } else if (cell$CONPLBA %in% Spruces) {
+    num <- (B0[5] + B1[5]*log(cell$QMDC_DOM))
+  } else {
+    num <- 0
+  }
+  L.in.mat[i,]$CONBA_tree_kg <- exp(num)
+}
+
+
 result.lemma <- data.frame()
-for (i in sample) {
-  single <- drought[i,]
+for (i in 1:2) {
+  single <- drought[7,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts data from the raster
@@ -126,29 +166,62 @@ for (i in sample) {
   s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
   mat2 <- as.data.frame(tab[[1]]/s) # Gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
-  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","ABGRC_BA","CADE27_BA")]
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3", "BAC_GE_3", "BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA")]
+  # Calculate biomass per tree for average tree size of dom and codom, for most common species, for each raster cell
+  L.in.mat$BA_tree_kg <- 0
+  for (i in 1:nrow(L.in.mat)) {
+    cell <- L.in.mat[i,]
+    if (cell$CONPLBA %in% Cedars) {
+      num <- (B0[1] + B1[1]*log(cell$QMDC_DOM))
+    } else if (cell$CONPLBA %in% Dougfirs) {
+      num <- (B0[2] + B1[2]*log(cell$QMDC_DOM))
+    } else if (cell$CONPLBA %in% Firs) {
+      num <- (B0[3] + B1[3]*log(cell$QMDC_DOM))
+    } else if (cell$CONPLBA %in% Pines) {
+      num <- (B0[4] + B1[4]*log(cell$QMDC_DOM))
+    } else if (cell$CONPLBA %in% Spruces) {
+      num <- (B0[5] + B1[5]*log(cell$QMDC_DOM))
+    } else {
+      num <- 0
+    }
+    L.in.mat[i,]$CONBA_tree_kg <- exp(num)
+  }
+  
   # NEED TO LOOK AT CONPLBA FOR A SUBSET OF POLYGONS AND THEN SELECT TREEPLBA FOR THE MOST COMMON ONES, THEN CALCULATE BIOMASS BASED ON FRACTION OF EACH
   if (is.na(L.in.mat[1,1])) {
       next
   }
   merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
+  BA <- mean(merge$BA_GE_3) # average basal area
   BM <- sum(merge$BPHC_GE_3_CRM*merge$Freq)
   THA <- sum(merge$TPHC_GE_3*merge$Freq)
-  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,BM, THA,gCentroid(single)@coords)
+  TREEPL <- names(tail(sort(summary(merge$TREEPLBA)), n=1)) # most common tree
+  TREEPLR <- as.numeric(tail(sort(summary(merge$TREEPLBA)), n=1))/nrow(merge) # Proportion of cells with most common tree
+  CONPL <- names(tail(sort(summary(merge$CONPLBA)), n=1))
+  CONPLR <- as.numeric(tail(sort(summary(merge$CONPLBA)), n=1))/nrow(merge) # Proportion of cells with most common conifer
+  numcon <- length(tail(sort(summary(merge$CONPLBA))))
+  CONPL2 <- names(tail(sort(summary(merge$CONPLBA))))[numcon-1]
+  CONPLR2 <- as.numeric(tail(sort(summary(merge$CONPLBA))))[numcon-1]/nrow(merge) # Proportion of cells with 2nd most common conifer
+  CONPL3 <- names(tail(sort(summary(merge$CONPLBA))))[numcon-2]
+  CONPLR3 <- as.numeric(tail(sort(summary(merge$CONPLBA))))[numcon-2]/nrow(merge) # Proportion of cells with 3rd most common conifer
+  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,BM, THA, TREEPL, TREEPLR, 
+                 CONPL,CONPLR, CONPL2, CONPLR2, CONPL3, CONPLR3,gCentroid(single)@coords)
   final <- as.data.frame(final)
-  names(final)[names(final)=="V1"] <- "RPT_YR"
-  names(final)[names(final)=="V2"] <- "TPA"
-  names(final)[names(final)=="V3"] <- "NO_TREE"
-  names(final)[names(final)=="V4"] <- "FOR_TYP"
-  names(final)[names(final)=="V5"] <- "Shap_Ar"
-  names(final)[names(final)=="x"] <- "Cent.x"
-  names(final)[names(final)=="y"] <- "Cent.y"  
   result.lemma <- rbind(final, result.lemma)
 }
+names(result.lemma)[names(result.lemma)=="V1"] <- "RPT_YR"
+names(result.lemma)[names(result.lemma)=="V2"] <- "TPA"
+names(result.lemma)[names(result.lemma)=="V3"] <- "NO_TREE"
+names(result.lemma)[names(result.lemma)=="V4"] <- "FOR_TYP"
+names(result.lemma)[names(result.lemma)=="V5"] <- "Shap_Ar"
+names(result.lemma)[names(result.lemma)=="x"] <- "Cent.x"
+names(result.lemma)[names(result.lemma)=="y"] <- "Cent.y"  
 result.lemma$est.tot.trees <- ((result.lemma$Shap_Ar)/1000)*result.lemma$THA
 result.lemma$est.perc.dead <- result.lemma$NO_TREE/result.lemma$est.tot.trees
 result.lemma$est.dead.BM <- result.lemma$est.perc.dead * result.lemma$BM
 head(result.lemma)
+
+
 result.lemma.drought.s <- result.lemma #  Error in fix.by(by.y, y) : 'by' must specify a uniquely valid column (at row 879)
 write.csv(result.lemma.drought.s, file = "result.lemma.drought.s_1-879.csv", row.names=F)
 result.lemma.drought.s.1.879 <- read.csv("result.lemma.drought.s_1-879.csv")

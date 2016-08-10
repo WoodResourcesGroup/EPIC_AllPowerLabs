@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 library(rgdal)
 library(raster)
 library(rgeos)
@@ -30,7 +29,7 @@ LEMMA <- raster("LEMMA.gri")
 
 ### DROUGHT MORTALITY POLYGONS
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-# drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
+drought.test <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
 # drought <- spTransform(drought, crs(LEMMA)) #change it to CRS of Gonzalez and LEMMA data - this takes a while
@@ -38,6 +37,20 @@ setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
 # writeOGR(obj=drought, dsn="tempdir",layer = "drought", driver="ESRI Shapefile")
 drought <- readOGR("tempdir", "drought")
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
+# take out areas not in high hazard zones
+highhaz <- readOGR(dsn = "HighHazardZones.gdb", layer = "HHZ_Tier2")
+crs(highhaz)
+highhaz <- spTransform(highhaz, crs(drought))
+# test intersection
+drought.test <- gIntersection(drought.s, highhaz)
+plot(highhaz, ext = extent(drought.s), col='blue')
+plot(drought.test, col='red', add=T)
+plot(highhaz, add=T, col='blue')
+plot(drought.s, add=T)
+drought <- drought.test
+
+# narrow drought down to large-ish polygons
+drought <- 
 
 ### RAMIREZ DATA
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")
@@ -60,17 +73,13 @@ plot(drought.s, add=T)
 # These don't look like they overlap that well. NEED TO CHECK PROJECTION CONVERSIONS
 
 result <- data.frame()
-for (i in 1:nrow(drought.s)) {
+for (i in 1:nrow(drought)) {
   single <- drought.s[i,]
   clip1 <- crop(PG_biomass, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts biomass values from the raster 
-  tab <- lapply(ext, table)
-  s <- sum(tab[[1]]) # This is different from length(clip2tg) because it doesn't include NAs
-  mat <- as.data.frame(tab)
-  mat2 <- as.data.frame(tab[[1]]/s)
-  ave.biomass <- sum(ext[[1]])/s
-  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,ave.biomass, gCentroid(single)@coords) #need to add to this
+  ave.biomass <- mean(ext[[1]])
+  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,ave.biomass, gCentroid(single)@coords) 
   final <- as.data.frame(final)
   names(final)[names(final)=="V1"] <- "RPT_YR"
   names(final)[names(final)=="V2"] <- "TPA"
@@ -82,40 +91,44 @@ for (i in 1:nrow(drought.s)) {
   result <- rbind(final, result)
 }
 head(result)
+write.csv(result, file = "Trial_Biomass_Polygons.csv", row.names=F)
+result.trial <- read.csv("Trial_Biomass_Polygons.csv")
 
 ###  LEMMA data 
 
-result <- data.frame()
-for (i in 2) { #for (i in nrow(drought)) 
-  single <- drought[i,]
+result.lemma <- data.frame()
+for (i in 1:nrow(drought.s)) {
+  single <- drought.s[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts data from the raster
-  tab <- lapply(ext, table)
-  s <- sum(tab[[1]])
+  tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are 
+  s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
-  mat2 <- as.data.frame(tab[[1]]/s)
-  final <- cbind(single@data$RPT_YR,single@data$TPA1,single@data$NO_TREES1,single@data$FOR_TYPE1,single@data$Shape_Area,mat,mat2$Freq) #need to add to this
-  result <- rbind(final, result)
+  mat2 <- as.data.frame(tab[[1]]/s) # Gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BPHC_GE_3_CRM","TPHC_GE_3")]
+  merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
+  BM <- sum(merge$BPHC_GE_3_CRM*merge$Freq)
+  THA <- sum(merge$TPHC_GE_3*merge$Freq)
+  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,BM, THA,gCentroid(single)@coords)
+  final <- as.data.frame(final)
+  names(final)[names(final)=="V1"] <- "RPT_YR"
+  names(final)[names(final)=="V2"] <- "TPA"
+  names(final)[names(final)=="V3"] <- "NO_TREE"
+  names(final)[names(final)=="V4"] <- "FOR_TYP"
+  names(final)[names(final)=="V5"] <- "Shap_Ar"
+  names(final)[names(final)=="x"] <- "Cent.x"
+  names(final)[names(final)=="y"] <- "Cent.y"  
+  result.lemma <- rbind(final, result.lemma)
 }
+result.lemma$est.tot.trees <- ((result.lemma$Shap_Ar)/1000)*result.lemma$THA
+result.lemma$est.perc.dead <- result.lemma$NO_TREE/result.lemma$est.tot.trees
+result.lemma$est.dead.BM <- result.lemma$est.perc.dead * result.lemma$BM
+head(result.lemma)
 
-# test each step before running test loop:
-singlet <- drought[1,]
-clip1t <- crop(LEMMA, extent(singlet))
-plot(clip1t)
-plot(singlet, add=T)
-clip2t <- mask(clip1t, singlet)
-plot(clip2t)
-plot(singlet, add=T)
 
-extt <- extract(clip2t, singlet)
-tabt <- lapply(extt, table)
-st <- sum(tabt[[1]])
-matt <- as.data.frame(tabt)
-mat2t <- as.data.frame(tabt[[1]]/st)
-finalt <- cbind(singlet@data$RPT_YR,singlet@data$TPA1,singlet@data$NO_TREES1,singlet@data$FOR_TYPE1,matt,mat2t$Freq)
-resultt <- data.frame()
-resultt <- rbind(finalt, resultt) # Problem: this doesn't retain spatial data, only attributes
+## NOW FIGURE OUT HOW TO COMBINE THIS WITH THE MATT TABLE - VLOOKUP STYLE
+
 
 ### TESTING ###
 

@@ -66,6 +66,7 @@ CR_mort <- raster("CR_mort.tif")
 
 # Try it on extent of Ramirez data so that I can compare the data sources?
 drought.s <- crop(drought, extent(CR_mort))
+drought.s <- subset(drought.s, drought.s$ACRES >2)
 plot(drought.s, add=T)
 # These don't look like they overlap that well. NEED TO CHECK PROJECTION CONVERSIONS
 
@@ -93,9 +94,30 @@ result.trial <- read.csv("Trial_Biomass_Polygons.csv")
 
 ###  LEMMA data 
 
+### FIND A RANDOM SAMPLE OF DROUGHT TO FIND MOST COMMON TREE SPECIES
+sample <- sample(nrow(drought), 10, replace =F)
+plot(drought[sample,]) #?
+result.sample <- data.frame()
+for (i in sample) {
+  single <- drought[i,]
+  clip1 <- crop(LEMMA, extent(single))
+  clip2 <- mask(clip1, single)
+  ext <- extract(clip2, single) # extracts data from the raster
+  tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are 
+  s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
+  mat <- as.data.frame(tab)
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","ABGRC_BA","CADE27_BA")]
+  if (is.na(L.in.mat[1,1])) {
+    next
+  }
+  result.sample <- rbind(L.in.mat, result.sample)
+}
+  
+  
+  
 result.lemma <- data.frame()
-for (i in 1:nrow(drought.s)) {
-  single <- drought.s[i,]
+for (i in sample) {
+  single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts data from the raster
@@ -103,7 +125,11 @@ for (i in 1:nrow(drought.s)) {
   s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
   mat2 <- as.data.frame(tab[[1]]/s) # Gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
-  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BPHC_GE_3_CRM","TPHC_GE_3")]
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","ABGRC_BA","CADE27_BA")]
+  # NEED TO LOOK AT CONPLBA FOR A SUBSET OF POLYGONS AND THEN SELECT TREEPLBA FOR THE MOST COMMON ONES, THEN CALCULATE BIOMASS BASED ON FRACTION OF EACH
+  if (is.na(L.in.mat[1,1])) {
+      next
+  }
   merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
   BM <- sum(merge$BPHC_GE_3_CRM*merge$Freq)
   THA <- sum(merge$TPHC_GE_3*merge$Freq)
@@ -122,26 +148,25 @@ result.lemma$est.tot.trees <- ((result.lemma$Shap_Ar)/1000)*result.lemma$THA
 result.lemma$est.perc.dead <- result.lemma$NO_TREE/result.lemma$est.tot.trees
 result.lemma$est.dead.BM <- result.lemma$est.perc.dead * result.lemma$BM
 head(result.lemma)
+result.lemma.drought.s <- result.lemma #  Error in fix.by(by.y, y) : 'by' must specify a uniquely valid column (at row 879)
+write.csv(result.lemma.drought.s, file = "result.lemma.drought.s_1-879.csv", row.names=F)
+result.lemma.drought.s.1.879 <- read.csv("result.lemma.drought.s_1-879.csv")
+# For some reason, rows 880 and 1182 are wacky, so I'm leaving it out and running it in chunks
+result.lemma.drought.s.881.1181 <- result.lemma
+write.csv(result.lemma.drought.s.881.1181, file = "result.lemma.drought.s_881.1181.csv", row.names=F)
+result.lemma.drought.s.881.1181 <- read.csv("result.lemma.drought.s_881.1181.csv")
+result.lemma.drought.s.1183.1452 <- result.lemma
+result.lemma.drought.s.1181.end <- result.lemma
+result.drought.s <- rbind(result.lemma.drought.s.1.879, result.lemma.drought.s.881.1181,result.lemma.drought.s.1181.end)
+write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA.csv", row.names=F)
 
+## PROBLEM: THE METHOD ABOVE DOESN'T TAKE INTO ACCOUNT THAT MANY OF THE TPH AREN'T DETECTABLE FROM AIR
+## ANOTHER APPROACH: USE THE "QMDC_DOM" VARIABLE, WHICH IS MEAN DIA OF DOM AND CODOM CONIFERS
+##### THEN CALCULATE BIOMASS, MAYBE BASED ON "TREEPLBA" WHICH TELLS WHICH SPECIES IS MOST COMMON
 
-## NOW FIGURE OUT HOW TO COMBINE THIS WITH THE MATT TABLE - VLOOKUP STYLE
+##### OR BY INDIVIDUAL BASAL AREA METRICS
 
+detach("package:raster", unload=TRUE)
 
 ### TESTING ###
 
-# Crop raster to single drought polygon and visualize to test the loop
-singlet <- drought[1,]
-clip1tG <- crop(PG_biomass, extent(singlet))
-plot(clip1tG)
-plot(singlet, add=T)
-clip2tG <- mask(clip1tG, singlet)
-plot(clip2tG, col=viridis(n=6))
-plot(singlet, add=T) 
-# Problem: when I do this with several different polygons, I find that the small polygons have only one or two raster pixels, and they're distorted by
-# angled polygon sides. So we need to only use drought polygons of a certain size. FOr now, I set this to 5 acres.
-
-# Calculate centroids
-singlet.c <- gCentroid(singlet)
-plot(gCentroid(singlet), add=T)
-singlet.c@coords
-gCentroid(singlet)@coords

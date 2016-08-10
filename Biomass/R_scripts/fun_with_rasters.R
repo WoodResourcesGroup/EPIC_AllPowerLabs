@@ -95,7 +95,7 @@ result.trial <- read.csv("Trial_Biomass_Polygons.csv")
 ###  LEMMA data 
 
 ### FIND A RANDOM SAMPLE OF DROUGHT TO FIND MOST COMMON TREE SPECIES
-sample <- sample(nrow(drought), 10, replace =F)
+sample <- sample(nrow(drought), 500, replace =F)
 plot(drought[sample,]) #?
 result.sample <- data.frame()
 for (i in sample) {
@@ -106,13 +106,14 @@ for (i in sample) {
   tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are 
   s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
-  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","ABGRC_BA","CADE27_BA")]
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA","CONPLBA","ABGRC_BA","CADE27_BA")]
   if (is.na(L.in.mat[1,1])) {
     next
   }
   result.sample <- rbind(L.in.mat, result.sample)
 }
-  
+sort(summary(result.sample$TREEPLBA)) # Find most common species
+plot(tail(sort(summary(result.sample$TREEPLBA)), n=20))
   
   
 result.lemma <- data.frame()

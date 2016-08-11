@@ -42,7 +42,7 @@ sample <- sample(nrow(drought), 500, replace =F)
 plot(drought[sample,]) #?
 result.sample <- data.frame()
 # Use this for loop to figure out what the species are in the sample
-for (i in sample) {
+for (i in 1:length(sample)) {
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
@@ -71,8 +71,8 @@ Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PI
 Spruces <- c("PIEN", "PISI") # all have been checked for genus
 
 result.lemma <- data.frame()
-for (i in 1:10) {
-  single <- drought[i,]
+for (i in 1:2) {
+  single <- drought.s[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts data from the raster
@@ -86,8 +86,8 @@ for (i in 1:10) {
     next
   }
   # Calculate biomass per tree for average tree size of dominant and codominant trees for most common species for each raster cell
-  L.in.mat$CONBA_tree_kg <- 0
-  L.in.mat$CONBA_kg <- 0
+  L.in.mat$CONBM_tree_kg <- 0
+  L.in.mat$CONBM_kg <- 0
   for (i in 1:nrow(L.in.mat)) {
     cell <- L.in.mat[i,]
     if (cell$CONPLBA %in% Cedars) {
@@ -104,21 +104,21 @@ for (i in 1:10) {
       num <- 0
     }
     if (num == 0) {
-      L.in.mat[i,]$CONBA_tree_kg <- 0
+      L.in.mat[i,]$CONBM_tree_kg <- 0
     } else {
-    L.in.mat[i,]$CONBA_tree_kg <- exp(num)
+    L.in.mat[i,]$CONBM_tree_kg <- exp(num)
     }
     NO <- single@data$NO_TREE
-    L.in.mat[i,]$CONBA_kg <- L.in.mat[i,]$CONBA_tree_kg*NO
+    L.in.mat[i,]$CONBM_kg <- L.in.mat[i,]$CONBM_tree_kg*NO
   }
   merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
-  CONBA_kg_pol <- sum(L.in.mat$CONBA_kg)
-  Av_BA_TR <- mean(L.in.mat$CONBA_tree_kg)
+  CONBM_kg_pol <- sum(L.in.mat$CONBM_kg)
+  Av_BM_TR <- mean(L.in.mat$CONBM_tree_kg)
   QMDC_DOM <- mean(L.in.mat$QMDC_DOM)
   CONPL <-  names(tail(sort(summary(merge$CONPLBA)), n=1))
   CONBM_kgha <- sum(merge$BPHC_GE_3_CRM*merge$Freq) # BPHC_GE_3_CRM is estimated biomass of all conifers
   THA <- sum(merge$TPHC_GE_3*merge$Freq)
-  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,CONBM_kgha, THA, QMDC_DOM, CONPL, Av_BA_TR, CONBA_kg_pol,gCentroid(single)@coords)
+  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,CONBM_kgha, THA, QMDC_DOM, CONPL, Av_BM_TR, CONBM_kg_pol,gCentroid(single)@coords)
   final <- as.data.frame(final)
   final$est.tot.trees <- (single@data$Shap_Ar/10000)*THA
   final$est.tot.BM <- (single@data$Shap_Ar/10000)*CONBM_kgha
@@ -138,26 +138,9 @@ remove(cell, final, L.in.mat, mat, mat2, merge)
 remove(BM_eqns, BA, BM, clip1, clip2, CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
 remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR)
 
-
-result.lemma.drought.s <- result.lemma #  Error in fix.by(by.y, y) : 'by' must specify a uniquely valid column (at row 879)
-write.csv(result.lemma.drought.s, file = "result.lemma.drought.s_1-879.csv", row.names=F)
-result.lemma.drought.s.1.879 <- read.csv("result.lemma.drought.s_1-879.csv")
-# For some reason, rows 880 and 1182 are wacky, so I'm leaving it out and running it in chunks
-result.lemma.drought.s.881.1181 <- result.lemma
-write.csv(result.lemma.drought.s.881.1181, file = "result.lemma.drought.s_881.1181.csv", row.names=F)
-result.lemma.drought.s.881.1181 <- read.csv("result.lemma.drought.s_881.1181.csv")
-result.lemma.drought.s.1183.1452 <- result.lemma
-result.lemma.drought.s.1181.end <- result.lemma
-result.drought.s <- rbind(result.lemma.drought.s.1.879, result.lemma.drought.s.881.1181,result.lemma.drought.s.1181.end)
-write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA.csv", row.names=F)
-
-## PROBLEM: THE METHOD ABOVE DOESN'T TAKE INTO ACCOUNT THAT MANY OF THE TPH AREN'T DETECTABLE FROM AIR
-## ANOTHER APPROACH: USE THE "QMDC_DOM" VARIABLE, WHICH IS MEAN DIA OF DOM AND CODOM CONIFERS
-##### THEN CALCULATE BIOMASS, MAYBE BASED ON "TREEPLBA" WHICH TELLS WHICH SPECIES IS MOST COMMON
-
-##### OR BY INDIVIDUAL BASAL AREA METRICS
+result.lemma.drought.s <- result.lemma 
+setwd("C:/Users/Carmen/cec_apl/Biomass/Results")
+write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA_2.csv", row.names=F)
 
 detach("package:raster", unload=TRUE)
-
-### TESTING ###
 

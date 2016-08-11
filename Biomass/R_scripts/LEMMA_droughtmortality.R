@@ -5,7 +5,7 @@ library(stringr)
 library(dplyr)
 library(viridis)
 
-### LEMMA DATA
+### OPEN LEMMA DATA
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 #LEMMA <- raster("mr200_2012")
 #crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
@@ -15,7 +15,7 @@ setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28
 #writeRaster(LEMMA, filename = "LEMMA.tif", format = "GTiff", overwrite = TRUE) # save a backup
 LEMMA <- raster("LEMMA.gri")
 
-### DROUGHT MORTALITY POLYGONS
+### OPEN# DROUGHT MORTALITY POLYGONS
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
 #drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
@@ -39,9 +39,9 @@ drought <- subset(drought, drought$ACRES > 2)
 
 ### FIND A RANDOM SAMPLE OF DROUGHT TO FIND MOST COMMON TREE SPECIES
 sample <- sample(nrow(drought), 500, replace =F)
-plot(drought[sample,]) #?
+plot(drought[sample,]) # Make sure it's distributed throughout the state
+# Use this for loop to figure out what the species are in the sample:
 result.sample <- data.frame()
-# Use this for loop to figure out what the species are in the sample
 for (i in 1:length(sample)) {
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
@@ -57,41 +57,48 @@ for (i in 1:length(sample)) {
   result.sample <- rbind(L.in.mat, result.sample)
 }
 
-# Create table based on Jenkins paper - for now only broken down by broad category, but I could do it by individual species later if we want
+## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
+## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
+## biomass = exp(B0 + B1*ln(dbh))
 types <- c("Cedar", "Dougfir", "Fir", "Pine", "Spruce")
 B0 <- as.numeric(c(-2.0336, -2.2304, -2.5384, -2.5356, -2.0773))
 B1 <- as.numeric(c(2.2592, 2.4435, 2.4814, 2.4349, 2.3323))
 BM_eqns <- cbind(types, B0, B1)
 all.species <- sort(levels(unique(result.sample$CONPLBA))) # Use this to assign species to genera
 
-Cedars <- c("CADE27", "THPL", "CHLA", "CHNO") # all have been checked for genus
-Dougfirs <- c("PSMA", "PSMA") # all have been checked for genus
+Cedars <- c("CADE27", "THPL", "CHLA", "CHNO") # all have been checked for genus on plants.usda.gov
+Dougfirs <- c("PSMA", "PSME") # all have been checked for genus plants.usda.gov
 Firs <- c("ABAM", "ABBR", "ABGRC", "ABLA", "ABPRSH", "TSHE", "TSME")
-Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") # all have been checked for genus
-Spruces <- c("PIEN", "PISI") # all have been checked for genus
+Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") # all have been checked for genus plants.usda.gov
+Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 
 result.lemma <- data.frame()
-for (i in 1:2) {
-  single <- drought.s[i,]
+for (i in 77:78) { # final: nrow(drought)
+  single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
-  ext <- extract(clip2, single) # extracts data from the raster
-  tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are 
-  s <- sum(tab[[1]]) # Counts raster cells in clip2 - This is different from length(clip2tg) because it doesn't include NAs
+  ext <- extract(clip2, single) # extracts data from the raster - this value is the plot # of the raster cell, which corresponds to detailed data in the attribute table
+  tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
+  s <- sum(tab[[1]]) # Counts total raster cells the polygon - this is different from length(clip2tg) because it doesn't include NAs
   mat <- as.data.frame(tab)
   mat2 <- as.data.frame(tab[[1]]/s) # Gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
-  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BA_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA")]
+  mat2 <- merge(mat, mat2, by="Var1")
+  # extract attribute information from LEMMA for each plot number contained in the polygon:
+  L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% mat[,1])[,c("ID","BAC_GE_3","BPHC_GE_3_CRM","TPHC_GE_3","QMDC_DOM","CONPLBA","TREEPLBA")]
   # SKIP POLYGONS WITH NO CORRESPONDING RASTER DATA
   if (is.na(L.in.mat[1,1])) {
     next
   }
-  # Calculate biomass per tree for average tree size of dominant and codominant trees for most common species for each raster cell
-  L.in.mat$CONBM_tree_kg <- 0
-  L.in.mat$CONBM_kg <- 0
-  for (i in 1:nrow(L.in.mat)) {
-    cell <- L.in.mat[i,]
-    if (cell$CONPLBA %in% Cedars) {
-      num <- (B0[1] + B1[1]*log(cell$QMDC_DOM))
+  merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
+   # Use a for loop to calculate biomass per tree based on the average dbh of dominant and codominant trees for the most common species in each raster cell:
+  merge$CONBM_tree_kg <- 0
+  merge$CONBM_kg <- 0
+  merge$relNO <- 0
+  merge$sumBA <- 0
+  for (i in 1:nrow(merge)) {
+    cell <- merge[i,]
+    if (cell$CONPLBA %in% Cedars) { #CONPLBA = Conifer tree species with plurality of basal area
+      num <- (B0[1] + B1[1]*log(cell$QMDC_DOM)) # apply formula above, minus the exp. QMDC_DOM = Quadratic mean diameter of all dominant and codominant conifers
     } else if (cell$CONPLBA %in% Dougfirs) {
       num <- (B0[2] + B1[2]*log(cell$QMDC_DOM))
     } else if (cell$CONPLBA %in% Firs) {
@@ -104,24 +111,27 @@ for (i in 1:2) {
       num <- 0
     }
     if (num == 0) {
-      L.in.mat[i,]$CONBM_tree_kg <- 0
+      merge[i,]$CONBM_tree_kg <- 0 # assign 0 if no conifers
     } else {
-    L.in.mat[i,]$CONBM_tree_kg <- exp(num)
+      merge[i,]$CONBM_tree_kg <- exp(num) # finish the formula
     }
-    NO <- single@data$NO_TREE
-    L.in.mat[i,]$CONBM_kg <- L.in.mat[i,]$CONBM_tree_kg*NO
+    merge[i,]$sumBA <- cell$BAC_GE_3*cell$Freq.x
   }
-  merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID")
-  CONBM_kg_pol <- sum(L.in.mat$CONBM_kg)
-  Av_BM_TR <- mean(L.in.mat$CONBM_tree_kg)
-  QMDC_DOM <- mean(L.in.mat$QMDC_DOM)
+  totBA <- sum(merge$sumBA)
+  merge$relBA <- merge$sumBA/totBA
+  tot_NO <- single@data$NO_TREE
+  merge$relNO <- tot_NO*merge$relBA
+  merge$CONBM_kg <- merge$relNO*merge$CONBM_tree_kg
+  CONBM_kg_pol <- sum(merge$CONBM_kg)
+  Av_BM_TR <- CONBM_kg_pol/tot_NO
+  QMDC_DOM <- mean(merge$QMDC_DOM)
   CONPL <-  names(tail(sort(summary(merge$CONPLBA)), n=1))
-  CONBM_kgha <- sum(merge$BPHC_GE_3_CRM*merge$Freq) # BPHC_GE_3_CRM is estimated biomass of all conifers
-  THA <- sum(merge$TPHC_GE_3*merge$Freq)
-  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,CONBM_kgha, THA, QMDC_DOM, CONPL, Av_BM_TR, CONBM_kg_pol,gCentroid(single)@coords)
+  TOT_CONBM_kgha <- sum(merge$BPHC_GE_3_CRM*merge$Freq.y) # BPHC_GE_3_CRM is estimated biomass of all conifers
+  CON_THA <- sum(merge$TPHC_GE_3*merge$Freq.y)
+  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,TOT_CONBM_kgha, CON_THA, QMDC_DOM, CONPL, Av_BM_TR, CONBM_kg_pol,gCentroid(single)@coords)
   final <- as.data.frame(final)
-  final$est.tot.trees <- (single@data$Shap_Ar/10000)*THA
-  final$est.tot.BM <- (single@data$Shap_Ar/10000)*CONBM_kgha
+  final$est.tot.con <- (single@data$Shap_Ar/10000)*CON_THA
+  final$est.tot.con.BM <- (single@data$Shap_Ar/10000)*TOT_CONBM_kgha
   result.lemma <- rbind(final, result.lemma)
 }
 names(result.lemma)[names(result.lemma)=="V1"] <- "RPT_YR"
@@ -136,7 +146,7 @@ head(result.lemma)
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
 remove(BM_eqns, BA, BM, clip1, clip2, CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
-remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR)
+remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 
 result.lemma.drought.s <- result.lemma 
 setwd("C:/Users/Carmen/cec_apl/Biomass/Results")

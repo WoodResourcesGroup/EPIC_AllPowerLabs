@@ -73,7 +73,7 @@ Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PI
 Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 
 result.lemma <- data.frame()
-for (i in 77:78) { # final: nrow(drought)
+for (i in 1:nrow(drought.s)) { # final: nrow(drought)
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
@@ -150,7 +150,7 @@ remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_B
 
 result.lemma.drought.s <- result.lemma 
 setwd("C:/Users/Carmen/cec_apl/Biomass/Results")
-write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA_2.csv", row.names=F)
+write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA_3.csv", row.names=F)
 
 detach("package:raster", unload=TRUE)
 

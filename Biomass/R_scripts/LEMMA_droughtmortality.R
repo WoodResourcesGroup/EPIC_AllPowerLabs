@@ -5,6 +5,8 @@ library(stringr)
 library(dplyr)
 library(viridis)
 
+options(digits = 17)
+
 ### OPEN LEMMA DATA
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 #LEMMA <- raster("mr200_2012")
@@ -72,9 +74,12 @@ Firs <- c("ABAM", "ABBR", "ABGRC", "ABLA", "ABPRSH", "TSHE", "TSME")
 Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") # all have been checked for genus plants.usda.gov
 Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 
-result.lemma <- data.frame()
-for (i in 1:nrow(drought.s)) { # final: nrow(drought)
+
+loop <- function(start, finish) {
+  result.lemma <- data.frame()
+  for (i in start:finish) { # final: nrow(drought)
   single <- drought[i,]
+  Pol.ID <- i
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
   ext <- extract(clip2, single) # extracts data from the raster - this value is the plot # of the raster cell, which corresponds to detailed data in the attribute table
@@ -115,7 +120,8 @@ for (i in 1:nrow(drought.s)) { # final: nrow(drought)
     } else {
       merge[i,]$CONBM_tree_kg <- exp(num) # finish the formula
     }
-    merge[i,]$sumBA <- cell$BAC_GE_3*cell$Freq.x
+    merge[i,]$sumBA <- cell$BAC_GE_3*cell$Freq.x # BAC_GE_3 is pixel basal area of live conifers. sumBA is how much conifer BA in the polygon is occupied 
+    # by that plot type
   }
   totBA <- sum(merge$sumBA)
   merge$relBA <- merge$sumBA/totBA
@@ -128,20 +134,22 @@ for (i in 1:nrow(drought.s)) { # final: nrow(drought)
   CONPL <-  names(tail(sort(summary(merge$CONPLBA)), n=1))
   TOT_CONBM_kgha <- sum(merge$BPHC_GE_3_CRM*merge$Freq.y) # BPHC_GE_3_CRM is estimated biomass of all conifers
   CON_THA <- sum(merge$TPHC_GE_3*merge$Freq.y)
-  final <- cbind(single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,TOT_CONBM_kgha, CON_THA, QMDC_DOM, CONPL, Av_BM_TR, CONBM_kg_pol,gCentroid(single)@coords)
+  final <- cbind(Pol.ID, single@data$RPT_YR,single@data$TPA,single@data$NO_TREE,single@data$FOR_TYP,single@data$Shap_Ar,TOT_CONBM_kgha, CON_THA, QMDC_DOM, CONPL, Av_BM_TR, CONBM_kg_pol,gCentroid(single)@coords)
   final <- as.data.frame(final)
   final$est.tot.con <- (single@data$Shap_Ar/10000)*CON_THA
   final$est.tot.con.BM <- (single@data$Shap_Ar/10000)*TOT_CONBM_kgha
   result.lemma <- rbind(final, result.lemma)
 }
-names(result.lemma)[names(result.lemma)=="V1"] <- "RPT_YR"
-names(result.lemma)[names(result.lemma)=="V2"] <- "TPA"
-names(result.lemma)[names(result.lemma)=="V3"] <- "NO_TREE"
-names(result.lemma)[names(result.lemma)=="V4"] <- "FOR_TYP"
-names(result.lemma)[names(result.lemma)=="V5"] <- "Shap_Ar"
+names(result.lemma)[names(result.lemma)=="V2"] <- "RPT_YR"
+names(result.lemma)[names(result.lemma)=="V3"] <- "TPA"
+names(result.lemma)[names(result.lemma)=="V4"] <- "NO_TREE"
+names(result.lemma)[names(result.lemma)=="V5"] <- "FOR_TYP"
+names(result.lemma)[names(result.lemma)=="V6"] <- "Shap_Ar"
 names(result.lemma)[names(result.lemma)=="x"] <- "Cent.x"
 names(result.lemma)[names(result.lemma)=="y"] <- "Cent.y"  
-head(result.lemma)
+return(result.lemma)
+}
+result <- loop(1,5)
 
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)

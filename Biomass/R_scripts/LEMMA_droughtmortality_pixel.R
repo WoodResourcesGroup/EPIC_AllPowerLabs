@@ -40,12 +40,22 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 #crs(highhaz)
 #highhaz <- spTransform(highhaz, crs(drought))
 
-#drought.test <- gIntersection(drought.s, highhaz)
-#drought.s.gIntersection <- drought.test
-# Intersection is too hard for now - ask Jose to do it on QGIS
+### RAMIREZ DATA
+#setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")
+#GDALinfo("FR_2016.01.13_167.bsq")
+#CR_mort <- raster("FR_2016.01.13_167.bsq")
+#crs(CR_mort)
+# plot(CR_mort)
+# CR_mort <- projectRaster(CR_mort, crs=crs(drought))
+setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+#writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
+CR_mort <- raster("CR_mort.tif")
 
 # narrow drought down to large-ish polygons
 drought <- subset(drought, drought$ACRES > 2)
+
+# Crop drought data to extent of Ramirez data 
+drought.s <- crop(drought, extent(CR_mort))
 
 ### FIND A RANDOM SAMPLE OF DROUGHT TO FIND MOST COMMON TREE SPECIES
 #sample <- sample(nrow(drought), 500, replace =F)
@@ -149,7 +159,7 @@ ploop <- function(start, finish) {
     Pol.NO_TREE <- rep(single@data$NO_TREE, nrow(pmerge))
     Pol.Shap_Ar <- rep(single@data$Shap_Ar, nrow(pmerge))
     Pol.Pixels <- rep(s, nrow(pmerge))
-    final <- cbind(pmerge$CONPLBA, pmerge$CONBM_kg, pmerge$QMDC_DOM, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar, TOT_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR, CONBM_kg_pol, pcoords[2], pcoords[3])
+    final <- cbind(pmerge, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar, TOT_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR, CONBM_kg_pol, pcoords[2], pcoords[3])
     final <- as.data.frame(final)
     final$est.num.con <- (single@data$Shap_Ar/10000)*CON_THA
     final$est.BM.con <- (single@data$Shap_Ar/10000)*TOT_CONBM_kgha
@@ -160,7 +170,7 @@ ploop <- function(start, finish) {
   return(result.lemma.p)
 }
 
-result.p <- ploop(1,5)
+result.p <- ploop(1,nrow(drought.s))
 
 ## Check that results match those of LEMMA_droughtmortality -- all of the following should return TRUE
 unique(result.p[result.p$Pol.ID == 5,"est.BM.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con.BM"]) 
@@ -168,12 +178,8 @@ unique(result.p[result.p$Pol.ID == 5,"est.num.con"]) == unique(result[result$Pol
 unique(result.p[result.p$Pol.ID == 5,"Pol.x"]) == unique(result[result$Pol.ID == 5,"Cent.x"]) 
 unique(result.p[result.p$Pol.ID == 5,"CONBM_kg_pol"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
 unique(result.p[result.p$Pol.ID == 5,"CON_THA"]) == unique(result[result$Pol.ID == 5,"CON_THA"]) 
-unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) 
-sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) 
-
-result.p.4 <- subset(result.p, result.p$Pol.ID==4)
-unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # TRUE, so total polygon BM is OK
-sum(result.p.4$`pmerge$CONBM_kg`) == unique(result.p.4$TOT_CONBM_kgha) # Problem is in dividing total BM among pixels
+unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # biomass of all conifers, not just dead ones
+sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
 
 
 ### NEED TO DECIDE WHAT LEVEL OF PRECISION TO USE AND STICK WITH IT - DEFAULT IS TO DISPLAY ONLY 7 SIG FIGS, HIGHEST POSSIBLE IS 22 BUT WHEN I SPECIFY 22
@@ -187,7 +193,7 @@ remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, 
 
 result.lemma.drought.s <- result.lemma 
 setwd("C:/Users/Carmen/cec_apl/Biomass/Results")
-write.csv(result.lemma.drought.s, file = "Trial_Biomass_Polygons_LEMMA_3.csv", row.names=F)
+write.csv(result.p, file = "Trial_Biomass_Pixels_LEMMA_4.csv", row.names=F)
 
 detach("package:raster", unload=TRUE)
 

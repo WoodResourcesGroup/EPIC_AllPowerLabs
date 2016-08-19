@@ -50,10 +50,10 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 drought <- subset(drought, drought$ACRES > 2)
 
 ### RAMIREZ DATA
-setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")
-GDALinfo("FR_2016.01.13_167.bsq")
-CR_mort <- raster("FR_2016.01.13_167.bsq")
-crs(CR_mort)
+#setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")
+#GDALinfo("FR_2016.01.13_167.bsq")
+#CR_mort <- raster("FR_2016.01.13_167.bsq")
+#crs(CR_mort)
 # plot(CR_mort)
 # CR_mort <- projectRaster(CR_mort, crs=crs(drought))
 setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/tempdir")

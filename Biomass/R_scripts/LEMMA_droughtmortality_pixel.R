@@ -15,13 +15,13 @@ library(viridis)
 
 ### OPEN LEMMA DATA 
 setwd("~/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-#LEMMA <- raster("mr200_2012")
+LEMMA <- raster("mr200_2012")
 #crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
 #plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
 #extent(LEMMA)
 #LEMMA <- crop(LEMMA, extent(-2362845, -1627605, 1232145, 2456985))
 #writeRaster(LEMMA, filename = "LEMMA.tif", format = "GTiff", overwrite = TRUE) # save a backup
-LEMMA <- raster("LEMMA.gri")
+LEMMA <- raster("LEMMA.grd")
 
 ### OPEN# DROUGHT MORTALITY POLYGONS
 setwd("~/Box Sync/EPIC-Biomass/GIS Data/")

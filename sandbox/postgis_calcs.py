@@ -18,7 +18,7 @@ import ast
 model = ConcreteModel()
 
 engine = create_engine('postgresql+pg8000://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5432/apl_cec?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
-df_routes = pd.read_sql_query('select biosum.scenario1_gis.lat as source_lat, biosum.scenario1_gis.lon as source_lon, pge_ram.feeders_data.lat as dest_lat, pge_ram.feeders_data.lon as dest_lon, st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 as distance FROM biosum.scenario1_gis, pge_ram.feeders_data where biosum.scenario1_gis.rxcycle = \'1\' and (st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 <= 80);', engine)
+df_routes = pd.read_sql_query('select biosum.scenario1_gis.lat as source_lat, biosum.scenario1_gis.lon as source_lon, pge_ram.feeders_data.lat as dest_lat, pge_ram.feeders_data.lon as dest_lon, st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 as distance FROM biosum.scenario1_gis, pge_ram.feeders_data where biosum.scenario1_gis.rxcycle = \'1\' and (st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 <= 50);', engine)
 print df_routes.count()
 
 """

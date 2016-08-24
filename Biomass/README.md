@@ -2,7 +2,11 @@
 title: "CEC_APL Dead Tree Biomass Estimation"
 author: "Carmen Tubbesing"
 date: "August 24, 2016"
-output: html_document # use html_document until the document is done, then switch it to md_document to publish
+output: 
+  html_document:
+    md_extensions: +pipe_tables
+
+# use html_document until the document is done, then switch it to md_document to publish
 ---
 
 # Assumptions
@@ -50,9 +54,10 @@ Data from LEMMA and drought mortality polygons were combined to estimate dead tr
 # Variables 
 # Manipulation
 There are a few components of the script that will most likely be altered in future runs. They are summarized below.
-| Line Number|       Step |
+
+| Line Number|       Step  |
 |:-----------|:------------|
-|   60    |        Specify min polygon size|       
-| 60    |      Specify min number of dead tree per polygon |    
+|   60       |        Specify min polygon size|       
+| 60         |      Specify min number of dead tree per polygon |    
 | 176        |        Select size of sample for testing the loop |    
-| 199 | Name of results file |
+| 199        | Name of results file |

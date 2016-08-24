@@ -44,7 +44,8 @@ All results are in x/y coordinates that should be projected in EPSG: 5070.
     -   These equations were used to estimate biomass in drought mortality polygons
       
 # Process
-Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass in the file *R_scripts/LEMMA_droughtmortality_pixels.R* . The steps can be summarized as follows:
+Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass in the file *R_scripts/LEMMA_droughtmortality_pixels.R* . The steps can be summarized as follows:  
+
 1.  Crop `LEMMA` data to include only California
 2.  Tranform drought mortality polygon data (`drought`) to the same CRS as `LEMMA`, namely EPSG 5070
 3.  Trim `drought` to exclude polygons that are 2 acres or smaller and/or have only 1 dead tree in them

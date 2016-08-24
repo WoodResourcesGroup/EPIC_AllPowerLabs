@@ -85,8 +85,31 @@ Manipulation
 ============
 
 There are a few components of the script that will most likely be
-altered in future runs. They are summarized below. | Line Number| Step |
-|:-----------|:------------| | 60 | Specify min polygon size|  
-| 60 | Specify min number of dead tree per polygon |  
-| 176 | Select size of sample for testing the loop |  
-| 199 | Name of results file |
+altered in future runs. They are summarized below.
+
+<table>
+<thead>
+<tr class="header">
+<th align="left">Line Number</th>
+<th align="left">Step</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">60</td>
+<td align="left">Specify min polygon size</td>
+</tr>
+<tr class="even">
+<td align="left">60</td>
+<td align="left">Specify min number of dead tree per polygon</td>
+</tr>
+<tr class="odd">
+<td align="left">176</td>
+<td align="left">Select size of sample for testing the loop</td>
+</tr>
+<tr class="even">
+<td align="left">199</td>
+<td align="left">Name of results file</td>
+</tr>
+</tbody>
+</table>

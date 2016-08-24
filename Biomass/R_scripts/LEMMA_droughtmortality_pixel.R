@@ -110,7 +110,7 @@ ploop <- function(start, finish) {
     # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
     # the most common conifer species in each raster cell:
     merge$CONBM_tree_kg <- 0
-    merge$CONBM_kg <- 0
+    merge$D_CONBM_kg <- 0
     merge$relNO <- 0
     for (i in 1:nrow(merge)) {
       cell <- merge[i,]
@@ -141,10 +141,10 @@ ploop <- function(start, finish) {
     tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
     pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
                                         # and total number of trees in polygon
-    pmerge$D_CONBM_kg <- pmerge$relNO*pmerge$CONBM_tree_kg # CONBM_kg is total biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
+    pmerge$D_CONBM_kg <- pmerge$relNO*pmerge$CONBM_tree_kg # D_CONBM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
     
     # Create vectors that are the same length as pmerge to combine into final table:
-    D_Pol_CONBM_kg <- rep(sum(pmerge$CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
+    D_Pol_CONBM_kg <- rep(sum(pmerge$D_CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
     Av_BM_TR <- D_Pol_CONBM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
     Av_QMDC_DOM <- rep(mean(pmerge$QMDC_DOM), nrow(pmerge)) # Find the average of the pixels' quadratic mean diameters 
     Mode_CONPL <-  rep(names(tail(sort(summary(pmerge$CONPLBA)), n=1)), nrow(pmerge)) # Find the conifer species that has a plurality in the most pixels
@@ -173,20 +173,20 @@ ploop <- function(start, finish) {
 }
 
 test.result.p <- ploop(1,2)
-result.p <- ploop(1,nrow(drought))
+result.p.small <- ploop(1,100)
+result.p <- ploop(1, nrow(drought))
 
 ## Check that results match those of LEMMA_droughtmortality -- all of the following should return TRUE
-unique(result.p[result.p$Pol.ID == 5,"est.BM.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con.BM"]) 
-unique(result.p[result.p$Pol.ID == 5,"est.num.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con"]) 
-unique(result.p[result.p$Pol.ID == 5,"Pol.x"]) == unique(result[result$Pol.ID == 5,"Cent.x"]) 
-unique(result.p[result.p$Pol.ID == 5,"CONBM_kg_pol"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-unique(result.p[result.p$Pol.ID == 5,"CON_THA"]) == unique(result[result$Pol.ID == 5,"CON_THA"]) 
-unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # biomass of all conifers, not just dead ones
-sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-# Add explanations of what these tests are
 
-### NEED TO DECIDE WHAT LEVEL OF PRECISION TO USE AND STICK WITH IT - DEFAULT IS TO DISPLAY ONLY 7 SIG FIGS, HIGHEST POSSIBLE IS 22 BUT WHEN I SPECIFY 22
-### ONLY 17 ARE SHOWN
+## Need to change these to reflect up-to-date variable names
+#unique(result.p[result.p$Pol.ID == 5,"est.BM.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con.BM"]) 
+#unique(result.p[result.p$Pol.ID == 5,"est.num.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con"]) 
+#unique(result.p[result.p$Pol.ID == 5,"Pol.x"]) == unique(result[result$Pol.ID == 5,"Cent.x"]) 
+#unique(result.p[result.p$Pol.ID == 5,"CONBM_kg_pol"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
+#unique(result.p[result.p$Pol.ID == 5,"CON_THA"]) == unique(result[result$Pol.ID == 5,"CON_THA"]) 
+#unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # biomass of all conifers, not just dead ones
+#sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
+# Add explanations of what these tests are
 
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
@@ -194,14 +194,12 @@ remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR
 remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, Av_QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
-result.lemma.drought.s <- result.lemma 
-setwd("C:/Users/Carmen/cec_apl/Biomass/Results")
+setwd("~/cec_apl/Biomass/Results")
+write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)
+result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
 
-write.csv(result.p, file = "Trial_Biomass_Pixels_LEMMA_5.csv", row.names=F)
-
-result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_5.csv")
-hist(result.p$pmerge.CONBM_kg, xlim=c(0,60000), breaks=500)
-nrow(subset(result.p, result.p$pmerge.CONBM_kg >60000))/nrow(subset(result.p, result.p$pmerge.CONBM_kg >0))
+hist(result.p$CONBM_kg) #, xlim=c(0,60000), breaks=500)
+nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >60000))/nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >0))
   ## setting max at 60,000 retains 99% of the non-zero pixels
 ## CHECK Gonzalez paper to figure out what is an unreasonably large amount of biomass
 result.p <- subset(result.p, result.p$pmerge.CONBM_kg < 60000)

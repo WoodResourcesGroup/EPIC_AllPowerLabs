@@ -89,7 +89,7 @@ ploop <- function(start, finish) {
     single <- drought[i,]
     clip1 <- crop(LEMMA, extent(single))
     clip2 <- mask(clip1, single)
-    pcoords <- cbind(clip2@data@values, coordinates(clip2)) # coordinates of each pixel 
+    pcoords <- cbind(clip2@data@values, coordinates(clip2)) # coordinates of each pixel
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords)
     Pol.ID <- rep(i, nrow(pcoords)) # create a Polygon ID
@@ -135,7 +135,8 @@ ploop <- function(start, finish) {
     }
     
     # Find biomass per pixel using biomass per tree and estimated number of trees
-    pmerge <- merge(merge, pcoords, by.x ="ID", by.y = "V1") # pmerge has a line for every pixel
+    pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
+    # problem here
     pmerge$relBA <- pmerge$BAC_GE_3/sum(pmerge$BAC_GE_3) # Create column for % of polygon BA in that pixel. 
                                                          # BAC_GE_3 is basal area of live conifers in that pixel.
     tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
@@ -161,7 +162,7 @@ ploop <- function(start, finish) {
     CON_THA <- rep(mean(pmerge$TPHC_GE_3), nrow(pmerge)) # TPHC_GE_3 is conifer trees per hectare from LEMMA
     
     # Bring it all together
-    final <- cbind(pmerge, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR,pcoords[2], pcoords[3])
+    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR)
     final <- as.data.frame(final)
     final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000)*CON_THA # Estimate total number of conifers in the polygon
     final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
@@ -169,12 +170,25 @@ ploop <- function(start, finish) {
   }
   key <- seq(1, nrow(result.lemma.p)) # Create a key for each pixel (row)
   result.lemma.p <- cbind(key, result.lemma.p)
+  names(result.lemma.p)[names(result.lemma.p)=="V1"] <- "x"
+  names(result.lemma.p)[names(result.lemma.p)=="V2"] <- "y"
+  names(result.lemma.p)[names(result.lemma.p)=="V3"] <- "D_CONBM_kg"
+  names(result.lemma.p)[names(result.lemma.p)=="V4"] <- "relNO"
+  names(result.lemma.p)[names(result.lemma.p)=="V5"] <- "relBA"
+  names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
   return(result.lemma.p)
 }
 
 test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
 result.p <- ploop(1, nrow(drought))
+
+# Problem: the two variables both meaning coordinates of pixel do not match
+pmerge[1,]
+pcoords[1,]
+# same length
+sort(subset(pcoords$x, pcoords$V1 == -74))
+sort(subset(pmerge$x, pmerge$V1 == -74))
 
 ## Check that results match those of LEMMA_droughtmortality -- all of the following should return TRUE
 
@@ -193,6 +207,10 @@ remove(cell, final, L.in.mat, mat, mat2, merge)
 remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
 remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, Av_QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
+
+# tests:
+sample(nrow(drought), 5)
+
 
 setwd("~/cec_apl/Biomass/Results")
 write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)

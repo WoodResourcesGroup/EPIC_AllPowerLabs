@@ -58,10 +58,10 @@ tinytest$PlotID %in% tiny@data@values # SHOULD BE TRUE
 
 # Test dead biomass calculations
 attributes$CONPLBA
-treeBA <- -2.5356 + 2.4349*log(attributes$QMDC_DOM) # ONLY IF THE ABOVE IS A PINE
-treeBA <- exp(treeBA) # Checked this against graph in Jenkins paper
-pixelBA <- treeBA*relNO
-testplot$D_CONBM_kg == pixelBA
+treeBM <- -2.5356 + 2.4349*log(attributes$QMDC_DOM) # ONLY IF THE ABOVE IS A PINE
+treeBM <- exp(treeBM) # Checked this against graph in Jenkins paper
+pixelBM <- treeBM*relNO
+testplot$D_CONBM_kg == pixelBM
 
 # Test Pol.x and Pol.y
 testplot$Pol.x == coordinates(single)[1]
@@ -75,17 +75,18 @@ All_TPH <- as.data.frame(cbind(clip2@data@attributes[[1]]$ID, clip2@data@attribu
 All_TPH <- subset(All_TPH, All_TPH$V1 %in% mat$Var1)
 mat <- merge(mat, All_TPH, by.x = "Var1", by.y = "V1")
 mat$NO <- mat$V2/10000*900
-All_BA <- sum(mat$NO*mat$Freq)
-All_BA == testplot$All_Pol_CON_NO
+All_T <- sum(mat$NO*mat$Freq)
+All_T == testplot$All_Pol_CON_NO
 
 ### FINAL TESTS: ALL OF THE FOLLOWING SHOULD RETURN TRUE
 plotBA == mat[mat$Var1 == plot,3] # THIS SHOULD BE TRUE
 relBA == unique(testplot$relBA) # THIS SHOULD BE TRUE
 unique(testplot$relNO) == relBA*ntrees # THIS SHOULD BE TRUE
 tinytest$PlotID %in% tiny@data@values # THIS SHOULD BE TRUE
-testplot$D_CONBM_kg == pixelBA# THIS SHOULD BE TRUE
+testplot$D_CONBM_kg == pixelBM# THIS SHOULD BE TRUE
 testplot$All_CONBM_kgha == subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BPHC_GE_3_CRM
 mean(as.numeric(paste(test1$All_CONBM_kgha))) == unique(test1$All_Pol_CONBM_kgha)
 testplot$Pol.x == coordinates(single)[1] # THIS SHOULD BE TRUE
 testplot$Pol.y == coordinates(single)[2] # THIS SHOULD BE TRUE
 testplot$Pol.NO_TREE == sum(as.numeric(paste((test1$relNO)))) # THIS SHOULD BE TRUE
+All_T == testplot$All_Pol_CON_NO

@@ -1,14 +1,11 @@
 ---
-title: "CEC_APL Dead Tree Biomass Estimation"
+title: "Mortality Biomass Estimation README"
 author: "Carmen Tubbesing"
-date: "August 24, 2016"
+date: "August 26, 2016"
 output: 
-  html_document:
-    md_extensions: +pipe_tables
-
-# use html_document until the document is done, then switch it to md_document to publish
+  github_document:
+    toc: TRUE
 ---
-
 # Assumptions
 1.  All dead trees in recent drought mortality have been conifers
 2.  Aerial detection surveys accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon
@@ -20,14 +17,23 @@ output:
 All results are in x/y coordinates that should be projected in EPSG: 5070.
 
 # File Organization
-- Within the *cec_apl/Biomass* folder, code is located in *R_scripts* and results are located in *Results*
+- R code assumes the user has the following located in their home directory:
+    - Box Sync folder
+    - Clone of the cec_apl git repository
 - Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
-- R code assumes the user has a Box Sync folder located in their home directory
+- Within the *cec_apl/Biomass* folder, there are:
+    - *R_scripts*: 
+        - *LEMMA_droughtmortality_pixel.R*: calculate biomass from LEMMA and drought mortality data
+        - *test.R*: test the accuracy of results
+    - *Results*: 
+        - *Trial_Biomass_Pixels_LEMMA_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary area for testing the code)
+
+
 
 # Sources
 
 ### Datasets
-1.  LEMMA GNN species-size raster data (*LEMMA_gnn_sppsz_2014_08_28*)
+1.  `LEMMA`: GNN species-size raster data (*LEMMA_gnn_sppsz_2014_08_28*)
     - State-wide estimates of tree species composition, size, biomass, etc.
     - Download and variable descriptions can be found [here](http://lemma.forestry.oregonstate.edu/data/structure-maps)
     - Methods described in LEMMA_readme.pdf in the same Box Sync folder as LEMMA data
@@ -35,45 +41,74 @@ All results are in x/y coordinates that should be projected in EPSG: 5070.
     - Each raster value is an FIA plot ID
         - each plot ID has many corresponding pixels
         - characteristics of plot IDs are described in the attribute table
-2.  Drought mortality polygons (*DroughtTreeMortality.gdb*)
+2.  `drought`: Drought mortality polygons (*DroughtTreeMortality.gdb*)
     - Aerial detection survey results from manually recording tree mortality from aircraft
     - Methods described [here](http://www.fs.usda.gov/detail/r5/forest-grasslandhealth/?cid=fsbdev3_046721)
+
 ### References
-1.  Jenkins, J. C., D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, “National-scale biomass estimators for United States tree species,” For. Sci., vol. 49, no. 1, pp. 12–35, 2003.
+1.  Jenkins, J. C., D. C. Chojnacky, L. S. Heath, and R. A. Birdsey. "National-scale biomass estimators for United States tree species." For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
     - Includes equations predicting biomass based on diameter at breast height for major classes of conifer species
     -   These equations were used to estimate biomass in drought mortality polygons
       
 # Process
-Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass in the file *R_scripts/LEMMA_droughtmortality_pixels.R* . The steps can be summarized as follows:  
+Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass in the file *R_scripts/LEMMA_droughtmortality_pixels.R* . The steps can be summarized as follows:
 
 1.  Crop `LEMMA` data to include only California
 2.  Tranform drought mortality polygon data (`drought`) to the same CRS as `LEMMA`, namely EPSG 5070
 3.  Trim `drought` to exclude polygons that are 2 acres or smaller and/or have only 1 dead tree in them
 4.  Create vectors of parameters for diameter -> biomass equations for each conifer class
 5.  For each polygon
-    1)  crop LEMMA data to the size and shape of the polygon
-    2)  extract coordinates of each LEMMA pixel that falls within the polygon
-    3. extract corresponding FIA plot IDs for each LEMMA pixel in the polygon
+    1)  crop `LEMMA` to the size and shape of the polygon
+    2)  extract coordinates of each `LEMMA` pixel that falls within the polygon
+    3. extract corresponding FIA plot IDs for each `LEMMA` pixel in the polygon
     4. for each pixel within the polygon
         1. assign a diameter -> biomass equation based on the most common conifer species in that pixel
-        2. calculate average per-tree biomass using the above equation and the quadratic mean diameter of dominant and codominant conifers (from LEMMA)
+        2. calculate average per-tree biomass using the above equation and the quadratic mean diameter of dominant and codominant conifers (from `LEMMA`)
     5. combine these results into a data frame with one row
     6. bind the data frame to that of other polygons
 7. Create a unique key for each pixel 
-8. Write results to .csv and raster files
+8. Write results to .csv file
 
-# Variables 
-| Code          |       Description  |
-|:--------------|:-------------------|
-|   ID          |       Corresponding FIA plot ID|       
-| D_CONBM_kg    |      biomass of dead conifers in that pixel in kg |    
-| Pol.ID        |        Polygon ID |    
-| Pol.x         | x coordinate of polygon centroid |
-| Pol.y         | y coordinate of polygon centroid |
-| etc.          | .....                             |
+# Output Variables 
+| Code          |       Description  | Source(s) of data                |
+|:--------------|:-------------------|:---------------------------------|
+|   `key`         |       Unique pixel ID|     Analysis                   |
+|   `x`           |       X coordinate of pixel center |     `LEMMA`        |    
+|   `y`           |       Y coordinate of pixel center |     `LEMMA`        |
+|   `D_CONBM_kg`  |       Estimated biomass of dead conifers n the pixel in kg | `LEMMA` & `drought` |     
+| `relNO`         | Approximate number of dead trees in pixel | Number of dead trees from `drought` (`Pol.NO_TREE`), divied up based on `relBA` (below)|
+| `relBA`         | Pixel basal area (`BAC_GE_3`)  relative to sum of `BAC_GE_3` of all pixels in the polygon |  `LEMMA`
+| `PlotID`          |       Corresponding FIA plot ID|       `LEMMA`          |
+| `Pol.ID`        |        Polygon ID |    Analysis |
+| `Pol.x`         | X coordinate of polygon centroid | `drought` |
+| `Pol.y`         | Y coordinate of polygon centroid | `drought` |
+| `RPT_YR`        | Year mortality was reported              | `drought` |
+| `Pol.NO_TREE`   | Number of dead trees in the polygon | `drought` |
+| `Pol.Shap_Ar`   | Area of polygon in square meters    | `drought` |
+| `D_Pol_CONBM_kg`| Polygon dead biomass in kg, sum of `D_CONBM_kg` of all pixels in the polygon | `LEMMA` & `drought` |
+| `All_CONBM_kgha`| Biomass density of all conifers >= 2.5 cm dbh, dead or alive (`BPHC_GE_3_CRM`) |`LEMMA`|
+| `All_Pol_CONBM_kgha` | Average density of all conifers (mean `ALL_CONBM_kgha` of all pixels in polygon) | `LEMMA`|
+| `CON_THA`       | Conifers >=2.5 cm dbh per hectare, dead or alive (`TPHC_GE_3`) | `LEMMA`|
+| `QMDC_DOM`      | Quadratic mean diameter in cm of dominant and codominant conifers | `LEMMA`|
+| `CONPL`         | Most common conifer species in the pixel | `LEMMA` |
+| `Av_BM_TR`      | Average per-tree biomass of dead trees, in kg (`D_Pol_CONBM_k`/`Pol.NO_TREE`) | `LEMMA` & `drought` |
+| `All_Pol_CON_NO`| Total number of conifers in the polygon, from `Pol.Shap_Ar` and `CON_THA` | `LEMMA`|
+| `All_Pol_CON_BM`| Total conifer bioimass in the polygon, from `Pol.Shap.Ar` and `All_Pol_CONBM_kgha` | `LEMMA` |
 
+# Tests
+The following tests were performed on a randomly selected polygon within `drought` in the file *R_scripts/test.R* to check for accuracy of the results. When *test.R* is run, lines 82-92 should all individually return `TRUE`.
 
-# Manipulation
+1. `relBA` calculated by hand outside the for loop for a randomly selected pixel within the polygon equals `relBA` from loop results
+2. `relNO` from loop results equals `relBA` * number of dead trees in pixel calculated by hand
+3. Pixels within 50 m of the polygon's centroid have the same raster values and X and Y coordinates as those produced by the loop
+4. Biomass of dead conifers in the pixel calculated by hand matches loop results
+5. `All_CONBM_kgha` from results matches attribute data in LEMMA
+6. `All_Pol_CONBM_kgha` from results equals the mean of `All_CONBM_kgha` for all pixels in the polygon
+7. `Pol.x` and `Pol.y` from results match `coordinates()` of the polygon
+8. `Pol.NO_TREE` from results matches the sum of `relNO` for all pixels
+9. `All_Pol_CON_NO` from results matches the sum of conifers per pixel calculated by hand from `TPHC_GE_3`
+
+# Further Manipulation
 There are a few components of the script that will most likely be altered in future runs. They are summarized below.
 
 | Line Number|       Step  |

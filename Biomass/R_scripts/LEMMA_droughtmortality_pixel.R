@@ -147,8 +147,8 @@ ploop <- function(start, finish) {
     # Create vectors that are the same length as pmerge to combine into final table:
     D_Pol_CONBM_kg <- rep(sum(pmerge$D_CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
     Av_BM_TR <- D_Pol_CONBM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
-    Av_QMDC_DOM <- rep(mean(pmerge$QMDC_DOM), nrow(pmerge)) # Find the average of the pixels' quadratic mean diameters 
-    Mode_CONPL <-  rep(names(tail(sort(summary(pmerge$CONPLBA)), n=1)), nrow(pmerge)) # Find the conifer species that has a plurality in the most pixels
+    QMDC_DOM <- pmerge$QMDC_DOM # Find the average of the pixels' quadratic mean diameters 
+    CONPL <-  pmerge$CONPLBA # Find the conifer species that has a plurality in the most pixels
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) 
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge))
@@ -159,10 +159,10 @@ ploop <- function(start, finish) {
     # Estimate biomass of live AND dead trees based on LEMMA values of conifer biomass per pixel:
     All_CONBM_kgha <- pmerge$BPHC_GE_3_CRM # BPHC_GE_3_CRM is estimated biomass of all conifers from LEMMA
     All_Pol_CONBM_kgha <- rep(mean(pmerge$BPHC_GE_3_CRM),nrow(pmerge)) # Average across polygons
-    CON_THA <- rep(mean(pmerge$TPHC_GE_3), nrow(pmerge)) # TPHC_GE_3 is conifer trees per hectare from LEMMA
+    CON_THA <- pmerge$TPHC_GE_3 # TPHC_GE_3 is conifer trees per hectare from LEMMA
     
     # Bring it all together
-    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR)
+    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, QMDC_DOM, CONPL, Av_BM_TR)
     final <- as.data.frame(final)
     final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000*900)*CON_THA # Estimate total number of conifers in the polygon
     final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
@@ -186,7 +186,7 @@ result.p <- ploop(1, nrow(drought))
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
 remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
-remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, Av_QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
+remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
 

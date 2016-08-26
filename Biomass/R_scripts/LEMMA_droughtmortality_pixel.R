@@ -162,7 +162,7 @@ ploop <- function(start, finish) {
     CON_THA <- pmerge$TPHC_GE_3 # TPHC_GE_3 is conifer trees per hectare from LEMMA
     
     # Bring it all together
-    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, QMDC_DOM, CONPL, Av_BM_TR)
+    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, QMDC_DOM,Av_BM_TR)
     final <- as.data.frame(final)
     final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000*900)*CON_THA # Estimate total number of conifers in the polygon
     final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
@@ -182,13 +182,29 @@ ploop <- function(start, finish) {
 test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
 result.p <- ploop(1, nrow(drought))
+# getting "Error in fix.by(by.x, x) : 'by' must specify a uniquely valid column" after 100 polygons 
+result.p.test100 <- ploop(99,102)
+big90 <- ploop(90,90)
+hist(big90$relBA)
+hist(big90$D_CONBM_kg)
+length(subset(big90$relBA, big90$relBA == 0))
+nrow(big90)
+
+# Look closer at pixels with very high biomass estimations
+hist(result.p.small$D_CONBM_kg)
+hist(result.p.small$D_CONBM_kg, xlim = c(0,60000), breaks =60)
+bigpixels <- subset(result.p.small$D_CONBM_kg, result.p.small$D_CONBM_kg > 60000)
+sum(bigpixels)
+length(result.p.small$D_CONBM_kg)
+sum(bigpixels)/sum(na.omit((result.p.small$D_CONBM_kg)))
+length(bigpixels)/length(result.p.small$D_CONBM_kg)
+big <- subset(result.p.small, result.p.small$D_CONBM_kg > 60000)
 
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
-remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
+remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
 remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
-
 
 setwd("~/cec_apl/Biomass/Results/")
 write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)

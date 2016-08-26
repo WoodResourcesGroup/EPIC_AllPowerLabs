@@ -4,6 +4,7 @@ Carmen Tubbesing
 August 26, 2016
 
 -   [Assumptions](#assumptions)
+-   [Projection](#projection)
 -   [File Organization](#file-organization)
 -   [Sources](#sources)
     -   [Datasets](#datasets)
@@ -16,12 +17,17 @@ August 26, 2016
 Assumptions
 ===========
 
-1.  All dead trees in recent drought mortality have been conifers
-2.  Aerial detection surveys accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon
-3.  LEMMA accurately estimates the average sizes, species, and densities of trees in each 30 x 30 m pixel of their raster.
-4.  The ratio of dead trees in each pixel of a drought mortality polygon to the total number of dead trees in the polygon is proportional to the amount of conifer biomass in that pixel relative to other pixels. That is, more dead tree occur more where there is more conifer biomass.
-5.  All dead trees in a given pixel are of the most common conifer species of the in that pixel.
-6.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant conifers in that pixel. \# Projection All results are in x/y coordinates that should be projected in EPSG: 5070.
+1.  All dead trees in recent drought mortality have been conifers.
+2.  Aerial detection surveys accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
+3.  LEMMA accurately estimates the average sizes, species, and densities of trees in each 30 x 30 m pixel.
+4.  The ratio of dead trees in each pixel of a drought mortality polygon to the total number of dead trees in the polygon is proportional to conifer basal area in that pixel relative to other pixels. That is, more dead tree occur more where there is more conifer basal area.
+5.  All dead trees in a given pixel are of the most common conifer species in that pixel.
+6.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant conifers in that pixel, as calculated by LEMMA.
+
+Projection
+==========
+
+All results are in X/Y coordinates that should be projected in EPSG: 5070.
 
 File Organization
 =================
@@ -30,12 +36,12 @@ File Organization
     -   Box Sync folder
     -   Clone of the cec\_apl git repository
 -   Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
--   Within the *cec\_apl/Biomass* folder, there are:
+-   The *cec\_apl/Biomass* folder contains:
     -   *R\_scripts*:
-        -   *LEMMA\_droughtmortality\_pixel.R*: calculate biomass from LEMMA and drought mortality data
-        -   *test.R*: test the accuracy of results
+        -   *LEMMA\_droughtmortality\_pixel.R*: code to calculate biomass from LEMMA and drought mortality data
+        -   *test.R*: test the accuracy of the above results
     -   *Results*:
-        -   *Trial\_Biomass\_Pixels\_LEMMA\_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary area for testing the code)
+        -   *Trial\_Biomass\_Pixels\_LEMMA\_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary sub-area for testing the code)
 
 Sources
 =======
@@ -43,8 +49,8 @@ Sources
 ### Datasets
 
 1.  `LEMMA`: GNN species-size raster data (*LEMMA\_gnn\_sppsz\_2014\_08\_28*)
-    -   State-wide estimates of tree species composition, size, biomass, etc.
     -   Download and variable descriptions can be found [here](http://lemma.forestry.oregonstate.edu/data/structure-maps)
+    -   State-wide estimates of tree species composition, size, biomass, etc.
     -   Methods described in LEMMA\_readme.pdf in the same Box Sync folder as LEMMA data
     -   Empirical FIA plot data was assigned to every 30 x 30 m pixel in California based on similaries between remote sensing results for that pixel and the FIA plot
     -   Each raster value is an FIA plot ID

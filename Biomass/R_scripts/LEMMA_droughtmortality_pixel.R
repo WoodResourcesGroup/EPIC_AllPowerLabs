@@ -164,8 +164,8 @@ ploop <- function(start, finish) {
     # Bring it all together
     final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR)
     final <- as.data.frame(final)
-    final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000)*CON_THA # Estimate total number of conifers in the polygon
-    final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
+    final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000*900)*CON_THA # Estimate total number of conifers in the polygon
+    final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
     result.lemma.p <- rbind(final, result.lemma.p, make.row.names = T)
   }
   key <- seq(1, nrow(result.lemma.p)) # Create a key for each pixel (row)
@@ -183,36 +183,14 @@ test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
 result.p <- ploop(1, nrow(drought))
 
-# Problem: the two variables both meaning coordinates of pixel do not match
-pmerge[1,]
-pcoords[1,]
-# same length
-sort(subset(pcoords$x, pcoords$V1 == -74))
-sort(subset(pmerge$x, pmerge$V1 == -74))
-
-## Check that results match those of LEMMA_droughtmortality -- all of the following should return TRUE
-
-## Need to change these to reflect up-to-date variable names
-#unique(result.p[result.p$Pol.ID == 5,"est.BM.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con.BM"]) 
-#unique(result.p[result.p$Pol.ID == 5,"est.num.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con"]) 
-#unique(result.p[result.p$Pol.ID == 5,"Pol.x"]) == unique(result[result$Pol.ID == 5,"Cent.x"]) 
-#unique(result.p[result.p$Pol.ID == 5,"CONBM_kg_pol"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-#unique(result.p[result.p$Pol.ID == 5,"CON_THA"]) == unique(result[result$Pol.ID == 5,"CON_THA"]) 
-#unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # biomass of all conifers, not just dead ones
-#sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-# Add explanations of what these tests are
-
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
 remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
 remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, Av_QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
-# tests:
-sample(nrow(drought), 5)
 
-
-setwd("~/cec_apl/Biomass/Results")
+setwd("~/cec_apl/Biomass/Results/")
 write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)
 result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
 

@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import ast
-import time as tm
 # Conventions for naming model components:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
@@ -72,84 +71,69 @@ distance_table = {}
 time_table = {}
 biomass_list = []
 substation_list = []
-avoid_table = {}
-fail_table = {}
 
+<<<<<<< HEAD
 
 if os.path.isfile('time_table.dat'):
     print "matrices for time exist at this time"
+=======
+if os.path.isfile('distance_table.dat') and os.path.isfile('substation_list.dat'):
+    print "matrices exist at this time"
+
+    f = open('biomass_list.dat', 'r')
+    biomass_list = f.read()
+    f.close()
+    biomass_list = ast.literal_eval(biomass_list)
+
+    f = open('substation_list.dat', 'r')
+    substation_list = f.read()
+    f.close()
+    substation_list = ast.literal_eval(substation_list)
+
+>>>>>>> b496996ee17d3d4bb3b2a042fd0cae5ff5a8ad41
     f = open('time_table.dat', 'r')
     time_table = f.read()
     f.close()
     time_table = ast.literal_eval(time_table)
-else:
-    print "There are no matrix files stored"
-    f = open('time_table.dat', 'w')
-    f.close()
 
-if os.path.isfile('distance_table.dat'):
-    print "matrices for distance exist at this time"
     f = open('distance_table.dat', 'r')
     distance_table = f.read()
     f.close()
     distance_table = ast.literal_eval(distance_table)
+
 else:
     print "There are no matrix files stored"
-    f = open('distance_table.dat', 'w')
-    f.close()
 
-if os.path.isfile('avoid_table.dat'):
-    print "avoid table exist at this time"
-    f = open('avoid_table.dat', 'r')
-    avoid_table = f.read()
-    f.close()
-    avoid_table = ast.literal_eval(avoid_table)
-else:
-    print "There are no avoid table files stored"
-    f = open('avoid_table.dat', 'w')
-    f.close()
-
-if os.path.isfile('fail_table.dat'):
-    print "fail table exist at this time"
-else:
-    print "There are no fail table files stored"
-    f = open('fail_table.dat', 'w')
-    f.close()
-
-
-for (bio_idx, biomass_source) in enumerate(biomass_coord):
-    for (sub_idx, substation_dest) in enumerate(substation_coord):
-        if (biomass_coord[bio_idx], substation_coord[sub_idx]) not in distance_table.keys() and (biomass_coord[bio_idx], substation_coord[sub_idx]) not in avoid_table.keys():
-            tm.sleep(0.3)
+    for (bio_idx, biomass_source) in enumerate(biomass_coord):
+        for (sub_idx, substation_dest) in enumerate(substation_coord):
             matrx_distance = gmaps.distance_matrix(biomass_coord[bio_idx], substation_coord[sub_idx], mode="driving", departure_time="now", traffic_model="pessimistic")
             error = matrx_distance['rows'][0]['elements'][0]['status']
             if error != 'OK':
-                f = open('fail_table.dat', 'a')
-                f.write(('Route data unavailable for ' + str(biomass_coord[bio_idx]) + "," + str(substation_coord[sub_idx] + "\n")))
-                f.close()
+                print "Route data unavailable for " + biomass_coord[bio_idx], substation_coord[sub_idx]
             else:
-                if 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value']) > 160:
-                    print "Distance too long for " + biomass_coord[bio_idx], substation_coord[sub_idx]
-                    avoid_table[biomass_source, substation_dest] = 1
-                    f = open('avoid_table.dat', 'w')
-                    f.write(str(avoid_table))
-                    f.close()
-                else:
-                    if str(biomass_coord[bio_idx]) not in biomass_list:
-                        biomass_list.extend([str(biomass_coord[bio_idx])])
-                    if str(substation_coord[sub_idx]) not in substation_list:
-                        substation_list.extend([str(substation_coord[sub_idx])])
-                    distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-                    time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
-                    f = open('distance_table.dat', 'w')
-                    f.write(str(distance_table))
-                    f.close()
-                    f = open('time_table.dat', 'w')
-                    f.write(str(time_table))
-                    f.close()
-        else:
-            continue
+                print "Route data available for " + biomass_coord[bio_idx], substation_coord[sub_idx]
+                if str(biomass_coord[bio_idx]) not in biomass_list:
+                    biomass_list.extend([str(biomass_coord[bio_idx])])
+                if str(substation_coord[sub_idx]) not in substation_list:
+                    substation_list.extend([str(substation_coord[sub_idx])])
+                distance_table[biomass_source, substation_dest] = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+                time_table[biomass_source, substation_dest] = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
 
+    f = open('biomass_list.dat', 'w')
+    f.write(str(biomass_list))
+    f.close()
+
+    f = open('substation_list.dat', 'w')
+    f.write(str(substation_list))
+    f.close()
+
+    f = open('distance_table.dat', 'w')
+    f.write(str(distance_table))
+    f.close()
+
+    f = open('time_table.dat', 'w')
+    f.write(str(time_table))
+    f.close()
 
 # Define sets of the substations and biomass stocks and initialize them from data above.
 model.SOURCES = Set(initialize=biomass_list, doc='Location of Biomass sources')

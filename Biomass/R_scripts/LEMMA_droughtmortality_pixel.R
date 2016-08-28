@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+### ONLY NEED TO INSTALL PACKAGES ONCE
+#install.packages("rgdal")
+#install.packages("raster")
+#install.packages("rgeos")
+#install.packages("stringr")
+#install.packages("dplyr")
+#install.packages("viridis")
+=======
 ### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
 ### such as cropping and rewriting large datasets. These steps are included but commented out to reduce processing time.
 
@@ -8,6 +17,7 @@ install.packages("rgeos")
 install.packages("stringr")
 install.packages("dplyr")
 install.packages("viridis")
+>>>>>>> cc738d012a95727f9bca241ff1c6fd7c5b0c785a
 
 library(rgdal)
 library(raster)

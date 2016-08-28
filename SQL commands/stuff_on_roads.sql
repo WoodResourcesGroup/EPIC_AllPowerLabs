@@ -60,3 +60,38 @@ WHERE g1.id = 2149 and g1.id <> g2.gid  AND ST_DWithin(st_transform(g1.geom,2691
 ORDER BY biomass_id, st_transform(g1.geom,26910) <-> st_transform(g2.geom,26910)
 
 http://geeohspatial.blogspot.com/2013/05/k-nearest-neighbor-search-in-postgis.html
+
+-- Final version 
+
+SET search_path to sandbox, public;
+SELECT DISTINCT ON(biomass_id) g1.id As biomass_id, 
+g2.gid As road_id, ST_Distance(st_transform(g1.geom,26910),st_transform(g2.geom,26910)) as distance 
+    FROM biosum_test As g1, foo As g2  
+WHERE 
+--	g1.id = 2149 and 
+--	g1.id <> g2.gid  AND 
+	ST_DWithin(st_transform(g1.geom,26910), st_transform(g2.geom,26910), 1000)  
+ORDER BY biomass_id, st_transform(g1.geom,26910) <-> st_transform(g2.geom,26910)
+
+-- Kmeans code that reflects the number of points in the cluster
+
+SET search_path to sandbox, public;
+SELECT kmeans, count(*), ST_Centroid(ST_Collect(geom)) AS geom
+FROM (
+  SELECT kmeans(ARRAY[lon, lat], 5) OVER (), geom
+  FROM biosum_test
+) AS ksub
+GROUP BY kmeans
+ORDER BY kmeans;
+
+-- Kmeans code that reflects the total yield from in the cluster
+
+SET search_path to sandbox, public;
+SELECT kmeans, count(*), sum(chip_yield) as yield, ST_Centroid(ST_Collect(geom)) AS geom
+FROM (
+  SELECT kmeans(ARRAY[lon, lat], 10) OVER (), geom, chip_yield
+  FROM biosum_test
+) AS ksub
+GROUP BY kmeans
+ORDER BY kmeans;
+

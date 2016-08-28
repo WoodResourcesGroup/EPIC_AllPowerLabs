@@ -1,10 +1,10 @@
 ### ONLY NEED TO INSTALL PACKAGES ONCE
-install.packages("rgdal")
-install.packages("raster")
-install.packages("rgeos")
-install.packages("stringr")
-install.packages("dplyr")
-install.packages("viridis")
+#install.packages("rgdal")
+#install.packages("raster")
+#install.packages("rgeos")
+#install.packages("stringr")
+#install.packages("dplyr")
+#install.packages("viridis")
 
 library(rgdal)
 library(raster)

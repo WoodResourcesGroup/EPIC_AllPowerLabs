@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ### ONLY NEED TO INSTALL PACKAGES ONCE
 #install.packages("rgdal")
 #install.packages("raster")
@@ -5,6 +6,18 @@
 #install.packages("stringr")
 #install.packages("dplyr")
 #install.packages("viridis")
+=======
+### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
+### such as cropping and rewriting large datasets. These steps are included but commented out to reduce processing time.
+
+### ONLY NEED TO INSTALL PACKAGES ONCE ON EACH MACHINE
+install.packages("rgdal")
+install.packages("raster")
+install.packages("rgeos")
+install.packages("stringr")
+install.packages("dplyr")
+install.packages("viridis")
+>>>>>>> cc738d012a95727f9bca241ff1c6fd7c5b0c785a
 
 library(rgdal)
 library(raster)
@@ -17,14 +30,18 @@ options(digits = 5)
 
 ### OPEN LEMMA DATA 
 setwd("~/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-LEMMA <- raster("mr200_2012")
-#crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
-#plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
-#extent(LEMMA)
+# LEMMA <- raster("mr200_2012")
+# crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
+# plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
+# extent(LEMMA)
 
-#LEMMA <- crop(LEMMA, extent(-2362845, -1627605, 1232145, 2456985)) # Crop LEMMA so it only contains CA
-#writeRaster(LEMMA, filename = "LEMMAt.tif", format = "GTiff", overwrite = F) # save a backup 
-LEMMA <- raster("LEMMAt.tif")
+# LEMMA <- crop(LEMMA, extent(-2362845, -1627605, 1232145, 2456985)) # Crop LEMMA so it only contains CA
+# LEMMA_bu <- LEMMA # backup
+# writeRaster(LEMMA, filename = "LEMMA.grd", overwrite = T) # save a backup
+# This creates both a .gri and a .grd file
+# I tried writing the raster in GeoTIFF and IMG formats, but they do not retain attribute information, which is critical
+
+LEMMA <- raster("LEMMA.gri")
 
 ### OPEN DROUGHT MORTALITY POLYGONS
 setwd("~/Box Sync/EPIC-Biomass/GIS Data/")
@@ -57,11 +74,9 @@ sum(drought_bu$ACRES)
 ## print how many trees this excludes: ~90,000 trees (out of ~33,000,000)
 sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
 sum(na.omit(drought_bu$NO_TREE))
-## see how continues these are
-plot(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1))
 
 # Crop drought data to extent of Ramirez data 
-drought <- crop(drought, extent(CR_mort)) # delete this step for running on the entire drought data set
+drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
 
 ## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
 ## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
@@ -84,7 +99,7 @@ ploop <- function(start, finish) {
     single <- drought[i,]
     clip1 <- crop(LEMMA, extent(single))
     clip2 <- mask(clip1, single)
-    pcoords <- cbind(clip2@data@values, coordinates(clip2)) # coordinates of each pixel 
+    pcoords <- cbind(clip2@data@values, coordinates(clip2)) # coordinates of each pixel
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords)
     Pol.ID <- rep(i, nrow(pcoords)) # create a Polygon ID
@@ -105,7 +120,7 @@ ploop <- function(start, finish) {
     # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
     # the most common conifer species in each raster cell:
     merge$CONBM_tree_kg <- 0
-    merge$CONBM_kg <- 0
+    merge$D_CONBM_kg <- 0
     merge$relNO <- 0
     for (i in 1:nrow(merge)) {
       cell <- merge[i,]
@@ -130,19 +145,20 @@ ploop <- function(start, finish) {
     }
     
     # Find biomass per pixel using biomass per tree and estimated number of trees
-    pmerge <- merge(merge, pcoords, by.x ="ID", by.y = "V1") # pmerge has a line for every pixel
+    pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
+    # problem here
     pmerge$relBA <- pmerge$BAC_GE_3/sum(pmerge$BAC_GE_3) # Create column for % of polygon BA in that pixel. 
                                                          # BAC_GE_3 is basal area of live conifers in that pixel.
     tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
     pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
                                         # and total number of trees in polygon
-    pmerge$CONBM_kg <- pmerge$relNO*pmerge$CONBM_tree_kg # CONBM_kg is total biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
+    pmerge$D_CONBM_kg <- pmerge$relNO*pmerge$CONBM_tree_kg # D_CONBM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
     
     # Create vectors that are the same length as pmerge to combine into final table:
-    CONBM_kg_pol <- rep(sum(pmerge$CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
-    Av_BM_TR <- CONBM_kg_pol/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
-    Av_QMDC_DOM <- rep(mean(pmerge$QMDC_DOM), nrow(pmerge)) # Find the average of the pixels' quadratic mean diameters 
-    Mode_CONPL <-  rep(names(tail(sort(summary(pmerge$CONPLBA)), n=1)), nrow(pmerge)) # Find the conifer species that has a plurality in the most pixels
+    D_Pol_CONBM_kg <- rep(sum(pmerge$D_CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
+    Av_BM_TR <- D_Pol_CONBM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
+    QMDC_DOM <- pmerge$QMDC_DOM # Find the average of the pixels' quadratic mean diameters 
+    CONPL <-  pmerge$CONPLBA # Find the conifer species that has a plurality in the most pixels
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) 
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge))
@@ -151,52 +167,61 @@ ploop <- function(start, finish) {
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
     
     # Estimate biomass of live AND dead trees based on LEMMA values of conifer biomass per pixel:
-    CONBM_kgha <- pmerge$BPHC_GE_3_CRM # BPHC_GE_3_CRM is estimated biomass of all conifers from LEMMA
-    Pol_CONBM_kgha <- rep(mean(pmerge$BPHC_GE_3_CRM),nrow(pmerge)) # Average across polygons
-    CON_THA <- rep(mean(pmerge$TPHC_GE_3), nrow(pmerge)) # TPHC_GE_3 is conifer trees per hectare from LEMMA
+    All_CONBM_kgha <- pmerge$BPHC_GE_3_CRM # BPHC_GE_3_CRM is estimated biomass of all conifers from LEMMA
+    All_Pol_CONBM_kgha <- rep(mean(pmerge$BPHC_GE_3_CRM),nrow(pmerge)) # Average across polygons
+    CON_THA <- pmerge$TPHC_GE_3 # TPHC_GE_3 is conifer trees per hectare from LEMMA
     
     # Bring it all together
-    final <- cbind(pmerge, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar, TOT_CONBM_kgha,CON_THA, Av_QMDC_DOM, Mode_CONPL, Av_BM_TR, CONBM_kg_pol, pcoords[2], pcoords[3])
+    final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, QMDC_DOM,Av_BM_TR)
     final <- as.data.frame(final)
-    final$est.num.con <- (single@data$Shap_Ar/10000)*CON_THA
-    final$est.BM.con <- (single@data$Shap_Ar/10000)*TOT_CONBM_kgha
+    final$All_Pol_CON_NO <- (single@data$Shap_Ar/10000*900)*CON_THA # Estimate total number of conifers in the polygon
+    final$All_Pol_CON_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_CONBM_kgha # Estimate total conifer biomass in the polygon
     result.lemma.p <- rbind(final, result.lemma.p, make.row.names = T)
   }
-  key <- seq(1, nrow(result.lemma.p))
+  key <- seq(1, nrow(result.lemma.p)) # Create a key for each pixel (row)
   result.lemma.p <- cbind(key, result.lemma.p)
+  names(result.lemma.p)[names(result.lemma.p)=="V1"] <- "x"
+  names(result.lemma.p)[names(result.lemma.p)=="V2"] <- "y"
+  names(result.lemma.p)[names(result.lemma.p)=="V3"] <- "D_CONBM_kg"
+  names(result.lemma.p)[names(result.lemma.p)=="V4"] <- "relNO"
+  names(result.lemma.p)[names(result.lemma.p)=="V5"] <- "relBA"
+  names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
   return(result.lemma.p)
 }
 
-test.result.p <- ploop.s(1,2)
-result.p <- ploop.s(1,nrow(drought.s))
+test.result.p <- ploop(1,2)
+result.p.small <- ploop(1,100)
+result.p <- ploop(1, nrow(drought))
+# getting "Error in fix.by(by.x, x) : 'by' must specify a uniquely valid column" after 100 polygons 
+result.p.test100 <- ploop(99,102)
+big90 <- ploop(90,90)
+hist(big90$relBA)
+hist(big90$D_CONBM_kg)
+length(subset(big90$relBA, big90$relBA == 0))
+nrow(big90)
 
-## Check that results match those of LEMMA_droughtmortality -- all of the following should return TRUE
-unique(result.p[result.p$Pol.ID == 5,"est.BM.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con.BM"]) 
-unique(result.p[result.p$Pol.ID == 5,"est.num.con"]) == unique(result[result$Pol.ID == 5,"est.tot.con"]) 
-unique(result.p[result.p$Pol.ID == 5,"Pol.x"]) == unique(result[result$Pol.ID == 5,"Cent.x"]) 
-unique(result.p[result.p$Pol.ID == 5,"CONBM_kg_pol"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-unique(result.p[result.p$Pol.ID == 5,"CON_THA"]) == unique(result[result$Pol.ID == 5,"CON_THA"]) 
-unique(result.p[result.p$Pol.ID == 5,"TOT_CONBM_kgha"]) == unique(result[result$Pol.ID == 5,"TOT_CONBM_kgha"]) # biomass of all conifers, not just dead ones
-sum(result.p[result.p$Pol.ID == 5,"pmerge$CONBM_kg"]) == unique(result[result$Pol.ID == 5,"CONBM_kg_pol"]) 
-# Add explanations of what these tests are
-
-### NEED TO DECIDE WHAT LEVEL OF PRECISION TO USE AND STICK WITH IT - DEFAULT IS TO DISPLAY ONLY 7 SIG FIGS, HIGHEST POSSIBLE IS 22 BUT WHEN I SPECIFY 22
-### ONLY 17 ARE SHOWN
+# Look closer at pixels with very high biomass estimations
+hist(result.p.small$D_CONBM_kg)
+hist(result.p.small$D_CONBM_kg, xlim = c(0,60000), breaks =60)
+bigpixels <- subset(result.p.small$D_CONBM_kg, result.p.small$D_CONBM_kg > 60000)
+sum(bigpixels)
+length(result.p.small$D_CONBM_kg)
+sum(bigpixels)/sum(na.omit((result.p.small$D_CONBM_kg)))
+length(bigpixels)/length(result.p.small$D_CONBM_kg)
+big <- subset(result.p.small, result.p.small$D_CONBM_kg > 60000)
 
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)
-remove(BM_eqns, BA, BM, clip1, clip2, Mode_CONPL, CONPL2, CONPL3, CONPLR, CONPLR2, CONPLR3)
-remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, Av_QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
+remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
+remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
 remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
-result.lemma.drought.s <- result.lemma 
-setwd("C:/Users/Carmen/cec_apl/Biomass/Results")
+setwd("~/cec_apl/Biomass/Results/")
+write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)
+result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
 
-write.csv(result.p, file = "Trial_Biomass_Pixels_LEMMA_5.csv", row.names=F)
-
-result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_5.csv")
-hist(result.p$pmerge.CONBM_kg, xlim=c(0,60000), breaks=500)
-nrow(subset(result.p, result.p$pmerge.CONBM_kg >60000))/nrow(subset(result.p, result.p$pmerge.CONBM_kg >0))
+hist(result.p$CONBM_kg) #, xlim=c(0,60000), breaks=500)
+nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >60000))/nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >0))
   ## setting max at 60,000 retains 99% of the non-zero pixels
 ## CHECK Gonzalez paper to figure out what is an unreasonably large amount of biomass
 result.p <- subset(result.p, result.p$pmerge.CONBM_kg < 60000)
@@ -214,12 +239,4 @@ writeRaster(r,"LEMMA_BM_sample.tif")
 
 detach("package:raster", unload=TRUE)
 
-# Need to: 
-# 1) check for how many decimal places are needed
-# 2) adjust data to that many decimal places
-# 3) upload to git
-# 4) edit README
-# 5) manually check for accurate calculations
-# 6) plot
-# 7) double check overlapping plots
 

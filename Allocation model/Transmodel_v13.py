@@ -7,6 +7,7 @@ from __future__ import division
 from pyomo.environ import *
 from pyomo.opt import SolverFactory
 import googlemaps
+from sqlalchemy import create_engine
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -23,30 +24,25 @@ import time as tm
 model = ConcreteModel()
 
 """
-Load data from files and turn into lists for processing, later this can be updated
-directly from the database.
+This portion of the code makes a query in the server to obtain from the database the substations and biomass sources list. It pergforms a pre-filtering by resucing the search space of the google API such that there no queries above certain linear distance.
 
-File biomass_v1.dat contains the data from the biomass stocks and their location
-All the data is loaded in to a dataframe
-File subs_v1.dat contains the data from the electrical nodes and their location
-All the data is loaded in to a dataframe
+The workflow is as follows:
+    -Create the Engine to connect to the DB.
+    -Make the query into a pandas dataframe where the potential routes are enclosed.
+    - This portion of the code is somewhat difficult to follow. In the Database the coordinates Y and X of the sites are independent columns, both the substations and the biomass. However,from the optimization point of view each "point" is a single location. So, what it does is that it merges the Y and X coordinates into a single colum as a string. Later on, this will also be used to generate the dictionaries with some limits.
+    -based on the list of potentials then get the list of biomass_coord and the substation_coord
 """
 
-biomass_df = pd.read_csv('biomass_v1.dat', encoding='UTF-8', delimiter=',')
-substation_df = pd.read_csv('subs_v2.dat', encoding='UTF-8', delimiter=',')
+engine = create_engine('postgresql+pg8000://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5432/apl_cec?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
+df_routes = pd.read_sql_query('select biosum.scenario1_gis.lat as source_lat, biosum.scenario1_gis.lon as source_lon, pge_ram.feeders_data.lat as dest_lat, pge_ram.feeders_data.lon as dest_lon, st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 as distance FROM biosum.scenario1_gis, pge_ram.feeders_data where (st_distance_Spheroid(biosum.scenario1_gis.st_makepoint, pge_ram.feeders_data.the_geom, \'SPHEROID[\"WGS 84\",6378137,298.257223563]\')/1000 <= 30);', engine)
 
-"""
-This portion of the code is somewhat difficult to follow. In the Database the
-coordinates Y and X of the sites are independent columns, both the substations
-and the biomass. However,from the optimization point of view each "point" is a
-single location. So, what it does is that it merges the Y and X coordinates into
-a single colum as a string. Later on, this will also be used to generate the
-dictionaries with some limits.
-"""
-biomass_coord = biomass_df.st_y.astype(str).str.cat(biomass_df.st_x.astype(str), sep=',')
+biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
 biomass_coord = biomass_coord.values.tolist()
-substation_coord = substation_df.st_y.astype(str).str.cat(substation_df.st_x.astype(str), sep=',')
+biomass_coord = list(set(biomass_coord))
+
+substation_coord = df_routes.dest_lat.astype(str).str.cat(df_routes.dest_lon.astype(str), sep=',')
 substation_coord = substation_coord.values.tolist()
+substation_coord = list(set(biomass_coord))
 
 """
 The data for the piecewise cost of installation is given in # of gasifiers per
@@ -78,6 +74,7 @@ biomass_list = []
 substation_list = []
 avoid_table = {}
 fail_table = {}
+
 
 if os.path.isfile('time_table.dat'):
     print "matrices for time exist at this time"

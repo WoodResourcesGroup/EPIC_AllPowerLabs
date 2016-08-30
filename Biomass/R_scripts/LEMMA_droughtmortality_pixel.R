@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ### ONLY NEED TO INSTALL PACKAGES ONCE
 #install.packages("rgdal")
 #install.packages("raster")
@@ -6,18 +5,9 @@
 #install.packages("stringr")
 #install.packages("dplyr")
 #install.packages("viridis")
-=======
+
 ### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
 ### such as cropping and rewriting large datasets. These steps are included but commented out to reduce processing time.
-
-### ONLY NEED TO INSTALL PACKAGES ONCE ON EACH MACHINE
-install.packages("rgdal")
-install.packages("raster")
-install.packages("rgeos")
-install.packages("stringr")
-install.packages("dplyr")
-install.packages("viridis")
->>>>>>> cc738d012a95727f9bca241ff1c6fd7c5b0c785a
 
 library(rgdal)
 library(raster)
@@ -76,7 +66,7 @@ sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
 sum(na.omit(drought_bu$NO_TREE))
 
 # Crop drought data to extent of Ramirez data 
-drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
+# drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
 
 ## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
 ## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
@@ -192,6 +182,7 @@ ploop <- function(start, finish) {
 test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
 result.p <- ploop(1, nrow(drought))
+
 # getting "Error in fix.by(by.x, x) : 'by' must specify a uniquely valid column" after 100 polygons 
 result.p.test100 <- ploop(99,102)
 big90 <- ploop(90,90)

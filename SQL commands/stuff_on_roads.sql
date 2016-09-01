@@ -95,3 +95,8 @@ FROM (
 GROUP BY kmeans
 ORDER BY kmeans;
 
+Select row_number() over () as ID, path, name_f, gc as geom FROM (
+Select sandbox.test_feeders."Name" as name_f,
+	sandbox.test_feeders."Path" as path,
+	ST_makeline(the_geom) as gc from sandbox.test_feeders where test_feeders."Path" = 'Path1' group by "Name", "Path") f
+group by name_f, path, gc

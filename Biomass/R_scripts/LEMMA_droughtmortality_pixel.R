@@ -5,10 +5,9 @@
 #install.packages("stringr")
 #install.packages("dplyr")
 #install.packages("viridis")
+
 ### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
 ### such as cropping and rewriting large datasets. These steps are included but commented out to reduce processing time.
-
-
 
 library(rgdal)
 library(raster)
@@ -20,7 +19,7 @@ library(viridis)
 options(digits = 5)
 
 ### OPEN LEMMA DATA 
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+setwd("~/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 # LEMMA <- raster("mr200_2012")
 # crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
 # plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
@@ -35,7 +34,7 @@ setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 LEMMA <- raster("LEMMA.gri")
 
 ### OPEN DROUGHT MORTALITY POLYGONS
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+setwd("~/Box Sync/EPIC-Biomass/GIS Data/")
 # drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
@@ -52,7 +51,7 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 # crs(CR_mort)
 # plot(CR_mort)
 # CR_mort <- projectRaster(CR_mort, crs=crs(drought))
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/tempdir")
 # writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
 CR_mort <- raster("CR_mort.tif")
 
@@ -67,7 +66,7 @@ sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
 sum(na.omit(drought_bu$NO_TREE))
 
 # Crop drought data to extent of Ramirez data 
-drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
+# drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
 
 ## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
 ## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
@@ -98,9 +97,6 @@ ploop <- function(start, finish) {
     tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
     s <- sum(tab[[1]]) # Counts total raster cells the polygon - this is different from length(clip2tg) because it doesn't include NAs
     mat <- as.data.frame(tab)
-    if (is.na(mat[1,1])) {
-      next
-    }
     mat2 <- as.data.frame(tab[[1]]/s) # gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
     mat2 <- merge(mat, mat2, by="Var1")
     # extract attribute information from LEMMA for each plot number contained in the polygon:
@@ -185,7 +181,8 @@ ploop <- function(start, finish) {
 
 test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
-result.p <- ploop(1, nrow(drought_bu))
+result.p <- ploop(1, nrow(drought))
+
 # getting "Error in fix.by(by.x, x) : 'by' must specify a uniquely valid column" after 100 polygons 
 result.p.test100 <- ploop(99,102)
 big90 <- ploop(90,90)

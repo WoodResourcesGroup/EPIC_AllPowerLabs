@@ -95,8 +95,26 @@ FROM (
 GROUP BY kmeans
 ORDER BY kmeans;
 
-Select row_number() over () as ID, path, name_f, gc as geom FROM (
-Select sandbox.test_feeders."Name" as name_f,
-	sandbox.test_feeders."Path" as path,
-	ST_makeline(the_geom) as gc from sandbox.test_feeders where test_feeders."Path" = 'Path1' group by "Name", "Path") f
-group by name_f, path, gc
+-- Cluster within code 
+
+drop table if exists sandbox.foo2;
+create table sandbox.foo2 as
+SELECT row_number() over () AS id, ST_NumGeometries(gc) as total_number,
+  st_setsrid(ST_MinimumBoundingCircle(gc),26910) as geom
+FROM (
+  SELECT unnest(ST_ClusterWithin(st_transform(geom,26910), 6000)) as gc
+  FROM sandbox.biosum_test
+) f;
+
+-- Cluster kmeans using circle
+
+drop table if exists sandbox.kmeans2;
+create table sandbox.kmeans2 as
+SELECT kmeans, count(*), sum(chip_yield) as yield, st_setsrid(ST_MinimumBoundingCircle(ST_Collect(geom)),26910)
+ AS geom
+FROM (
+  SELECT kmeans(ARRAY[lon, lat], 10) OVER (), geom, chip_yield
+  FROM sandbox.biosum_test
+) AS ksub
+GROUP BY kmeans
+ORDER BY kmeans;

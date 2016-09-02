@@ -97,6 +97,9 @@ ploop <- function(start, finish) {
     tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
     s <- sum(tab[[1]]) # Counts total raster cells the polygon - this is different from length(clip2tg) because it doesn't include NAs
     mat <- as.data.frame(tab)
+    if (is.na(mat[1,1])) {
+      next
+    }
     mat2 <- as.data.frame(tab[[1]]/s) # gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
     mat2 <- merge(mat, mat2, by="Var1")
     # extract attribute information from LEMMA for each plot number contained in the polygon:

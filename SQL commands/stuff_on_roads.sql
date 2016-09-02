@@ -110,7 +110,7 @@ FROM (
 
 drop table if exists sandbox.kmeans2;
 create table sandbox.kmeans2 as
-SELECT kmeans, count(*), sum(chip_yield) as yield, st_setsrid(ST_MinimumBoundingCircle(ST_Collect(geom)),26910)
+SELECT kmeans, count(*), sum(chip_yield) as yield, st_setsrid(ST_MinimumBoundingCircle(ST_Collect(geom)),4326)
  AS geom
 FROM (
   SELECT kmeans(ARRAY[lon, lat], 10) OVER (), geom, chip_yield
@@ -118,3 +118,7 @@ FROM (
 ) AS ksub
 GROUP BY kmeans
 ORDER BY kmeans;
+
+-- Failed stuff on roads
+
+create table roads_data.ca_roads_osm as with ca as (select st_union(the_geom) geom from "General_GIS_DATA"."California_counties") select * from roads_data.roads_california r, ca c where st_intersects(c.geom,r.wkb_geometry);

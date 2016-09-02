@@ -19,7 +19,7 @@ library(viridis)
 options(digits = 5)
 
 ### OPEN LEMMA DATA 
-setwd("~/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 # LEMMA <- raster("mr200_2012")
 # crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
 # plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
@@ -34,7 +34,7 @@ setwd("~/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 LEMMA <- raster("LEMMA.gri")
 
 ### OPEN DROUGHT MORTALITY POLYGONS
-setwd("~/Box Sync/EPIC-Biomass/GIS Data/")
+setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 # drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
@@ -51,7 +51,7 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 # crs(CR_mort)
 # plot(CR_mort)
 # CR_mort <- projectRaster(CR_mort, crs=crs(drought))
-setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
 # writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
 CR_mort <- raster("CR_mort.tif")
 
@@ -105,6 +105,7 @@ ploop <- function(start, finish) {
     if (is.na(L.in.mat[1,1])) {
       next
     }
+    print('merge line', i)
     merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID") # merge LEMMA data with polygon data into one table
     
     # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
@@ -113,7 +114,7 @@ ploop <- function(start, finish) {
     merge$D_CONBM_kg <- 0
     merge$relNO <- 0
     for (i in 1:nrow(merge)) {
-      cell <- merge[i,]
+      cell <- merge[i,]**
       if (cell$CONPLBA %in% Cedars) { #CONPLBA = Conifer tree species with plurality of basal area
         num <- (B0[1] + B1[1]*log(cell$QMDC_DOM)) # apply formula above, but w/o the exp. QMDC_DOM = Quadratic mean diameter of all dominant and codominant conifers
       } else if (cell$CONPLBA %in% Dougfirs) {

@@ -51,9 +51,9 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 # crs(CR_mort)
 # plot(CR_mort)
 # CR_mort <- projectRaster(CR_mort, crs=crs(drought))
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+#setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
 # writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
-CR_mort <- raster("CR_mort.tif")
+# CR_mort <- raster("CR_mort.tif")
 
 # narrow drought down to large-ish polygons and those with more than one tree
 # might want to change these later
@@ -66,7 +66,8 @@ sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
 sum(na.omit(drought_bu$NO_TREE))
 
 # Crop drought data to extent of Ramirez data 
-drought <- crop(drought, extent(CR_mort)) # *****delete this step for running on the entire drought data set*****
+# drought <- crop(drought, extent(CR_mort)) # *****commented out this step for running on the entire drought data set*****
+
 
 ## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
 ## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
@@ -85,7 +86,7 @@ Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 ### COMBINE LEMMA AND POLYGON DATA
 ploop <- function(start, finish) {
   result.lemma.p <- data.frame()
-  for (i in start:finish) { # final: nrow(drought)
+  for (i in start:finish) { 
     single <- drought[i,]
     clip1 <- crop(LEMMA, extent(single))
     clip2 <- mask(clip1, single)
@@ -108,7 +109,6 @@ ploop <- function(start, finish) {
     if (is.na(L.in.mat[1,1])) {
       next
     }
-    print('merge line', i)
     merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID") # merge LEMMA data with polygon data into one table
     
     # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
@@ -117,7 +117,7 @@ ploop <- function(start, finish) {
     merge$D_CONBM_kg <- 0
     merge$relNO <- 0
     for (i in 1:nrow(merge)) {
-      cell <- merge[i,]**
+      cell <- merge[i,]
       if (cell$CONPLBA %in% Cedars) { #CONPLBA = Conifer tree species with plurality of basal area
         num <- (B0[1] + B1[1]*log(cell$QMDC_DOM)) # apply formula above, but w/o the exp. QMDC_DOM = Quadratic mean diameter of all dominant and codominant conifers
       } else if (cell$CONPLBA %in% Dougfirs) {
@@ -187,60 +187,20 @@ test.result.p <- ploop(1,2)
 result.p.small <- ploop(1,100)
 result.p <- ploop(1, nrow(drought))
 
-# Look at an example polygon with pixels with very high biomass
-result.p.test100 <- ploop(99,102)
-big90 <- ploop(90,90)
-hist(big90$relBA)
-hist(big90$D_CONBM_kg)
-length(subset(big90$relBA, big90$relBA == 0))
-nrow(big90)
+# Take out nonsensical results
+hist(result.p$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)
+result.p <- subset(result.p, result.p$D_CONBM_kg > 0 & result.p$D_CONBM_kg < 60000)
 
-# Look closer at pixels with very high biomass estimations
-hist(result.p.small$D_CONBM_kg)
-hist(result.p.small$D_CONBM_kg, xlim = c(0,60000), breaks =60)
-bigpixels <- subset(result.p.small$D_CONBM_kg, result.p.small$D_CONBM_kg > 60000)
-sum(bigpixels)
-length(result.p.small$D_CONBM_kg)
-sum(bigpixels)/sum(na.omit((result.p.small$D_CONBM_kg)))
-length(bigpixels)/length(result.p.small$D_CONBM_kg)
-big <- subset(result.p.small, result.p.small$D_CONBM_kg > 60000)
 
 # CLEAR EVERYTHING IN LOOPS
-remove(cell, final, L.in.mat, mat, mat2, merge)
-remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
-remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
-remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
+#remove(cell, final, L.in.mat, mat, mat2, merge)
+#remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
+#remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
+#remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
-# Write an re-open results
-setwd("~/cec_apl/Biomass/Results/")
-write.csv(result.p, file = "Trial_Biomass_Pixels_LEMMA_cropped.csv", row.names=F)
-result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_cropped.csv")
+# Write and re-open results
+setwd("~/Documents/cec_apl/Biomass/Results/")
+write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)
+result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
 
-result.p <- subset(result.p, result.p$D_CONBM_kg > 0)
-
-hist(result.p$D_CONBM_kg, xlim = c(-10000,70000), breaks = 1000)
-length(subset(result.p$D_CONBM_kg, result.p$D_CONBM_kg < 0))
-head(sort(result.p$D_CONBM_kg))
-error <- subset(result.p, result.p$D_CONBM_kg < 0)
-head(result.p$key)
-drought[5983950,]
-
-## FOR NOW, LOWER EVERYTHING ABOVE 60,000 kg
-
-hist(result.p$CONBM_kg) #, xlim=c(0,60000), breaks=500)
-nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >60000))/nrow(subset(result.p, result.p$pmerge.D_CONBM_kg >0))
-  ## setting max at 60,000 retains 99% of the non-zero pixels
-## CHECK Gonzalez paper to figure out what is an unreasonably large amount of biomass
-result.p <- subset(result.p, result.p$pmerge.CONBM_kg < 60000)
-p <- result.p[,c("x", "y", "pmerge.CONBM_kg")]
-coordinates(p) = ~x+y
-proj4string(p) = CRS("+init=epsg:5070")
-gridded(p) = TRUE
-r = raster(p)
-projection(r) = CRS(proj4string(p))
-plot(r, col=viridis(n=20, option = 'inferno'), `extent<-`())
-plot(r, col=rev(heat.colors(8, alpha=1)), breaks=seq(0,10000, by=1000))
-writeRaster(r,"LEMMA_BM_sample.tif")
-
-## EVERTHING IS IN EPSG 5070
-
+## REMINDER: EVERTHING IS IN SRID EPSG 5070

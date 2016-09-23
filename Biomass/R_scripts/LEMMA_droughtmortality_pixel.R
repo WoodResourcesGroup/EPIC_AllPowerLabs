@@ -3,7 +3,7 @@
 #install.packages("raster")
 #install.packages("rgeos")
 #install.packages("stringr")
-#install.packages("dplyr")
+#install.packages("dplyr") ## NOT CURRENTLY INSTALLED
 #install.packages("viridis")
 
 ### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
@@ -13,7 +13,7 @@ library(rgdal)
 library(raster)
 library(rgeos)
 library(stringr)
-library(dplyr)
+# library(dplyr) ## NOT CURRENTLY INSTALLED
 library(viridis)
 
 options(digits = 5)
@@ -199,8 +199,12 @@ result.p <- subset(result.p, result.p$D_CONBM_kg > 0 & result.p$D_CONBM_kg < 600
 #remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
 
 # Write and re-open results
-setwd("~/Documents/cec_apl/Biomass/Results/")
+setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
 write.csv(result.p, file = "Biomass_Pixels_LEMMA_sept22.csv", row.names=F)
-result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
+result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_sept22.csv")
+
+# Test write and re-open results
+write.csv(test.result.p, file = "Biomass_Pixels_LEMMA_TEST_sept23.csv", row.names=F)
+result.p <- read.csv("Biomass_Pixels_LEMMA_TEST_sept23.csv")
 
 ## REMINDER: EVERTHING IS IN SRID EPSG 5070

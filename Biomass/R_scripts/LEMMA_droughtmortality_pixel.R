@@ -200,7 +200,7 @@ result.p <- subset(result.p, result.p$D_CONBM_kg > 0 & result.p$D_CONBM_kg < 600
 
 # Write and re-open results
 setwd("~/Documents/cec_apl/Biomass/Results/")
-write.csv(result.p.small, file = "Trial_Biomass_Pixels_LEMMA_6.csv", row.names=F)
+write.csv(result.p, file = "Biomass_Pixels_LEMMA_sept22.csv", row.names=F)
 result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_6.csv")
 
 ## REMINDER: EVERTHING IS IN SRID EPSG 5070

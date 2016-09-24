@@ -86,9 +86,10 @@ Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 
 ploop <- function(start, finish) {
   result.lemma.p <- data.frame()
-  pb <- winProgressBar(title="Progress", min=start, max=finish, initial=0)
+  pb <- winProgressBar(title="Progress", min=start, max=finish, initial=0, label = "0% done")
   for (i in start:finish) { 
-    setWinProgressBar(pb, value = i)
+    info <- sprintf("%d%% done", round((i/finish)*100))
+    setWinProgressBar(pb, value = i, label = info)
     single <- drought[i,]
     clip1 <- crop(LEMMA, extent(single))
     clip2 <- mask(clip1, single)
@@ -186,23 +187,12 @@ ploop <- function(start, finish) {
   return(result.lemma.p)
 }
 
-# Quick test
-strt<-Sys.time()
-test.result.p <- ploop(1,2)
-print(Sys.time()-strt)
-# 1.13 seconds
 
 # Ten polygon test
 strt<-Sys.time()
 cheese10 <- ploop(1,10)
 print(Sys.time()-strt)
 # 6.45 seconds
-
-# One hundred polygon test
-strt<-Sys.time()
-cheese100 <- ploop(1,100)
-print(Sys.time()-strt)
-# 2.06 minutes
 
 # Full extent of CR 
 strt<-Sys.time()
@@ -212,7 +202,6 @@ print(Sys.time()-strt)
 # Take out nonsensical results
 hist(result.p$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)
 result.p <- subset(result.p, result.p$D_CONBM_kg > 0 & result.p$D_CONBM_kg < 60000)
-
 
 # CLEAR EVERYTHING IN LOOPS
 remove(cell, final, L.in.mat, mat, mat2, merge)

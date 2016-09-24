@@ -3,7 +3,6 @@
 #install.packages("raster")
 #install.packages("rgeos")
 #install.packages("stringr")
-#install.packages("dplyr") ## NOT CURRENTLY INSTALLED
 #install.packages("viridis")
 
 ### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
@@ -13,8 +12,8 @@ library(rgdal)
 library(raster)
 library(rgeos)
 library(stringr)
-# library(dplyr) ## NOT CURRENTLY INSTALLED
 library(viridis)
+library(parallel)
 
 options(digits = 5)
 
@@ -84,9 +83,12 @@ Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PI
 Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 
 ### COMBINE LEMMA AND POLYGON DATA
+
 ploop <- function(start, finish) {
   result.lemma.p <- data.frame()
+  pb <- winProgressBar(title="Progress", min=start, max=finish, initial=0)
   for (i in start:finish) { 
+    setWinProgressBar(pb, value = i)
     single <- drought[i,]
     clip1 <- crop(LEMMA, extent(single))
     clip2 <- mask(clip1, single)
@@ -180,12 +182,32 @@ ploop <- function(start, finish) {
   names(result.lemma.p)[names(result.lemma.p)=="V4"] <- "relNO"
   names(result.lemma.p)[names(result.lemma.p)=="V5"] <- "relBA"
   names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
+  close(pb)
   return(result.lemma.p)
 }
 
+# Quick test
+strt<-Sys.time()
 test.result.p <- ploop(1,2)
-result.p.small <- ploop(1,100)
+print(Sys.time()-strt)
+# 1.13 seconds
+
+# Ten polygon test
+strt<-Sys.time()
+cheese10 <- ploop(1,10)
+print(Sys.time()-strt)
+# 6.45 seconds
+
+# One hundred polygon test
+strt<-Sys.time()
+cheese100 <- ploop(1,100)
+print(Sys.time()-strt)
+# 2.06 minutes
+
+# Full extent of CR 
+strt<-Sys.time()
 result.p <- ploop(1, nrow(drought))
+print(Sys.time()-strt)
 
 # Take out nonsensical results
 hist(result.p$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)
@@ -193,10 +215,11 @@ result.p <- subset(result.p, result.p$D_CONBM_kg > 0 & result.p$D_CONBM_kg < 600
 
 
 # CLEAR EVERYTHING IN LOOPS
-#remove(cell, final, L.in.mat, mat, mat2, merge)
-#remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
-#remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
-#remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
+remove(cell, final, L.in.mat, mat, mat2, merge)
+remove(BM_eqns, BA, BM, clip1, clip2, CONPL)
+remove(num, numcon, s, ext, i, tab, single, THA, TREEPL, TREEPLR, QMDC_DOM, Av_BM_TR, CONBM_kgha, CONBM_kg_pol, relNO, NO)
+remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, RPT_YR, TOT_CONBM_kgha, tot_NO, totBA, i)
+remove(All_CONBM_kgha, All_Pol_CONBM_kgha, D_Pol_CONBM_kg, key)
 
 # Write and re-open results
 setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")

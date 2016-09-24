@@ -1,3 +1,79 @@
+
+library(rgdal)
+library(raster)
+library(rgeos)
+library(stringr)
+library(viridis)
+library(parallel)
+
+options(digits = 5)
+
+### OPEN LEMMA DATA 
+setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+# LEMMA <- raster("mr200_2012")
+# crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
+# plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
+# extent(LEMMA)
+
+# LEMMA <- crop(LEMMA, extent(-2362845, -1627605, 1232145, 2456985)) # Crop LEMMA so it only contains CA
+# LEMMA_bu <- LEMMA # backup
+# writeRaster(LEMMA, filename = "LEMMA.grd", overwrite = T) # save a backup
+# This creates both a .gri and a .grd file
+# I tried writing the raster in GeoTIFF and IMG formats, but they do not retain attribute information, which is critical
+
+LEMMA <- raster("LEMMA.gri")
+
+### OPEN DROUGHT MORTALITY POLYGONS
+setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+# drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
+# plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
+# crs(drought)
+# drought <- spTransform(drought, crs(LEMMA)) #change it to CRS of Gonzalez and LEMMA data - this takes a while
+# crs(drought)
+# writeOGR(obj=drought, dsn="tempdir",layer = "drought", driver="ESRI Shapefile")
+drought <- readOGR("tempdir", "drought")
+drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
+
+### RAMIREZ DATA
+# setwd("~/Box Sync/EPIC-Biomass/GIS Data/Ramirez Data/Copy of ENVI_FR.1754x4468x15x1000/")
+# GDALinfo("FR_2016.01.13_167.bsq")
+# CR_mort <- raster("FR_2016.01.13_167.bsq")
+# crs(CR_mort)
+# plot(CR_mort)
+# CR_mort <- projectRaster(CR_mort, crs=crs(drought))
+#setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+# writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
+# CR_mort <- raster("CR_mort.tif")
+
+# narrow drought down to large-ish polygons and those with more than one tree
+# might want to change these later
+drought <- subset(drought, drought$ACRES > 2 & drought$NO_TREE > 1)
+## print how much area this excludes: ~30,000 ACRES (out of ~4,000,000)
+sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$ACRES)
+sum(drought_bu$ACRES)
+## print how many trees this excludes: ~90,000 trees (out of ~33,000,000)
+sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
+sum(na.omit(drought_bu$NO_TREE))
+
+# Crop drought data to extent of Ramirez data 
+# drought <- crop(drought, extent(CR_mort)) # *****commented out this step for running on the entire drought data set*****
+
+
+## Create table of dia -> biomass parameters based on Jenkins paper - for now only broken down by broad genus category, but I could do it by individual species later if we want
+## Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
+## biomass = exp(B0 + B1*ln(dbh))
+types <- c("Cedar", "Dougfir", "Fir", "Pine", "Spruce")
+B0 <- as.numeric(c(-2.0336, -2.2304, -2.5384, -2.5356, -2.0773))
+B1 <- as.numeric(c(2.2592, 2.4435, 2.4814, 2.4349, 2.3323))
+BM_eqns <- cbind(types, B0, B1)
+
+Cedars <- c("CADE27", "THPL", "CHLA", "CHNO") # all have been checked for genus on plants.usda.gov
+Dougfirs <- c("PSMA", "PSME") # all have been checked for genus plants.usda.gov
+Firs <- c("ABAM", "ABBR", "ABGRC", "ABLA", "ABPRSH", "TSHE", "TSME")
+Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") # all have been checked for genus plants.usda.gov
+Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
+
+
 library(doParallel)
 library(foreach)
 detectCores()
@@ -13,7 +89,6 @@ strt<-Sys.time()
 # function
 
 inputs = 1:100
-
 result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="stop") %dopar% {
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
@@ -106,4 +181,3 @@ remove(result.lemma.p)
 # end timer
 print(Sys.time()-strt)
 ###################################################################
-

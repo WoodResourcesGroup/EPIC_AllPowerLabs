@@ -198,6 +198,7 @@ print(Sys.time()-strt)
 strt<-Sys.time()
 result.p <- ploop(1, nrow(drought))
 print(Sys.time()-strt)
+# 1.54 hours
 
 # Take out nonsensical results
 hist(result.p$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)

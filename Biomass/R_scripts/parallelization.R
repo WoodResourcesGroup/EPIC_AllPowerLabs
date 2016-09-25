@@ -82,14 +82,40 @@ c1 <- makeCluster(no_cores)
 registerDoParallel(c1)
 
 
+########### Find which polygons aren't going to work - these will automatically be left out of the foreach() loop ###########
+
+# start timer
+strt<-Sys.time()
+
+inputs = zero.i
+
+no.go <- foreach(i = inputs, .combine = rbind, .packages = c('raster', 'rgeos'), .errorhandling = "stop") %dopar% {
+  single <- drought[i,]
+  clip1 <- crop(LEMMA, extent(single))
+  clip2 <- mask(clip1, single)
+  ext <- extract(clip2, single)
+  no.pixels <- length(subset(ext[[1]], !is.na(ext[[1]])))
+  return(no.pixels)
+} 
+
+# end timer
+print(Sys.time()-strt)
+# 10 min for CR_mort subset of drought
+
+zeros <- subset(no.go, no.go == 0)
+zeros <- as.data.frame(zeros)
+zero.i <- row.names(zeros)
+zero.i <- as.integer(gsub("result.", "", zero.i))
+
 ###################################################################
 # start timer
 strt<-Sys.time()
 
 # function
 
-inputs = 1:100
-result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="stop") %dopar% {
+inputs = 1:nrow(drought)
+
+result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- drought[i,]
   clip1 <- crop(LEMMA, extent(single))
   clip2 <- mask(clip1, single)
@@ -175,9 +201,14 @@ names(result.lemma.p)[names(result.lemma.p)=="V3"] <- "D_CONBM_kg"
 names(result.lemma.p)[names(result.lemma.p)=="V4"] <- "relNO"
 names(result.lemma.p)[names(result.lemma.p)=="V5"] <- "relBA"
 names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
-chocolate100 <- result.lemma.p
+chocolate_CRMORT<- result.lemma.p
 remove(result.lemma.p)
 
 # end timer
 print(Sys.time()-strt)
 ###################################################################
+# 25 minutes for CRMORT
+
+setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
+write.csv(chocolate_CRMORT, file = "LEMMA_parallel_CRMORT.csv", row.names=F)
+result.p <- read.csv("LEMMA_parallel_CRMORT.csv")

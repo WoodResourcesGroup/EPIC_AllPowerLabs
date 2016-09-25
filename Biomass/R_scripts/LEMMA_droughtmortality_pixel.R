@@ -217,7 +217,7 @@ write.csv(result.p, file = "Biomass_Pixels_LEMMA_sept22.csv", row.names=F)
 result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_sept22.csv")
 
 # Test write and re-open results
-write.csv(test.result.p, file = "Biomass_Pixels_LEMMA_TEST_sept23.csv", row.names=F)
-result.p <- read.csv("Biomass_Pixels_LEMMA_TEST_sept23.csv")
+write.csv(result.p, file = "LEMMA_TEST_CRMORT_FORLOOP.csv", row.names=F)
+result.forloop <- read.csv("LEMMA_TEST_CRMORT_FORLOOP.csv")
 
 ## REMINDER: EVERTHING IS IN SRID EPSG 5070

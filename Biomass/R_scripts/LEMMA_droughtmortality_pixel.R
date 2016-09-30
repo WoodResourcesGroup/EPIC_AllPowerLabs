@@ -17,8 +17,13 @@ library(parallel)
 
 options(digits = 5)
 
-### OPEN LEMMA DATA 
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+### OPEN LEMMA DATA (detect whether it's Carmen's computer or Jose's computer)
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+}
+
 # LEMMA <- raster("mr200_2012")
 # crs(LEMMA) # 5070. based on what this guys says: http://gis.stackexchange.com/questions/128190/convert-srtext-to-proj4text
 # plot(LEMMA) # This is just plotting alias for FCID, forest class identification number, as described here: http://lemma.forestry.oregonstate.edu/data/structure-maps
@@ -33,7 +38,11 @@ setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 LEMMA <- raster("LEMMA.gri")
 
 ### OPEN DROUGHT MORTALITY POLYGONS
-setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+}
 # drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
@@ -50,7 +59,11 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 # crs(CR_mort)
 # plot(CR_mort)
 # CR_mort <- projectRaster(CR_mort, crs=crs(drought))
-#setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+# if( Sys.info()['sysname'] == "Windows" ) {
+# setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+# } else {
+#   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
+# }
 # writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
 # CR_mort <- raster("CR_mort.tif")
 
@@ -212,7 +225,11 @@ remove(pcoords, pmerge, CON_THA, key, NO_TREE, Pol.ID, Pol.NO_TREE, Pol.Pixels, 
 remove(All_CONBM_kgha, All_Pol_CONBM_kgha, D_Pol_CONBM_kg, key)
 
 # Write and re-open results
-setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/R Results/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
+}
 write.csv(result.p, file = "Biomass_Pixels_LEMMA_sept22.csv", row.names=F)
 result.p <- read.csv("Trial_Biomass_Pixels_LEMMA_sept22.csv")
 

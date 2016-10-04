@@ -87,7 +87,7 @@ registerDoParallel(c1)
 # start timer
 strt<-Sys.time()
 
-inputs = zero.i
+inputs = i:nrow(drought)
 
 no.go <- foreach(i = inputs, .combine = rbind, .packages = c('raster', 'rgeos'), .errorhandling = "stop") %dopar% {
   single <- drought[i,]
@@ -209,6 +209,12 @@ print(Sys.time()-strt)
 ###################################################################
 # 25 minutes for CRMORT
 
+
+# Take out nonsensical results
+hist(chocolate_CRMORT$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)
+chocolate_CRMORT <- subset(chocolate_CRMORT, chocolate_CRMORT$D_CONBM_kg > 0 & chocolate_CRMORT$D_CONBM_kg < 60000)
+
 setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
 write.csv(chocolate_CRMORT, file = "LEMMA_parallel_CRMORT.csv", row.names=F)
-result.p <- read.csv("LEMMA_parallel_CRMORT.csv")
+result.parallel <- read.csv("LEMMA_parallel_CRMORT.csv")
+ 

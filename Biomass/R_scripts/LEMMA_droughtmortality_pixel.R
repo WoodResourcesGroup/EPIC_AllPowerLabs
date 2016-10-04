@@ -5,7 +5,7 @@
 #install.packages("stringr")
 #install.packages("viridis")
 
-### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once, 
+### NOTE: Throughout this code, there are time-intensive steps that have already been done and only need to be done once,
 ### such as cropping and rewriting large datasets. These steps are included but commented out to reduce processing time.
 
 library(rgdal)
@@ -43,7 +43,7 @@ if( Sys.info()['sysname'] == "Windows" ) {
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
-# drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality") 
+# drought <- readOGR(dsn = "DroughtTreeMortality.gdb", layer = "DroughtTreeMortality")
 # plot(drought, add = TRUE) # only plot if necessary; takes a long ass time
 # crs(drought)
 # drought <- spTransform(drought, crs(LEMMA)) #change it to CRS of Gonzalez and LEMMA data - this takes a while
@@ -64,12 +64,12 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 # } else {
 #   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
 # }
-# writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup 
+# writeRaster(CR_mort, filename = "CR_mort.tif", format = "GTiff", overwrite = TRUE) # save a backup
 # CR_mort <- raster("CR_mort.tif")
 
 # narrow drought down to large-ish polygons and those with more than one tree
 # might want to change these later
-drought <- subset(drought, drought$ACRES > 2 & drought$NO_TREE > 1)
+drought <- subset(drought, drought$ACRES > 2 & drought$NO_TREE > 1 & drought$RPT_YR = 2015)
 ## print how much area this excludes: ~30,000 ACRES (out of ~4,000,000)
 sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$ACRES)
 sum(drought_bu$ACRES)
@@ -77,7 +77,7 @@ sum(drought_bu$ACRES)
 sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREE == 1)$NO_TREE)
 sum(na.omit(drought_bu$NO_TREE))
 
-# Crop drought data to extent of Ramirez data 
+# Crop drought data to extent of Ramirez data
 # drought <- crop(drought, extent(CR_mort)) # *****commented out this step for running on the entire drought data set*****
 
 
@@ -100,7 +100,7 @@ Spruces <- c("PIEN", "PISI") # all have been checked for genus plants.usda.gov
 ploop <- function(start, finish) {
   result.lemma.p <- data.frame()
   pb <- winProgressBar(title="Progress", min=start, max=finish, initial=0, label = "0% done")
-  for (i in start:finish) { 
+  for (i in start:finish) {
     info <- sprintf("%d%% done", round((i/finish)*100))
     setWinProgressBar(pb, value = i, label = info)
     single <- drought[i,]
@@ -126,8 +126,8 @@ ploop <- function(start, finish) {
       next
     }
     merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID") # merge LEMMA data with polygon data into one table
-    
-    # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
+
+    # The below for loop calculates biomass per tree based on the average dbh of dominant and codominant trees for
     # the most common conifer species in each raster cell:
     merge$CONBM_tree_kg <- 0
     merge$D_CONBM_kg <- 0
@@ -153,34 +153,34 @@ ploop <- function(start, finish) {
         merge[i,]$CONBM_tree_kg <- exp(num) # finish the formula to assign biomass per tree in that pixel
       }
     }
-    
+
     # Find biomass per pixel using biomass per tree and estimated number of trees
     pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
     # problem here
-    pmerge$relBA <- pmerge$BAC_GE_3/sum(pmerge$BAC_GE_3) # Create column for % of polygon BA in that pixel. 
+    pmerge$relBA <- pmerge$BAC_GE_3/sum(pmerge$BAC_GE_3) # Create column for % of polygon BA in that pixel.
                                                          # BAC_GE_3 is basal area of live conifers in that pixel.
     tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
-    pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
+    pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel
                                         # and total number of trees in polygon
     pmerge$D_CONBM_kg <- pmerge$relNO*pmerge$CONBM_tree_kg # D_CONBM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
-    
+
     # Create vectors that are the same length as pmerge to combine into final table:
-    D_Pol_CONBM_kg <- rep(sum(pmerge$D_CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
+    D_Pol_CONBM_kg <- rep(sum(pmerge$D_CONBM_kg), nrow(pmerge)) # Sum biomass over the entire polygon
     Av_BM_TR <- D_Pol_CONBM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
-    QMDC_DOM <- pmerge$QMDC_DOM # Find the average of the pixels' quadratic mean diameters 
+    QMDC_DOM <- pmerge$QMDC_DOM # Find the average of the pixels' quadratic mean diameters
     CONPL <-  pmerge$CONPLBA # Find the conifer species that has a plurality in the most pixels
-    Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) 
+    Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge))
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge))
     Pol.NO_TREE <- rep(single@data$NO_TREE, nrow(pmerge))
     Pol.Shap_Ar <- rep(single@data$Shap_Ar, nrow(pmerge))
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
-    
+
     # Estimate biomass of live AND dead trees based on LEMMA values of conifer biomass per pixel:
     All_CONBM_kgha <- pmerge$BPHC_GE_3_CRM # BPHC_GE_3_CRM is estimated biomass of all conifers from LEMMA
     All_Pol_CONBM_kgha <- rep(mean(pmerge$BPHC_GE_3_CRM),nrow(pmerge)) # Average across polygons
     CON_THA <- pmerge$TPHC_GE_3 # TPHC_GE_3 is conifer trees per hectare from LEMMA
-    
+
     # Bring it all together
     final <- cbind(pmerge$x, pmerge$y, pmerge$D_CONBM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.ID, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, Pol.Shap_Ar,D_Pol_CONBM_kg,All_CONBM_kgha,All_Pol_CONBM_kgha,CON_THA, QMDC_DOM,Av_BM_TR)
     final <- as.data.frame(final)
@@ -207,7 +207,7 @@ cheese10 <- ploop(1,10)
 print(Sys.time()-strt)
 # 6.45 seconds
 
-# Full extent of CR 
+# Full extent of CR
 strt<-Sys.time()
 result.p <- ploop(1, nrow(drought))
 print(Sys.time()-strt)

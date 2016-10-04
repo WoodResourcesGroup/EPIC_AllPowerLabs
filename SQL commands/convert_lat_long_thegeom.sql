@@ -20,3 +20,5 @@ set search_path = sandbox, public;
 alter table sandbox."Trial_Biomass_Pixels_LEMMA_6" drop column if exists geom;
 SELECT AddGeometryColumn ('sandbox','Trial_Biomass_Pixels_LEMMA_6','geom',5070,'POINT',2);
 UPDATE "Trial_Biomass_Pixels_LEMMA_6" set geom = ST_SetSRID(st_makepoint("Trial_Biomass_Pixels_LEMMA_6".x, "Trial_Biomass_Pixels_LEMMA_6".y), 5070)::geometry;
+
+CREATE INDEX jacksonco_streets_gix ON jacksonco_streets USING GIST (the_geom);

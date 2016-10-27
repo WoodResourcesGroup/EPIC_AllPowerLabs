@@ -1,7 +1,15 @@
  #Change this to the target database 
 dbname := cec
+usgsFTP := ftp://rockyftp.cr.usgs.gov/vdelivery/Datasets/Staged/MapIndices/Shape/
+usgs13FTP := ftp://rockyftp.cr.usgs.gov/vdelivery/Datasets/Staged/Elevation/13/
+caidxurl := https://prd-tnm.s3.amazonaws.com/StagedProducts/MapIndices/Shape/
+caIndex := CELLS_6_California_GU_STATEORTERRITORY.zip
+dbdir := cecdb
+PG := psql -h switch-db2.erg.berkeley.edu -d apl_cec -U ptittmann
+#this works when password is stored in ~/.pgpass per https://www.postgresql.org/docs/9.4/static/libpq-pgpass.html
+demSchema = elevation
 
- #Table name in th database
+#Table name in th database
 pxTableName := lemma_biomass
 
  #Change this to the target schema
@@ -29,3 +37,39 @@ ${dbname}db/px2db:
 	psql -d ${dbname} -c "SELECT AddGeometryColumn ('${pxSchema}','${pxTableName}','geom',5070,'POINT',2);"
 	psql -d ${dbname} -c "update ${pxTableName} set geom = st_setsrid(st_makepoint(x,y),5070);"
 	touch $@
+
+#####
+# Elevation data
+#####
+
+#Schema
+
+${dbdir}/demSchema:
+	${PG} -c 'drop schema if exists ${demSchema};'
+	${PG} -c 'create schema ${demSchema};'
+	touch $@
+
+${dbdir}/usgs_index:
+	rm -rf $(@F)
+	mkdir $(@F)
+	wget ${caidxurl}${caIndex} -O $(@F)/$(@F).zip
+	unzip $(@F)/$(@F).zip -d $(@F)
+	shp2pgsql -d -s 4269:5070 -I $(@F)/Shape/CellGrid_1X1Degree.shp ${demSchema}.usgs375 |${PG}
+	rm -rf $(@F)
+	touch $@
+
+
+
+# ${dbdir}/usgs_13_idx:
+# 	rm -rf $(@F)
+# 	mkdir $(@F)
+# 	wget ${usgs13FTP}${usgs13idx} -O $(@F)/$(@F).zip
+# 	unzip $(@F)/$(@F).zip -d $(@F)
+# 	shp2pgsql -d -s 4269:5070 -I $(@F)/Shape/CellGrid_3_75Minute.shp ${demSchema}.usgs375 |${PG}
+# 	shp2pgsql -d -s 4269:5070 -I $(@F)/Shape/CellGrid_7_5Minute.shp ${demSchema}.usgs75 |${PG}
+# 	rm -rf $(@F)
+# 	touch $@
+
+
+.PHONY: elev
+elev: ${dbdir}/demSchema ${dbdir}/usgs_index

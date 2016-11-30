@@ -1,5 +1,7 @@
 from sqlalchemy import create_engine as ce
-
+dbname = 'apl_cec'
+host = 'switch-db2.erg.berkeley.edu'
+user = ptittmann
 
 def dbconfig(name, echoCmd=True):
     """

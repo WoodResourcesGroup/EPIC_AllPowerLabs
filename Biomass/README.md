@@ -39,7 +39,8 @@ File Organization
 -   The *cec\_apl/Biomass* folder contains:
     -   *R\_scripts*:
         -   *LEMMA\_droughtmortality\_pixel.R*: code to calculate biomass from LEMMA and drought mortality data
-        -   *test.R*: test the accuracy of the above results
+        -   *parallelization.R*: same as above but using multiple cores for speed
+        -  *test.R*: test the accuracy of the above results
     -   *Results*:
         -   *Trial\_Biomass\_Pixels\_LEMMA\_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary sub-area for testing the code)
 

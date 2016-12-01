@@ -38,8 +38,11 @@ File Organization
 -   Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
 -   The *cec\_apl/Biomass* folder contains:
     -   *R\_scripts*:
-        -   *LEMMA\_droughtmortality\_pixel.R*: code to calculate biomass from LEMMA and drought mortality data
-        -   *parallelization.R*: same as above but using multiple cores for speed
+        -   *crop_LEMMA*: crops original LEMMA data (*LEMMA\_gnn\_sppsz\_2014\_08\_28*) and creates *LEMMA.gri* for faster loading
+        -   *LEMMA_ADS_AllSpp_AllYrs_Parall.R*: MOST UP-TO-DATE VERSION OF BIOMASS ESTIMATION
+            - All tree species including hardwoods and conifers
+            - All ADS years combined
+            - Parallelization
         -  *test.R*: test the accuracy of the above results
     -   *Results*:
         -   *Trial\_Biomass\_Pixels\_LEMMA\_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary sub-area for testing the code)

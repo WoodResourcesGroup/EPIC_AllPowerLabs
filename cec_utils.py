@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine as ce
 import itertools as it
 import csv
+from numpy import linspace
 
 FRCSDIR = 'FRCS'
 
@@ -21,10 +22,13 @@ def dbconfig(name, echoCmd=True):
     return engine
 
 
-def iterHarvestSystems(output='frcs_batch.csv', maxAYD=2500, minAYD=0):
-    slp = range(0, 100, 5)
-    ayd = range(minAYD, maxAYD, 100)
-    trtArea = range(20, 200, 10)
+def iterHarvestSystems(output='frcs_batch.csv', intervals = 20, maxAYD=2500, minAYD=0):
+    tpa = linspace(20,500,intervals)
+    cuFt = 65.44 # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
+    resFrac = 0.8
+    slp = linspace(0, 100, intervals)
+    ayd = linspace(minAYD, maxAYD, intervals)
+    trtArea = linspace(1, 20, intervals)
     elev = [0]
     comb = [['Stand',
              'State',
@@ -32,9 +36,12 @@ def iterHarvestSystems(output='frcs_batch.csv', maxAYD=2500, minAYD=0):
              'AYD',
              'Treatment Area',
              'Elev',
-             'Harvesting System']]
+             'Harvesting System',
+             'CT/ac',
+             'CT residue fraction',
+             'ft3/CT']]
 
-    for idx, itm in enumerate(it.product(slp, ayd, trtArea, elev)):
+    for idx, itm in enumerate(it.product(slp, ayd, trtArea, elev, tpa)):
         if itm[0] <= 50:
             comb.append([idx,
                          'CA',
@@ -42,7 +49,11 @@ def iterHarvestSystems(output='frcs_batch.csv', maxAYD=2500, minAYD=0):
                          itm[1],
                          itm[2],
                          itm[3],
-                         'Ground-Based Mech WT'])
+                         'Ground-Based Mech WT',
+                         int(itm[4]),
+                         resFrac,
+                         cuFt]
+                        )
         else:
             comb.append([idx,
                          'CA',
@@ -50,8 +61,12 @@ def iterHarvestSystems(output='frcs_batch.csv', maxAYD=2500, minAYD=0):
                          itm[1],
                          itm[2],
                          itm[3],
-                         'Cable Manual WT'])
+                         'Cable Manual WT',
+                         int(itm[4]),
+                         resFrac,
+                         cuFt])
 
     with open(FRCSDIR+'/'+output, "wb") as f:
         writer = csv.writer(f)
         writer.writerows(comb)
+    

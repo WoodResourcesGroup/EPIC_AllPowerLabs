@@ -2,6 +2,8 @@ from sqlalchemy import create_engine as ce
 import itertools as it
 import csv
 from numpy import linspace
+from openpyxl import load_workbook
+ 
 
 FRCSDIR = 'FRCS'
 
@@ -22,7 +24,10 @@ def dbconfig(name, echoCmd=True):
     return engine
 
 
-def iterHarvestSystems(output='frcs_batch.csv', intervals = 20, maxAYD=2500, minAYD=0):
+def iterHarvestSystems(output='frcs_batch.xlsx', intervals = 20, maxAYD=2500, minAYD=0):
+    wb2 = load_workbook(FRCSDIR+'/'+output)
+    print wb2.get_sheet_names()
+
     tpa = linspace(20,500,intervals)
     cuFt = 65.44 # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
@@ -34,7 +39,7 @@ def iterHarvestSystems(output='frcs_batch.csv', intervals = 20, maxAYD=2500, min
              'State',
              'Slope',
              'AYD',
-             'Treatment Area',
+             'TreatmentArea',
              'Elev',
              'Harvesting System',
              'CT/ac',

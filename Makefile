@@ -73,3 +73,14 @@ ${dbdir}/usgs_index:
 
 .PHONY: elev
 elev: ${dbdir}/demSchema ${dbdir}/usgs_index
+
+FRCS:
+	mkdir $@
+
+.PHONY: frcs_input
+frcs_input: FRCS
+	python -c 'import cec_utils as ut; ut.iterHarvestSystems()'
+
+
+FRCS/frcs_input_trial.csv: FRCS
+	${PG} -f frcs_input.sql > $@

@@ -35,10 +35,10 @@ File Organization
 -   R code assumes the user has the following located in their home directory:
     -   Box Sync folder
     -   Clone of the cec\_apl git repository
--   Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
+-   Source data is located in *Box Sync/EPIC-Biomass/GIS Data* (files are too large for github)
 -   The *cec\_apl/Biomass* folder contains:
     -   *R\_scripts*:
-        -   *crop_LEMMA*: crops original LEMMA data (*LEMMA\_gnn\_sppsz\_2014\_08\_28*) and creates *LEMMA.gri* for faster loading
+        -   *crop_LEMMA*: crops original LEMMA data (*mr200_2012* within *LEMMA\_gnn\_sppsz\_2014\_08\_28* ) and creates *LEMMA.gri* for faster loading
         -   *LEMMA\_ADS\_AllSpp\_AllYrs\_Parall.R*: MOST UP-TO-DATE VERSION OF BIOMASS ESTIMATION
             - All tree species including hardwoods and conifers
             - All ADS years combined

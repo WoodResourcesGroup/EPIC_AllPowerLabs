@@ -215,12 +215,12 @@ Output Variables
 </tr>
 <tr class="odd">
 <td align="left"><code>All_Pol_NO</code></td>
-<td align="left">Total number of trees in the polygon, from <code>Pol.Shap_Ar</code> and <code>THA</code></td>
+<td align="left">Total number of trees in the polygon (live and dead), from <code>Pol.Shap_Ar</code> and <code>THA</code></td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
 <td align="left"><code>All_Pol_BM</code></td>
-<td align="left">Total tree biomass in the polygon, from <code>Pol.Shap.Ar</code> and <code>All_Pol_BM_kgha</code></td>
+<td align="left">Total tree biomass in the polygon (live and dead), from <code>Pol.Shap.Ar</code> and <code>All_Pol_BM_kgha</code></td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 </tbody>

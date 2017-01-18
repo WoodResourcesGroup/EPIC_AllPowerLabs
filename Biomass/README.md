@@ -17,12 +17,11 @@ August 26, 2016
 Assumptions
 ===========
 
-1.  All dead trees in recent drought mortality have been conifers.
-2.  Aerial detection surveys accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
+1.  Aerial detection surveys accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
 3.  LEMMA accurately estimates the average sizes, species, and densities of trees in each 30 x 30 m pixel.
-4.  The ratio of dead trees in each pixel of a drought mortality polygon to the total number of dead trees in the polygon is proportional to conifer basal area in that pixel relative to other pixels. That is, more dead tree occur more where there is more conifer basal area.
+4.  The ratio of dead trees in each pixel of a drought mortality polygon to the total number of dead trees in the polygon is proportional to 2014 live tree basal area in that pixel relative to other pixels. That is, more dead tree occur more where there is more live basal area.
 5.  All dead trees in a given pixel are of the most common conifer species in that pixel.
-6.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant conifers in that pixel, as calculated by LEMMA.
+6.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant conifers in that pixel, as calculated by LEMMA GLN.
 
 Projection
 ==========
@@ -44,8 +43,8 @@ File Organization
             - All ADS years combined
             - Parallelization
         -  *test.R*: test the accuracy of the above results
-    -   *Results*:
-        -   *Trial\_Biomass\_Pixels\_LEMMA\_6.csv*: results for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary sub-area for testing the code)
+-   The *Box Sync\_EPIC-Biomass\_R Results* folder contains:
+    *LEMMA_ADS_AllSpp_AlYrs.csv*: results from *LEMMA\_ADS\_AllSpp\_AllYrs\_Parall.R* for the subset of drought mortality polygons that fall within the extent Carlos Ramirez' analysis (chosen as an arbitrary sub-area for testing the code)    
 
 Sources
 =======

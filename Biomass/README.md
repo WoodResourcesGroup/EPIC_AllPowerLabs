@@ -67,7 +67,7 @@ Sources
 ### References
 
 1.  Jenkins, J. C., D. C. Chojnacky, L. S. Heath, and R. A. Birdsey. "National-scale biomass estimators for United States tree species." For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
-    -   Includes equations predicting biomass based on diameter at breast height for major classes of conifer species
+    -   Includes equations predicting biomass based on diameter at breast height for major classes of tree species
     -   These equations were used to estimate biomass in drought mortality polygons
 
 Process
@@ -129,8 +129,8 @@ Output Variables
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>D_CONBM_kg</code></td>
-<td align="left">Estimated biomass of dead conifers n the pixel in kg</td>
+<td align="left"><code>D_BM_kg</code></td>
+<td align="left">Estimated biomass of dead in the pixel in kg</td>
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
 <tr class="odd">
@@ -140,7 +140,7 @@ Output Variables
 </tr>
 <tr class="even">
 <td align="left"><code>relBA</code></td>
-<td align="left">Pixel basal area (<code>BAC_GE_3</code>) relative to sum of <code>BAC_GE_3</code> of all pixels in the polygon</td>
+<td align="left">Pixel basal area (<code>BAC_GE_3</code>) relative to sum of <code>BA_GE_3</code> of all pixels in the polygon</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="odd">
@@ -179,48 +179,48 @@ Output Variables
 <td align="left"><code>drought</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>D_Pol_CONBM_kg</code></td>
-<td align="left">Polygon dead biomass in kg, sum of <code>D_CONBM_kg</code> of all pixels in the polygon</td>
+<td align="left"><code>D_Pol_BM_kg</code></td>
+<td align="left">Polygon dead biomass in kg, sum of <code>D_BM_kg</code> of all pixels in the polygon</td>
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
 <tr class="odd">
-<td align="left"><code>All_CONBM_kgha</code></td>
-<td align="left">Biomass density of all conifers &gt;= 2.5 cm dbh, dead or alive (<code>BPHC_GE_3_CRM</code>)</td>
+<td align="left"><code>All_BM_kgha</code></td>
+<td align="left">Biomass density of all trees &gt;= 2.5 cm dbh, dead or alive (<code>BPH_GE_3_CRM</code>)</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>All_Pol_CONBM_kgha</code></td>
-<td align="left">Average density of all conifers (mean <code>ALL_CONBM_kgha</code> of all pixels in polygon)</td>
+<td align="left"><code>All_Pol_BM_kgha</code></td>
+<td align="left">Average density of all trees (mean <code>ALL_BM_kgha</code> of all pixels in polygon)</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="odd">
-<td align="left"><code>CON_THA</code></td>
-<td align="left">Conifers &gt;=2.5 cm dbh per hectare, dead or alive (<code>TPHC_GE_3</code>)</td>
+<td align="left"><code>THA</code></td>
+<td align="left">Trees &gt;=2.5 cm dbh per hectare, dead or alive (<code>TPH_GE_3</code>)</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>QMDC_DOM</code></td>
-<td align="left">Quadratic mean diameter in cm of dominant and codominant conifers</td>
+<td align="left"><code>QMD_DOM</code></td>
+<td align="left">Quadratic mean diameter in cm of dominant and codominant trees</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="odd">
-<td align="left"><code>CONPL</code></td>
-<td align="left">Most common conifer species in the pixel</td>
+<td align="left"><code>TREEPL</code></td>
+<td align="left">Most common tree species in the pixel</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
 <td align="left"><code>Av_BM_TR</code></td>
-<td align="left">Average per-tree biomass of dead trees, in kg (<code>D_Pol_CONBM_k</code>/<code>Pol.NO_TREE</code>)</td>
+<td align="left">Average per-tree biomass of dead trees, in kg (<code>D_Pol_BM_k</code>/<code>Pol.NO_TREE</code>)</td>
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
 <tr class="odd">
-<td align="left"><code>All_Pol_CON_NO</code></td>
-<td align="left">Total number of conifers in the polygon, from <code>Pol.Shap_Ar</code> and <code>CON_THA</code></td>
+<td align="left"><code>All_Pol_NO</code></td>
+<td align="left">Total number of trees in the polygon, from <code>Pol.Shap_Ar</code> and <code>THA</code></td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>All_Pol_CON_BM</code></td>
-<td align="left">Total conifer bioimass in the polygon, from <code>Pol.Shap.Ar</code> and <code>All_Pol_CONBM_kgha</code></td>
+<td align="left"><code>All_Pol_BM</code></td>
+<td align="left">Total tree biomass in the polygon, from <code>Pol.Shap.Ar</code> and <code>All_Pol_BM_kgha</code></td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 </tbody>

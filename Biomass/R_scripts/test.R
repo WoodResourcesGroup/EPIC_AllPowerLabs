@@ -2,6 +2,7 @@
 ### ALL LINES OF CODE AT THE BOTTOM OF THIS SCRIPTS SHOULD RETURN "TRUE" IF THE RESULTS ARE OK
 ### *NOTE*: Must load drought data frame from LEMMA_ADS_AllSpp_AllYrs_Parall.R 
 
+options(digits = 5)
 
 ### Load the results you're testing
 if( Sys.info()['sysname'] == "Windows" ) {
@@ -9,7 +10,7 @@ if( Sys.info()['sysname'] == "Windows" ) {
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
 }
-result.lemma.p <- read.csv(file = "LEMMA_ADS_AllSpp_AlYrs_011817.csv", header=F) 
+result.lemma.p <- read.csv(file = "LEMMA_ADS_AllSpp_AlYrs_011817.csv", header=T) # This takes a while! 
 
 
 ### Randomly sample a polygon from the drought mortality polygons
@@ -146,7 +147,9 @@ plot <- sample(na.omit(clip2@data@values), 1)
 testplot <- subset(test1, test1$PlotID == plot)
 reps <- length(subset(clip2@data@values, clip2@data@values == plot))
 attributes <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)
-attributes$QMDC_DOM # If this equals 0, move on to another test polygon
+attributes$TREEPLBA
+attributes$QMD_DOM 
+### *NOTE* If the above equals 0, move on to another test polygon
 npixels <- length(na.omit(clip2@data@values))
 ntrees <- single@data$NO_TREE
 
@@ -157,17 +160,17 @@ mat <- as.data.frame(tab)
 mat$BA <- 0
 for(i in 1:nrow(mat)) {
   row <- mat[i,]
-  mat[i,3] <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == row$Var1)$BAC_GE_3*row$Freq
+  mat[i,3] <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == row$Var1)$BA_GE_3*row$Freq
 }
 
 # Check the above loop by hand:   
-plotBA <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BAC_GE_3
+plotBA <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BA_GE_3
 plotreps <- length(subset(ext[[1]], ext[[1]] == plot))  
 plotBA <- plotBA*plotreps
 plotBA == mat[mat$Var1 == plot,3] # THIS SHOULD BE TRUE
 
 # Compare loop and by-hand BA results
-relBA <- attributes$BAC_GE_3/sum(mat$BA)
+relBA <- attributes$BA_GE_3/sum(mat$BA)
 relBA
 relBA == unique(testplot$relBA) # THIS SHOULD BE TRUE
 
@@ -182,40 +185,43 @@ tinyxmin <- as.numeric(extent(tiny)[1])
 tinyxmax <- as.numeric(extent(tiny)[2])
 tinyymin <- as.numeric(extent(tiny)[3])
 tinyymax <- as.numeric(extent(tiny)[4])
-tinytest <- subset(test1, as.numeric(paste(test1$x)) > tinyxmin & as.numeric(paste(test1$x)) < tinyxmax & as.numeric(paste(test1$y)) > tinyymin & as.numeric(paste(test1$y)) < tinyymax)
+tinytest <- subset(test1, as.numeric(paste(test1$x)) > tinyxmin & as.numeric(paste(test1$x)) < tinyxmax & as.numeric(paste(test1$y)) 
+                   > tinyymin & as.numeric(paste(test1$y)) < tinyymax)
 tinytest$PlotID %in% tiny@data@values # SHOULD BE TRUE
 
 # Test dead biomass calculations
-attributes$CONPLBA
-treeBM <- -2.5356 + 2.4349*log(attributes$QMDC_DOM) # ONLY IF THE ABOVE IS A PINE
+attributes$TREEPLBA
+treeBM <- -2.5356 + 2.4349*log(attributes$QMD_DOM) # ONLY IF THE ABOVE IS A PINE
 treeBM <- exp(treeBM) # Checked this against graph in Jenkins paper
 pixelBM <- treeBM*relNO
-testplot$D_CONBM_kg == pixelBM
+testplot$D_BM_kg == pixelBM
 
 # Test Pol.x and Pol.y
-testplot$Pol.x == coordinates(single)[1]
-testplot$Pol.y == coordinates(single)[2]
+as.factor(unique(testplot$Pol.x)) == as.factor(coordinates(single)[1])
+as.factor(unique(testplot$Pol.y)) == as.factor(coordinates(single)[2])
 
 # Test NO_TREES
-testplot$Pol.NO_TREE == sum(as.numeric(paste((test1$relNO)))) # Should be true
+a <- unique(testplot$Pol.NO_TREE)[1] 
+b <- sum(as.numeric(paste((test1$relNO)))) 
+a==b # Should be true
 
-# Test All_Pol_CON_NO
-All_TPH <- as.data.frame(cbind(clip2@data@attributes[[1]]$ID, clip2@data@attributes[[1]]$TPHC_GE_3))
-All_TPH <- subset(All_TPH, All_TPH$V1 %in% mat$Var1)
-mat <- merge(mat, All_TPH, by.x = "Var1", by.y = "V1")
-mat$NO <- mat$V2/10000*900
-All_T <- sum(mat$NO*mat$Freq)
-All_T == testplot$All_Pol_CON_NO
+# Test All_Pol_CON_NO - NEED TO WORK ON THIS ONE
+##All_TPH <- as.data.frame(cbind(clip2@data@attributes[[1]]$ID, clip2@data@attributes[[1]]$TPH_GE_3))
+##All_TPH <- subset(All_TPH, All_TPH$V1 %in% mat$Var1)
+##mat <- merge(mat, All_TPH, by.x = "Var1", by.y = "V1")
+##mat$NO <- mat$V2/10000*900
+##All_T <- sum(mat$NO*mat$Freq)
+##All_T == testplot$All_Pol_NO
 
 ### FINAL TESTS: ALL OF THE FOLLOWING SHOULD RETURN TRUE
 plotBA == mat[mat$Var1 == plot,3] # THIS SHOULD BE TRUE
 relBA == unique(testplot$relBA) # THIS SHOULD BE TRUE
 unique(testplot$relNO) == relBA*ntrees # THIS SHOULD BE TRUE
 tinytest$PlotID %in% tiny@data@values # THIS SHOULD BE TRUE
-testplot$D_CONBM_kg == pixelBM# THIS SHOULD BE TRUE
-testplot$All_CONBM_kgha == subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BPHC_GE_3_CRM
-mean(as.numeric(paste(test1$All_CONBM_kgha))) == unique(test1$All_Pol_CONBM_kgha)
-testplot$Pol.x == coordinates(single)[1] # THIS SHOULD BE TRUE
-testplot$Pol.y == coordinates(single)[2] # THIS SHOULD BE TRUE
+testplot$D_BM_kg == pixelBM# THIS SHOULD BE TRUE
+testplot$All_BM_kgha == subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BPHC_GE_3_CRM
+#mean(as.numeric(paste(test1$All_BM_kgha))) == unique(test1$All_Pol_BM_kgha) # NEED TO WORK ON THIS ONE
+as.factor(unique(testplot$Pol.x)) == as.factor(coordinates(single)[1])
+as.factor(unique(testplot$Pol.y)) == as.factor(coordinates(single)[2])
 testplot$Pol.NO_TREE == sum(as.numeric(paste((test1$relNO)))) # THIS SHOULD BE TRUE
-All_T == testplot$All_Pol_CON_NO
+All_T == testplot$All_Pol_NO

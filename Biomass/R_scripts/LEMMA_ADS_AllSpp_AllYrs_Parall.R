@@ -129,7 +129,7 @@ strt<-Sys.time()
 
 # function that does the bulk of the analysis
 
-inputs = 1:nrow(drought)
+inputs = 1:2 #nrow(drought)
 
 result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- drought[i,] # select one polygon
@@ -228,6 +228,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   final <- as.data.frame(final)
   final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
+  final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
 # Create a key for each pixel (row)
@@ -246,17 +247,29 @@ print(Sys.time()-strt)
 ###################################################################
 # 9 minutes for CRMORT-sized area
 
-# Look at histogram of results
-library(ggplot2)
-qplot(result.lemma.p$D_BM_kg, geom = "histogram")
-
+### Save results
 if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/R Results")
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
 }
+write.csv(result.lemma.p, file = "LEMMA_ADS_AllSpp_AlYrs_011817.csv", row.names=F)
 
-write.csv(results.lemma.p, file = "LEMMA_ADS_AllSpp_AlYrs.csv", row.names=F)
+# Look at histograms of results
+library(ggplot2)
+qplot(result.lemma.p$D_BM_kg, geom = "histogram")
+
+qplot(result.lemma.p$D_BM_kgha,
+      geom="histogram",
+      binwidth = 2000,  
+      main = "Histogram of Mortality Biomass", 
+      xlab = "Biomass (kg/ha)",  
+      ylab = "Pixel Count",
+      fill=I("blue"), 
+      col=I("black"), 
+      alpha=I(.2),
+      xlim=c(0,200000),
+      ylim=c(0,2000000))
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

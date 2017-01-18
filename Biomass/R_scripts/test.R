@@ -203,9 +203,10 @@ as.factor(unique(testplot$Pol.y)) == as.factor(coordinates(single)[2])
 # Test NO_TREES
 a <- unique(testplot$Pol.NO_TREE)[1] 
 b <- sum(as.numeric(paste((test1$relNO)))) 
-a==b # Should be true
+as.factor(a)==as.factor(b) # Should be true
 
-# Test All_Pol_CON_NO - NEED TO WORK ON THIS ONE
+# Test All_Pol_NO - NEED TO WORK ON THIS ONE
+# Make data frame with FIA plot ID and density of live trees from LEMMA
 ##All_TPH <- as.data.frame(cbind(clip2@data@attributes[[1]]$ID, clip2@data@attributes[[1]]$TPH_GE_3))
 ##All_TPH <- subset(All_TPH, All_TPH$V1 %in% mat$Var1)
 ##mat <- merge(mat, All_TPH, by.x = "Var1", by.y = "V1")
@@ -219,9 +220,9 @@ relBA == unique(testplot$relBA) # THIS SHOULD BE TRUE
 unique(testplot$relNO) == relBA*ntrees # THIS SHOULD BE TRUE
 tinytest$PlotID %in% tiny@data@values # THIS SHOULD BE TRUE
 testplot$D_BM_kg == pixelBM# THIS SHOULD BE TRUE
-testplot$All_BM_kgha == subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BPHC_GE_3_CRM
+testplot$All_BM_kgha == subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] == plot)$BPH_GE_3_CRM
 #mean(as.numeric(paste(test1$All_BM_kgha))) == unique(test1$All_Pol_BM_kgha) # NEED TO WORK ON THIS ONE
 as.factor(unique(testplot$Pol.x)) == as.factor(coordinates(single)[1])
 as.factor(unique(testplot$Pol.y)) == as.factor(coordinates(single)[2])
-testplot$Pol.NO_TREE == sum(as.numeric(paste((test1$relNO)))) # THIS SHOULD BE TRUE
-All_T == testplot$All_Pol_NO
+as.factor(unique(testplot$Pol.NO_TREE)) == as.factor(sum(as.numeric(paste((test1$relNO))))) # THIS SHOULD BE TRUE
+# All_T == testplot$All_Pol_NO # need to edit this

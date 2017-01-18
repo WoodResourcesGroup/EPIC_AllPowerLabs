@@ -235,20 +235,10 @@ The following tests were performed on a randomly selected polygon within `drough
 2.  `relNO` from loop results equals `relBA` \* number of dead trees in pixel calculated by hand
 3.  Pixels within 50 m of the polygon's centroid have the same raster values and X and Y coordinates as those produced by the loop
 4.  Biomass of dead conifers in the pixel calculated by hand matches loop results
-5.  `All_CONBM_kgha` from results matches attribute data in LEMMA
-6.  `All_Pol_CONBM_kgha` from results equals the mean of `All_CONBM_kgha` for all pixels in the polygon
+5.  `All_BM_kgha` from results matches attribute data in LEMMA
+6.  `All_Pol_BM_kgha` from results equals the mean of `All_CONBM_kgha` for all pixels in the polygon
 7.  `Pol.x` and `Pol.y` from results match `coordinates()` of the polygon
 8.  `Pol.NO_TREE` from results matches the sum of `relNO` for all pixels
-9.  `All_Pol_CON_NO` from results matches the sum of conifers per pixel calculated by hand from `TPHC_GE_3`
+9.  `All_Pol_NO` from results matches the sum of conifers per pixel calculated by hand from `TPH_GE_3`
 
-Further Manipulation
-====================
 
-There are a few components of the script that will most likely be altered in future runs. They are summarized below.
-
-| Line Number | Step                                        |
-|:------------|:--------------------------------------------|
-| 60          | Specify min polygon size                    |
-| 60          | Specify min number of dead tree per polygon |
-| 176         | Select size of sample for testing the loop  |
-| 199         | Name of results file                        |

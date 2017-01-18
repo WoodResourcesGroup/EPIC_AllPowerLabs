@@ -5,12 +5,8 @@ install.packages("stringr")
 install.packages("viridis")
 install.packages("parallel") 
 
-library(rgdal)  # def used
-library(raster) # def used 
-library(rgeos) 
-library(stringr) 
-library(viridis) 
-library(parallel) 
+library(rgdal)  
+library(raster)  
 
 options(digits = 5)
 
@@ -125,8 +121,8 @@ saveRDS(zero.i,file="zero_i.Rdata")
 ########### JUMP HERE IF SKIPPING THE ABOVE STEP
 
 setwd("~/cec_apl/Biomass/R_scripts")
+readRDS("zero_i_CR_mort.Rdata")
 readRDS("zero_i.Rdata")
-
 ###################################################################
 # start timer
 strt<-Sys.time()
@@ -152,7 +148,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   
   # extract attribute information from LEMMA for each plot number contained in the polygon:
   L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% 
-       mat[,1])[,c("ID","BA_GE_3","BPH_GE_3_CRM","TPH_GE_3","QMD_DOM","CONPLBA","TREEPLBA")]
+       mat[,1])[,c("ID","BA_GE_3","BPH_GE_3_CRM","TPH_GE_3","QMD_DOM","TREEPLBA")]
   
   ### Attribute meanings from LEMMA GLN:
   ### BA_GE_3 = basal area of live trees >= 2.5 cm dbh (m^2/ha)
@@ -180,11 +176,21 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
       num <- (B0[4] + B1[4]*log(cell$QMD_DOM))
     } else if (cell$TREEPLBA %in% Spruces) {
       num <- (B0[5] + B1[5]*log(cell$QMD_DOM))
+    } else if (cell$TREEPLBA %in% mh) {
+      num <- (B0[6] + B1[6]*log(cell$QMD_DOM))  
+    } else if (cell$TREEPLBA %in% wo) {
+      num <- (B0[7] + B1[7]*log(cell$QMD_DOM))  
+    } else if (cell$TREEPLBA %in% mb) {
+      num <- (B0[8] + B1[8]*log(cell$QMD_DOM))
+    } else if (cell$TREEPLBA %in% aa) {
+      num <- (B0[9] + B1[9]*log(cell$QMD_DOM))
+    } else if (cell$TREEPLBA %in% mo) {
+      num <- (B0[10] + B1[10]*log(cell$QMD_DOM))
     } else {
       num <- 0
     }
     if (num == 0) {
-      merge[i,]$BM_tree_kg <- 0 # assign 0 if no TREEifers
+      merge[i,]$BM_tree_kg <- 0 # assign 0 if no trees
     } else {
       merge[i,]$BM_tree_kg <- exp(num) # finish the formula to assign biomass per tree in that pixel
     }
@@ -194,7 +200,6 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
   # problem here
   pmerge$relBA <- pmerge$BA_GE_3/sum(pmerge$BA_GE_3) # Create column for % of polygon BA in that pixel. 
-  # BAC_GE_3 is basal area of live conifers in that pixel.
   tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
   pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
   # and total number of trees in polygon
@@ -212,7 +217,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   Pol.Shap_Ar <- rep(single@data$Shap_Ar, nrow(pmerge)) # Create area vector
   Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
   
-  # Estimate biomass of live AND dead trees based on LEMMA values of conifer biomass per pixel:
+  # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
   All_BM_kgha <- pmerge$BPH_GE_3_CRM 
   All_Pol_BM_kgha <- rep(mean(pmerge$BPH_GE_3_CRM),nrow(pmerge)) # Average across polygons
   THA <- pmerge$TPH_GE_3 
@@ -221,8 +226,8 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, 
                  Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID) #
   final <- as.data.frame(final)
-  final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of conifers in the polygon
-  final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total conifer biomass in the polygon
+  final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of trees in the polygon
+  final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
   return(final)
 }
 # Create a key for each pixel (row)
@@ -235,23 +240,23 @@ names(result.lemma.p)[names(result.lemma.p)=="V3"] <- "D_BM_kg"
 names(result.lemma.p)[names(result.lemma.p)=="V4"] <- "relNO"
 names(result.lemma.p)[names(result.lemma.p)=="V5"] <- "relBA"
 names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
-results_CRMORT<- result.lemma.p
-remove(result.lemma.p)
 
 # end timer
 print(Sys.time()-strt)
 ###################################################################
 # 9 minutes for CRMORT-sized area
 
+# Look at histogram of results
+library(ggplot2)
+qplot(result.lemma.p$D_BM_kg, geom = "histogram")
 
-# Take out nonsensical results
-hist(chocolate_CRMORT$D_CONBM_kg, xlim = c(-10000, 70000), breaks = 100)
-chocolate_CRMORT <- subset(chocolate_CRMORT, chocolate_CRMORT$D_CONBM_kg > 0 & chocolate_CRMORT$D_CONBM_kg < 60000)
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/R Results")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
+}
 
-setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
-write.csv(chocolate_CRMORT, file = "LEMMA_parallel_CRMORT.csv", row.names=F)
-result.parallel <- read.csv("LEMMA_parallel_CRMORT.csv")
-
+write.csv(results.lemma.p, file = "LEMMA_ADS_AllSpp_AlYrs.csv", row.names=F)
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

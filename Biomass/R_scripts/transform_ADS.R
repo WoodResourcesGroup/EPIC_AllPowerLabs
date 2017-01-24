@@ -1,3 +1,6 @@
+library(rgdal)
+library(raster)
+
 if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
 } else {

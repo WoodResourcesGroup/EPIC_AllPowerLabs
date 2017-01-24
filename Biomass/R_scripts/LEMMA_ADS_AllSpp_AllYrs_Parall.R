@@ -1,9 +1,5 @@
 install.packages("rgdal")
 install.packages("raster") 
-install.packages("rgeos") 
-install.packages("stringr")
-install.packages("viridis")
-install.packages("parallel") 
 
 library(rgdal)  
 library(raster)  

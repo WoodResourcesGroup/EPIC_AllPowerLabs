@@ -10,7 +10,7 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
 
-FS <- readOGR(dsn="tempdir",layer = "FS_CA") 
+FS_CA <- readOGR(dsn="tempdir",layer = "FS_CA") 
 plot(FS_CA)
 
 # Then forests of interest
@@ -23,12 +23,6 @@ plot(FS, add= T, col="red")
 Mtn_hm <- readOGR(dsn = "Mtn_home", layer = "Mtn_home_new")
 Mtn_hm <- spTransform(Mtn_hm, crs(FS_CA))
 plot(Mtn_hm, add=T, col="purple", border="purple")
-
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/State_Parks")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/State_Parks")
-}
 
 ### Open State Park layer
 st_p <- readOGR(dsn = "State_Parks", layer = "two_parks")
@@ -51,6 +45,12 @@ kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100
 kc <- spTransform(kc, crs(FS_CA))
 plot(kc, add=T, col="green")
 
+### Lassen
+
+lnp <- readOGR(dsn = "tempdir", layer = "LNP")
+lnp <- spTransform(lnp, crs(FS_CA))
+plot(lnp)
+
 ### Just plots
 plot(FS_CA)
 plot(FS, add= T, col="purple")
@@ -58,6 +58,7 @@ plot(Mtn_hm, add=T, col="red", border="red")
 plot(st_p, add=T, col="deeppink2", border="deeppink2")
 plot(sequ, add=T, col="green") 
 plot(kc, add=T, col="green")
+plot(lnp, add=T, col="orange")
 
 ### Open Results
 

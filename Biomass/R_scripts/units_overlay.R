@@ -31,7 +31,9 @@ if( Sys.info()['sysname'] == "Windows" ) {
 }
 
 ### Open State Park layer
-st_p <- readOGR(dsn = "CalStPrks_Geodata_Facilities_Public_2016_04.gdb", layer = "CalStPrks_Geodata_Facilities_Public_2016_04")
+st_p <- readOGR(dsn = "State_Parks", layer = "two_parks")
+st_p<- spTransform(st_p, crs(FS_CA))
+plot(st_p, add=T, col="blue")
 
 ### Open National Park Layers
 
@@ -49,6 +51,16 @@ kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100
 kc <- spTransform(kc, crs(FS_CA))
 plot(kc, add=T, col="green")
 
+### Just plots
+plot(FS_CA)
+plot(FS, add= T, col="purple")
+plot(Mtn_hm, add=T, col="red", border="red")
+plot(st_p, add=T, col="deeppink2", border="deeppink2")
+plot(sequ, add=T, col="green") 
+plot(kc, add=T, col="green")
+
 ### Open Results
+
+
 
 ### Crop Results

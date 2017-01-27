@@ -54,6 +54,46 @@ plot(lnp, add=T, col="orange")
 
 ### Open Results
 #results_2016 <- readOGR(dsn = "Results_2016", layer = "Results_2016") #takes long time
+#results_1215 <- readOGR(dsn = "Results_2012-2015", layer = "Results_2012-2015")  # takes a long time 
 
+### Crop and mask results once for each unit spdf
 
-### Crop Results
+library(sp)
+results_1215_MH <- crop(results_1215, extent(MH))
+results_1215_MH <- spTransform(results_1215_MH, crs(Mtn_hm))
+
+results_1215_FS <- crop(results_1215, extent(FS))
+results_1215_FS <- mask(results_1215_FS, FS)
+results_1215_kc <- crop(results_1215, extent(kc))
+results_1215_lnp <- 
+
+### Trying with gIntersect
+
+# First find which points in results fall within MH
+MH.intersect <- gIntersection(Mtn_hm, results_1215_MH, byid=T)
+plot(Mtn_hm, add=T, border="orange")
+MH.pts.intersect <- strsplit(dimnames(MH.intersect@coords)[[1]], " ")
+MH.pts.intersect.id <- as.numeric(sapply(MH.pts.intersect,"[[",2))
+MH.pts.extract <- results_1215_MH[MH.pts.intersect.id, ]
+results_1215_MH_ex <- subset(results_1215_MH, results_1215_MH$key %in% MH.pts.intersect.id)
+
+plot(results_1215_MH_ex)
+plot(Mtn_hm, add=T, border="orange")
+
+# Repeat for st_p
+results_1215_SP <- crop(results_1215, extent(st_p))
+results_1215_SP <- spTransform(results_1215_SP, crs(st_p))
+
+### Divide into the two parks
+CSP <- st_p[1,]
+ESP <- st_p[2,]
+
+### Calculate separately for each park
+CSP.intersect <- gIntersection(CSP, results_1215_SP, byid=T)
+CSP.pts.intersect <- strsplit(dimnames(CSP.intersect@coords)[[1]], " ")
+CSP.pts.intersect.id <- as.numeric(sapply(CSP.pts.intersect,"[[",2))
+CSP.pts.extract <- results_1215_CSP[CSP.pts.intersect.id, ]
+results_1215_CSP <- subset(results_1215_SP, results_1215_SP$key %in% CSP.pts.intersect.id)
+plot(results_1215_CSP)
+plot(st_p, add=T, border = "orange")
+

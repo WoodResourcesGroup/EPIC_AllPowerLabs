@@ -31,12 +31,6 @@ plot(st_p, add=T, col="blue")
 
 ### Open National Park Layers
 
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
-
 sequ <- readOGR(dsn = "Boundary_SequoiaNP_20100209", layer = "Boundary_SequoiaNP_20100209")
 sequ <- spTransform(sequ, crs(FS_CA))
 plot(sequ, add=T, col="green") 
@@ -44,8 +38,6 @@ plot(sequ, add=T, col="green")
 kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
 kc <- spTransform(kc, crs(FS_CA))
 plot(kc, add=T, col="green")
-
-### Lassen
 
 lnp <- readOGR(dsn = "tempdir", layer = "LNP")
 lnp <- spTransform(lnp, crs(FS_CA))
@@ -61,7 +53,7 @@ plot(kc, add=T, col="green")
 plot(lnp, add=T, col="orange")
 
 ### Open Results
-
+#results_2016 <- readOGR(dsn = "Results_2016", layer = "Results_2016") #takes long time
 
 
 ### Crop Results

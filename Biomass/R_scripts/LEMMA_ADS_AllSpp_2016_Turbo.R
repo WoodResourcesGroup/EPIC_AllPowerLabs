@@ -1,6 +1,3 @@
-install.packages("rgdal")
-install.packages("raster") 
-
 library(rgdal)  
 library(raster)  
 
@@ -47,7 +44,7 @@ CR_mort <- raster("CR_mort.tif")
 #  sum(na.omit(drought_bu$NO_TREES1))
 
 ### Crop drought data to extent of Ramirez data 
-drought <- crop(drought, extent(CR_mort)) # *****comment out this step for running on the entire drought data set*****
+#drought <- crop(drought, extent(CR_mort)) # *****comment out this step for running on the entire drought data set*****
 
 ### Identify species in LEMMA
 spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
@@ -88,35 +85,7 @@ no_cores <- detectCores() - 1 # Use all but one core on your computer
 c1 <- makeCluster(no_cores)
 registerDoParallel(c1)
 
-########### Find which polygons aren't going to work - these will automatically be left out of the foreach() loop ###########
-########### Skip this step if there is already a working "zero_i.Rdata" file in the Biomass -> R_scripts folder   ###########
-
-# start timer - this process takes a while
-strt<-Sys.time()
-
-inputs = 1:nrow(drought)
-no.go <- foreach(i = inputs, .combine = rbind, .packages = c('raster', 'rgeos'), .errorhandling = "stop") %dopar% {
-  single <- drought[i,]
-  clip1 <- crop(LEMMA, extent(single))
-  clip2 <- mask(clip1, single)
-  ext <- extract(clip2, single)
-  no.pixels <- length(subset(ext[[1]], !is.na(ext[[1]])))
-  return(no.pixels)
-} 
-# end timer
-print(Sys.time()-strt)
-# 3 min for CR_mort subset of drought - will take longer for whole drought dataset 
-
-zeros <- subset(no.go, no.go == 0)
-zeros <- as.data.frame(zeros)
-zero.i <- row.names(zeros)
-zero.i <- as.integer(gsub("result.", "", zero.i))
-
-setwd("~/cec_apl/Biomass/R_scripts")
-saveRDS(zero.i,file="zero_i_16.Rdata")
-
-########### JUMP HERE IF SKIPPING THE ABOVE STEP
-
+### Check out which polygons will be skipped by the analysis - see script "find_skipped.R"
 setwd("~/cec_apl/Biomass/R_scripts")
 readRDS("zero_i_16_CR.Rdata") # for test
 readRDS("zero_i_16.Rdata")    # for final
@@ -228,6 +197,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
+
 # Create a key for each pixel (row)
 key <- seq(1, nrow(result.lemma.p)) 
 result.lemma.p <- cbind(key, result.lemma.p)
@@ -251,6 +221,14 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
 }
 write.csv(result.lemma.p, file = "LEMMA_ADS_AllSpp_2016_Turbo_01242016.csv", row.names=F)
+
+### Convert to a spatial data frame
+?SpatialPolygonsDataFrame
+xy <- result.lemma.p[,c("x","y")]
+spdf <- SpatialPointsDataFrame(coords=xy, data = result.lemma.p, proj4string = crs(LEMMA))
+
+### Save spatial data frame
+writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016", driver = "ESRI Shapefile")
 
 # Look at histograms of results
 library(ggplot2)

@@ -1,6 +1,6 @@
 
 if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/")
+  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/")
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/")
 }

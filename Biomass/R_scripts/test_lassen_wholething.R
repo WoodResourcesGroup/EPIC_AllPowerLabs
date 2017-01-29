@@ -1,3 +1,8 @@
+#########################################################################################################################
+######## TRY TO FIND ERRORS WITH TURBO LOOP BY RUNNING ALGORITHM ON ONLY DROUGHT POLYGONS IN LASSEN IN 2016
+#########################################################################################################################
+
+
 library(rgdal)  
 library(raster)  
 
@@ -20,31 +25,13 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
 drought <- readOGR("tempdir", "drought16")
+drought <- spTransform(drought, crs(LEMMA))
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 
-### OPEN RAMIREZ DATA (see script transform_CRmort.R for where "CR_mort.tif" comes from)
-### NOTE: We didn't end up analysing Ramirez data, so this step is only for cropping the data down for editing code in a manageably sized chunk
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/tempdir/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
-}
-CR_mort <- raster("CR_mort.tif")
-
-### SKIP THIS SECTION FOR BATTLES RUNS 
-
-  ### Narrow drought down to large-ish polygons (>2 ac) and those with more than one tree
-  ### Might want to change these filters later
-#  drought <- subset(drought, drought$ACRES > 2 & drought$NO_TREES1 > 1)
-  ## print how much area this excludes: ~10,500 ACRES (out of ~33,000,000)
-#  sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREES1 == 1)$ACRES)
-#  sum(drought_bu$ACRES)
-  ## print how many trees this excludes: ~50,000 trees (out of ~60,000,000)
-#  sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREES1 == 1)$NO_TREES1)
-#  sum(na.omit(drought_bu$NO_TREES1))
-
-### Crop drought data to extent of Ramirez data 
-#drought <- crop(drought, extent(CR_mort)) # *****comment out this step for running on the entire drought data set*****
+### Open Lassen perimeter to crop to it
+lnp <- readOGR(dsn = "tempdir", layer = "LNP")
+lnp <- spTransform(lnp, crs(drought))
+drought <- crop(drought, extent(lnp)) # *****comment out this step for running on the entire drought data set*****
 
 ### Identify species in LEMMA
 spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
@@ -67,7 +54,7 @@ mo <- c("QUAG", "QUDO", "QUEN", "QUERC", "QUGA4", "QUKE", "QULO", "QUWI2", "QUCH
 
 ### Check that no species remain - this step is important when using new years of drought polygon data
 remaining <- subset(spp.names, !spp.names %in% c(Cedars_Larch, Dougfirs, Firs, Pines, Spruces, mh, wo, mb, aa, mo))
-
+remaining
 ### Create table of dia -> biomass conversion parameters based on Jenkins paper - for now only broken down by broad genus category, but could do it by individual species later if we want
 # Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
 # biomass = exp(B0 + B1*ln(dbh))
@@ -174,7 +161,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   # Create vectors that are the same length as pmerge to combine into final table:
   D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
   Av_BM_TR <- D_Pol_BM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
-  QMD_DOM <- pmerge$QMD_DOM # Find the apixels' quadratic mean diameters 
+  QMD_DOM <- pmerge$QMD_DOM # Find the average of the pixels' quadratic mean diameters 
   TREEPL <-  pmerge$TREEPLBA # Find the tree species that has a plurality in the most pixels
   Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
   Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
@@ -212,23 +199,18 @@ names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
 # end timer
 print(Sys.time()-strt)
 ###################################################################
-# 9 minutes for CRMORT-sized area
-
-### Save results
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/R Results")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
-}
-write.csv(result.lemma.p, file = "LEMMA_ADS_AllSpp_2016_Turbo_01242016.csv", row.names=F)
+# 23 seconds for lassen-sized area
 
 ### Convert to a spatial data frame
-?SpatialPolygonsDataFrame
 xy <- result.lemma.p[,c("x","y")]
 spdf <- SpatialPointsDataFrame(coords=xy, data = result.lemma.p, proj4string = crs(LEMMA))
+plot(spdf, pch=".")
+plot(lnp, add=T, border="orange")
+plot(drought, add=T, border="red")
+LNP_16 <- spdf
 
 ### Save spatial data frame
-writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016", driver = "ESRI Shapefile")
+writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016_LNP", driver = "ESRI Shapefile")
 
 # Look at histograms of results
 library(ggplot2)
@@ -243,11 +225,75 @@ qplot(result.lemma.p$D_BM_kgha,
       fill=I("blue"), 
       col=I("black"), 
       alpha=I(.2),
-      xlim=c(0,200000),
-      ylim=c(0,2000000))
+      xlim=c(0,max(result.lemma.p$D_BM_kgha)),
+      ylim=c(0,2000))
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
-       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, result.lemma.p, RPT_YR, s)
+       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
 remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
 remove(no.pixels, QMD_DOM, tab)
+
+########################## TESTING STEPS PASTED FROM "overlay_cropped.R"
+
+## Check that results look OK - compare NO_TREES, biomass per tree, biomass per pixel
+
+# Define Mg/ha
+LNP_16$D_BM_Mgha <- LNP_16$D_BM_kgha/1000
+LNP_16$D_BM_Mg <- LNP_16$D_BM_kg/1000
+plot(sort(LNP_16$D_BM_Mgha))
+max(LNP_16$D_BM_Mgha)
+
+# Max Mg per pixel of dead biomass is 94. That's maybe reasonable. Investigate further below.
+hist(LNP_16$D_BM_Mgha)
+
+# How do dead trees per polygon and relative number of dead trees per pixel look?
+hist(LNP_16$relNO)
+max(LNP_16$relNO)
+# It looks like my results are showing relNO of trees per pixel as high as 84, which seems reasonable
+# Investigate how high that is by comparing to THA
+hist(LNP_16$THA*.09)
+max(LNP_16$THA*.09) # higher than relNO, as it should be, because it includes live trees
+max(LNP_16$Pol.NO_TREES1/(LNP_16$Pol.Shap_Ar/10000)) # average dead trees per acre across polygon is close to relNO. Good!
+LEMMA_LNP <- crop(LEMMA, extent(lnp)) # crop LEMMA GLN data to the size of that polygon
+LEMMA_LNP <- mask(LEMMA_LNP, lnp) # fit the cropped LEMMA data to the shape of the polygon
+hist(LEMMA_LNP@data@attributes[[1]]$TPH_GE_3) # total TPH should not exceed 10,000, so I'm good
+hist(LNP_16$THA)
+hist((LEMMA_LNP@data@attributes[[1]]$BPH_GE_3_CRM/1000)) # total biomass per hectare goes up to 1000 Mg, so above max of 
+max((LEMMA_LNP@data@attributes[[1]]$BPH_GE_3_CRM/1000))
+# dead biomass per hectare of 1000 seems ok
+
+### Compare LEMMA total biomass per hectare to results estimates
+hist(LNP_16$All_BM_kgha/1000)
+
+# Check average dead biomass per pixel averaged across all pixels in each polygon to see if they look ok
+plot(unique(LNP_16$Pol.NO_TREES1/LNP_16$Pol.Shap_Ar), main="number of dead trees per sq m in polygon")
+# Compare to that of the original drought polygon layer
+points(drought$NO_TREES1/drought$Shap_Ar, main="number of dead trees per sq m in polygon from original drought data", col="pink")
+### THESE TWO PLOTS ARE IDENTICAL, AS THEY SHOULD BE
+
+# Use area of LNP to calculate dead biomass density 
+### Crop LNP_16 to actual shape of lnp
+# First find which points in results fall within MH
+library(rgeos)
+
+strt<-Sys.time()
+LNP.intersect <- gIntersection(lnp, LNP_16, byid=T) # TAKES A WHILE
+print(Sys.time()-strt)
+
+plot(lnp)
+plot(LNP.intersect, add=T, col="pink", pch=".")
+
+LNP.pts.intersect <- strsplit(dimnames(LNP.intersect@coords)[[1]], " ")
+LNP.pts.intersect.id <- as.numeric(sapply(LNP.pts.intersect,"[[",2))
+LNP.pts.extract <- LNP_16[LNP.pts.intersect.id, ]
+LNP_16 <- subset(LNP_16, LNP_16$key %in% LNP.pts.intersect.id)
+plot(LNP_16, add=T, col="pink", pch=".")
+
+LNP_16_D_BM_sum_Mg <- sum(LNP_16$D_BM_Mg)
+LNP_16_D_BM_sum_Mg
+area(lnp) # area in square meters
+area.lnp.ha <- area(lnp)/10000
+LNP_DBM_Mgha_16 <- LNP_16_D_BM_sum_Mg/area.lnp.ha
+LNP_DBM_Mgha_16
+

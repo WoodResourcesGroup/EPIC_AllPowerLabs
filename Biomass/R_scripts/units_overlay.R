@@ -63,3 +63,5 @@ units$UNIT <- c(rep("MH",6), "CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
 plot(units)
 
 writeOGR(units, dsn="units", layer="units_nokc", overwrite_layer = T, driver = "ESRI Shapefile")
+
+

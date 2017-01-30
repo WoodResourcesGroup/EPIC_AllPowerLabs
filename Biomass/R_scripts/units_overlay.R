@@ -31,12 +31,6 @@ plot(st_p, add=T, col="blue")
 
 ### Open National Park Layers
 
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
-
 sequ <- readOGR(dsn = "Boundary_SequoiaNP_20100209", layer = "Boundary_SequoiaNP_20100209")
 sequ <- spTransform(sequ, crs(FS_CA))
 plot(sequ, add=T, col="green") 
@@ -44,8 +38,6 @@ plot(sequ, add=T, col="green")
 kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
 kc <- spTransform(kc, crs(FS_CA))
 plot(kc, add=T, col="green")
-
-### Lassen
 
 lnp <- readOGR(dsn = "tempdir", layer = "LNP")
 lnp <- spTransform(lnp, crs(FS_CA))
@@ -105,11 +97,4 @@ results_1215_SP <- spTransform(results_1215_SP, crs(st_p))
 CSP <- st_p[1,]
 ESP <- st_p[2,]
 
-### Calculate separately for each park
-CSP.intersect <- gIntersection(CSP, results_1215_SP, byid=T)
-CSP.pts.intersect <- strsplit(dimnames(CSP.intersect@coords)[[1]], " ")
-CSP.pts.intersect.id <- as.numeric(sapply(CSP.pts.intersect,"[[",2))
-CSP.pts.extract <- results_1215_CSP[CSP.pts.intersect.id, ]
-results_1215_CSP <- subset(results_1215_SP, results_1215_SP$key %in% CSP.pts.intersect.id)
-plot(results_1215_CSP)
-plot(st_p, add=T, border = "orange")
+

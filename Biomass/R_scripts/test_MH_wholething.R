@@ -1,3 +1,8 @@
+#########################################################################################################################
+######## TRY TO FIND ERRORS WITH TURBO LOOP BY RUNNING ALGORITHM ON ONLY DROUGHT POLYGONS IN MOUNTAIN HOME IN 2016
+#########################################################################################################################
+
+
 library(rgdal)  
 library(raster)  
 
@@ -20,31 +25,13 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
 drought <- readOGR("tempdir", "drought16")
+drought <- spTransform(drought, crs(LEMMA))
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 
-### OPEN RAMIREZ DATA (see script transform_CRmort.R for where "CR_mort.tif" comes from)
-### NOTE: We didn't end up analysing Ramirez data, so this step is only for cropping the data down for editing code in a manageably sized chunk
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/tempdir/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/tempdir")
-}
-CR_mort <- raster("CR_mort.tif")
-
-### SKIP THIS SECTION FOR BATTLES RUNS 
-
-  ### Narrow drought down to large-ish polygons (>2 ac) and those with more than one tree
-  ### Might want to change these filters later
-#  drought <- subset(drought, drought$ACRES > 2 & drought$NO_TREES1 > 1)
-  ## print how much area this excludes: ~10,500 ACRES (out of ~33,000,000)
-#  sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREES1 == 1)$ACRES)
-#  sum(drought_bu$ACRES)
-  ## print how many trees this excludes: ~50,000 trees (out of ~60,000,000)
-#  sum(subset(drought_bu, drought_bu$ACRES <= 2 | drought_bu$NO_TREES1 == 1)$NO_TREES1)
-#  sum(na.omit(drought_bu$NO_TREES1))
-
-### Crop drought data to extent of Ramirez data 
-#drought <- crop(drought, extent(CR_mort)) # *****comment out this step for running on the entire drought data set*****
+### Open Lassen perimeter to crop to it
+mtn_hm <- readOGR(dsn = "Mtn_home", layer = "Mtn_home_new")
+mtn_hm <- spTransform(mtn_hm, crs(drought))
+drought <- crop(drought, extent(mtn_hm)) # *****comment out this step for running on the entire drought data set*****
 
 ### Identify species in LEMMA
 spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
@@ -67,7 +54,7 @@ mo <- c("QUAG", "QUDO", "QUEN", "QUERC", "QUGA4", "QUKE", "QULO", "QUWI2", "QUCH
 
 ### Check that no species remain - this step is important when using new years of drought polygon data
 remaining <- subset(spp.names, !spp.names %in% c(Cedars_Larch, Dougfirs, Firs, Pines, Spruces, mh, wo, mb, aa, mo))
-
+remaining
 ### Create table of dia -> biomass conversion parameters based on Jenkins paper - for now only broken down by broad genus category, but could do it by individual species later if we want
 # Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
 # biomass = exp(B0 + B1*ln(dbh))
@@ -86,9 +73,9 @@ c1 <- makeCluster(no_cores)
 registerDoParallel(c1)
 
 ### Check out which polygons will be skipped by the analysis - see script "find_skipped.R"
-setwd("~/cec_apl/Biomass/R_scripts")
-readRDS("zero_i_16_CR.Rdata") # for test
-readRDS("zero_i_16.Rdata")    # for final
+#setwd("~/cec_apl/Biomass/R_scripts")
+#readRDS("zero_i_16_CR.Rdata") # for test
+#readRDS("zero_i_16.Rdata")    # for final
 ###################################################################
 # start timer
 strt<-Sys.time()
@@ -174,7 +161,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   # Create vectors that are the same length as pmerge to combine into final table:
   D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
   Av_BM_TR <- D_Pol_BM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
-  QMD_DOM <- pmerge$QMD_DOM # Find the apixels' quadratic mean diameters 
+  QMD_DOM <- pmerge$QMD_DOM # Find the average of the pixels' quadratic mean diameters 
   TREEPL <-  pmerge$TREEPLBA # Find the tree species that has a plurality in the most pixels
   Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
   Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
@@ -190,7 +177,7 @@ result.lemma.p <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rg
   
   # Bring it all together
   final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
-                 Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID) #
+                 Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
   final <- as.data.frame(final)
   final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
@@ -212,23 +199,23 @@ names(result.lemma.p)[names(result.lemma.p)=="V6"] <- "PlotID"
 # end timer
 print(Sys.time()-strt)
 ###################################################################
-# 9 minutes for CRMORT-sized area
-
-### Save results
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/R Results")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
-}
-write.csv(result.lemma.p, file = "LEMMA_ADS_AllSpp_2016_Turbo_01242016.csv", row.names=F)
+# 23 seconds for lassen-sized area
 
 ### Convert to a spatial data frame
-?SpatialPolygonsDataFrame
 xy <- result.lemma.p[,c("x","y")]
 spdf <- SpatialPointsDataFrame(coords=xy, data = result.lemma.p, proj4string = crs(LEMMA))
+plot(spdf, pch=".")
+plot(mtn_hm, add=T, border="orange")
+plot(drought, add=T, border="pink")
+MH_16 <- spdf
 
 ### Save spatial data frame
-writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016", driver = "ESRI Shapefile")
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/R Results/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
+}
+writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016_MH", driver = "ESRI Shapefile")
 
 # Look at histograms of results
 library(ggplot2)
@@ -243,11 +230,144 @@ qplot(result.lemma.p$D_BM_kgha,
       fill=I("blue"), 
       col=I("black"), 
       alpha=I(.2),
-      xlim=c(0,200000),
-      ylim=c(0,2000000))
+      xlim=c(0,max(result.lemma.p$D_BM_kgha)),
+      ylim=c(0,2000))
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
-       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, result.lemma.p, RPT_YR, s)
+       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
 remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
 remove(no.pixels, QMD_DOM, tab)
+
+########################## TESTING STEPS PASTED FROM "overlay_cropped.R"
+
+## Check that results look OK - compare NO_TREES, biomass per tree, biomass per pixel
+
+# Define Mg/ha
+MH_16$D_BM_Mgha <- MH_16$D_BM_kgha/1000
+MH_16$D_BM_Mg <- MH_16$D_BM_kg/1000
+plot(sort(MH_16$D_BM_Mgha))
+max(MH_16$D_BM_Mgha)
+
+# Max Mg per ha of dead biomass is 55,000. That's really high! Investigate further below.
+hist(MH_16$D_BM_Mgha)
+
+# How do dead trees per polygon and relative number of dead trees per pixel look?
+hist(MH_16$relNO)
+max(MH_16$relNO)
+max(MH_16$relNO)/.09
+# It looks like my results are showing relNO of trees per pixel as high as 270.
+# Investigate how high that is by comparing to THA
+hist(MH_16$THA*.09)
+max(MH_16$THA*.09) # 580, higher than relNO, as it should be, because it includes live trees
+max(MH_16$Pol.NO_TREES1/(MH_16$Pol.Shap_Ar/10000)) # average dead trees per ha across polygon is 150, sorta close to relNO. Good!
+mean(MH_16$Pol.NO_TREES1/(MH_16$Pol.Shap_Ar/10000))
+mean(MH_16$relNO)/.09
+LEMMA_MH <- crop(LEMMA, extent(mtn_hm)) # crop LEMMA GLN data to the size of that polygon
+LEMMA_MH <- mask(LEMMA_MH, mtn_hm) # fit the cropped LEMMA data to the shape of the polygon
+hist(LEMMA_MH@data@attributes[[1]]$TPH_GE_3) # total TPH should not exceed 10,000, so I'm good
+hist(MH_16$THA)
+max((LEMMA_MH@data@attributes[[1]]$BPH_GE_3_CRM/1000)) # total biomass per hectare goes up to 3000 Mg, so below MH_16 max
+mean((LEMMA_MH@data@attributes[[1]]$BPH_GE_3_CRM/1000))
+# dead biomass per hectare of 1000 seems ok
+
+### Compare LEMMA total biomass per hectare to results estimates
+hist(MH_16$All_BM_kgha/1000)
+
+# Check average dead biomass per pixel averaged across all pixels in each polygon to see if they look ok
+plot(unique(MH_16$Pol.NO_TREES1/MH_16$Pol.Shap_Ar), main="number of dead trees per sq m in polygon")
+# Compare to that of the original drought polygon layer
+points(drought$NO_TREES1/drought$Shap_Ar, main="number of dead trees per sq m in polygon from original drought data", col="pink")
+### THESE TWO PLOTS ARE IDENTICAL, AS THEY SHOULD BE
+
+# Use area of MH to calculate dead biomass density 
+### Crop MH_16 to actual shape of MH
+# First find which points in results fall within MH
+library(rgeos)
+
+strt<-Sys.time()
+MH.intersect <- gIntersection(mtn_hm, MH_16, byid=T) # TAKES A WHILE
+print(Sys.time()-strt)
+
+plot(mtn_hm)
+plot(MH.intersect, add=T, col="pink", pch=".")
+
+MH.pts.intersect <- strsplit(dimnames(MH.intersect@coords)[[1]], " ")
+MH.pts.intersect.id <- as.numeric(sapply(MH.pts.intersect,"[[",2))
+MH.pts.extract <- MH_16[MH.pts.intersect.id, ]
+MH_16 <- subset(MH_16, MH_16$key %in% MH.pts.intersect.id)
+plot(mtn_hm)
+plot(MH_16, add=T, col="pink", pch=".")
+
+MH_16_D_BM_sum_Mg <- sum(MH_16$D_BM_Mg)
+MH_16_D_BM_sum_Mg
+area(mtn_hm) # area in square meters
+area.MH.ha <- sum(area(mtn_hm))/10000
+MH_DBM_Mgha_16 <- MH_16_D_BM_sum_Mg/area.MH.ha
+MH_DBM_Mgha_16
+
+
+#################################################################################################################
+### FIND WHAT PROPORTION DEAD BIOMASS IS OF TOTAL BIOMASS AS PREDICTED BY LEMMA
+#################################################################################################################
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+}
+LEMMA_live_MH <- readOGR(dsn = "LEMMA_units", layer = "LEMMA_MH")
+plot(LEMMA_live_MH, pch=".")
+summary(LEMMA_live_MH$All_BM_)
+mean(LEMMA_live_MH$All_BM_)
+MH_live_Mg <- mean(LEMMA_live_MH$All_BM_)/1000
+
+## LIVE BIOMASS < DEAD BIOMASS - NOT GOING TO WORK!
+
+
+#################################################################################################################
+### CHECK DEAD BIOMASS NUMBERS AGAINST TOTAL NUMBER OF DEAD TREES IN MH AND AVERAGE BIOMASS PER DEAD TREE
+#################################################################################################################
+
+plot(drought)
+plot(mtn_hm, add=T, border="pink")
+summary(drought$NO_TREES1)
+sum(drought$NO_TREES1) #670,308 dead trees in drought
+
+### FROM LEMMA, AVERAGE BIOMASS 
+summary(LEMMA_live_MH$All_BM_/LEMMA_live_MH$THA) # divide LEMMA biomass kg/ha by LEMMA trees per ha, both of trees >2.5cm
+hist(LEMMA_live_MH$All_BM_/LEMMA_live_MH$THA)
+hist(MH_16$Av_BM_TR) # these numbers go higher than LEMMA's but could still be correct because Av_BM_TR 
+#is only dead trees (which are larger)
+
+# FIND WHICH PIXELS ARE BUMPING THE NUMBERS WAY UP
+big_pixels <- subset(MH_16, MH_16$D_BM_Mgha>300)
+plot(MH_16, pch=".", col="orange")
+plot(big_pixels, pch=".", col="purple", add=T)
+plot(mtn_hm, add=T)
+plot(drought, add=T)
+hist(big_pixels$THA, border="orange") # relNO < THA so that's good
+hist(big_pixels$relNO/.09, border="blue",add=T) # that's way too many dead trees per hectare 
+hist(big_pixels$relNO*(big_pixels$Pol.Shap_Ar/900), border="blue",add=T) # find total in polygon
+hist(drought_bu)
+hist(big_pixels$QMD_DOM)
+summary(big_pixels$TREEPL)
+
+hist()
+
+### test per-tree biomass for an individual 280-cm pin
+pretree <- exp(-2.5356 + 2.4349*log(280))
+
+
+# EXAMINE QMD_DOM and relNO for big pixels
+
+### FIND BIOMASS PER TREE BY DIVIDING BY relNO
+hist(MH_16$D_BM_kg/MH_16$relNO)
+FIXME <- subset(MH_16, MH_16$D_BM_kg/MH_16$relNO>40000)
+plot(FIXME, add=T)
+
+# in drought, dead trees per ha are < 300 tph and < 30 dead trees per pixel
+drought$NO_TREES1/((drought$Shap_Ar/10000))
+hist(drought_bu$NO_TREES1/((drought_bu$Shap_Ar/10000))) # <300 dead trees per hectare 
+hist(drought$NO_TREES1/((drought$Shap_Ar/10000))) # <300 dead trees per hectare 
+hist(drought_bu$NO_TREES1/((drought_bu$Shap_Ar/10000))/11.11) # dead trees per pixel
+     

@@ -62,7 +62,16 @@ plot(lnp, add=T, col="orange")
 
 ### Open Results
 
+# First all forests to give a CA overview map
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/R Results/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/R Results/")
+}
+
+
 #results_1215 <- readOGR(dsn = "Results_2012-2015", layer = "Results_2012-2015")  # takes a long time 
+result_16 <- readOGR(dsn = "Results_2016", layer = "Results_2016")
 
 ### Crop and mask results once for each unit spdf
 
@@ -71,9 +80,9 @@ results_1215_MH <- crop(results_1215, extent(MH))
 results_1215_MH <- spTransform(results_1215_MH, crs(Mtn_hm))
 
 results_1215_FS <- crop(results_1215, extent(FS))
-results_1215_FS <- mask(results_1215_FS, FS)
+
 results_1215_kc <- crop(results_1215, extent(kc))
-results_1215_lnp <- 
+results_1215_lnp <- crop(results_1215, extent(lnp))
 
 ### Trying with gIntersect
 

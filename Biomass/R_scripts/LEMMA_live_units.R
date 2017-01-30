@@ -7,18 +7,17 @@ if( Sys.info()['sysname'] == "Windows" ) {
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
-
 units <- readOGR(dsn = "units", layer="units_nokc")
 
+### SETWD based on whether it's Carmen's computer or Jose's computer)
 if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 }
 
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
 LEMMA <- raster("LEMMA.gri")
-
 units <- spTransform(units, crs(LEMMA))
 
 ### Set up parallel cores for faster runs
@@ -29,13 +28,12 @@ no_cores <- detectCores() - 1 # Use all but one core on your computer
 c1 <- makeCluster(no_cores)
 registerDoParallel(c1)
 
+### function that does the bulk of the analysis
+
+inputs = 1:nrow(units)
 # start timer
 strt<-Sys.time()
-
-# function that does the bulk of the analysis
-
-inputs = 1:nrow(units) # units[3:8] is all polygons in MH
-
+# foreach loop
 LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- units[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -131,11 +129,7 @@ plot(kc, col="green")
 
 # start timer
 strt<-Sys.time()
-
-# function that does the bulk of the analysis
-
 inputs = 1:nrow(kc) # units[3:8] is all polygons in MH
-
 LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- kc[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -187,12 +181,12 @@ LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'),
   final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
+print(Sys.time()-strt)
 
 # Create a key for each pixel (row)
 key <- seq(1, nrow(LEMMA.kc)) 
 LEMMA.kc <- cbind(key, LEMMA.kc)
-print(Sys.time()-strt)
-# only takes 5 min on Carmen's dell 
+
 
 # Rename variables whose names were lost in the cbind
 names(LEMMA.kc)[names(LEMMA.kc)=="V1"] <- "x"

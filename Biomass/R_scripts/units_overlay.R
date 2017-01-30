@@ -41,8 +41,14 @@ plot(sequ, add=T, col="green")
 plot(kc, add=T, col="green")
 plot(lnp, add=T, col="orange")
 
-### Open Results
+### Merge units
+units <- union(Mtn_hm, st_p)
+units <- union(units, sequ)
+units <- union(units, FS)
+units <- union(units, lnp)
+units$UNIT <- c(rep("MH",6), "CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
 
+writeOGR(units, dsn="units", layer="units_nokc", overwrite_layer = T, driver = "ESRI Shapefile")
 
 ### Crop and mask results once for each unit spdf
 
@@ -72,8 +78,5 @@ plot(Mtn_hm, add=T, border="orange")
 results_1215_SP <- crop(results_1215, extent(st_p))
 results_1215_SP <- spTransform(results_1215_SP, crs(st_p))
 
-### Divide into the two parks
-CSP <- st_p[1,]
-ESP <- st_p[2,]
 
 

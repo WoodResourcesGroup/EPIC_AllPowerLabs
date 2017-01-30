@@ -1,15 +1,6 @@
 ### ATTEMPTS TO ACTUALLY CALCULATE BY PARK
 ### SOME OF THIS CODE IS PASTED FROM units_overlay.R on Carmen's PC
 
-## Merge Units
-
-units <- union(Mtn_hm, st_p)
-units <- union(units, sequ)
-units <- union(units, FS)
-units <- union(units, lnp)
-plot(units)
-plot(kc, add=T, col="pink") # kc isn't merging with units for some reason, but it falls within the 
-# extent of units so it's ok for cropping results
 
 ## Open LEMMA
 if( Sys.info()['sysname'] == "Windows" ) {

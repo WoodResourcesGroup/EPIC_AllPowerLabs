@@ -2,16 +2,27 @@
 ######## CALCULATE TOTAL LIVE BIOMASS IN EACH MANAGEMENT UNIT FROM LEMMA DATA
 #########################################################################################################################
 
+### SETWD based on whether it's Carmen's computer or Jose's computer)
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
+}
+
+### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
+LEMMA <- raster("LEMMA.gri")
+
 plot(units)
 units <- spTransform(units, crs(LEMMA))
+
+# function that does the bulk of the analysis
+
+inputs = 1:nrow(units) 
 
 # start timer
 strt<-Sys.time()
 
-# function that does the bulk of the analysis
-
-inputs = 3:8 #nrow(units) # units[3:8] is all polygons in MH
-
+# foreach loop
 LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- units[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -89,7 +100,7 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
 
-writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_MH", driver = "ESRI Shapefile")
+writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_allunits", driver = "ESRI Shapefile", overwrite_layer=T)
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

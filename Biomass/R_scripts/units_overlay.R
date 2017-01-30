@@ -54,13 +54,12 @@ plot(lnp, add=T, col="orange")
 
 ### Merge units
 units <- union(Mtn_hm, st_p)
-units <- union(units, kc)
 units <- union(units, sequ)
 units <- union(units, FS)
-units <- union(units, lnp)
+units<- union(units, lnp)
+units$UNIT <- c(rep("MH",6), "CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
+
 ### Note: units excludes kc because sequ and kc won't union for some reason
 plot(units)
-plot(kc, add=T, col="pink") 
 
-### Open Results
-
+writeOGR(units, dsn="units", layer="units_nokc", overwrite_layer = T, driver = "ESRI Shapefile")

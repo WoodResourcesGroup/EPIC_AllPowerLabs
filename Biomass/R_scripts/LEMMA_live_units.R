@@ -1,6 +1,7 @@
 #########################################################################################################################
 ######## CALCULATE TOTAL LIVE BIOMASS IN EACH MANAGEMENT UNIT FROM LEMMA DATA
 #########################################################################################################################
+library(rgdal)
 
 if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
@@ -82,7 +83,6 @@ LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos
   final <- as.data.frame(final)
   final$All_Pol_NO <- (area(single)/10000)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (area(single)/10000)*900*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
-  final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
 
@@ -104,6 +104,7 @@ spdf <- SpatialPointsDataFrame(coords=xy, data = LEMMA.units, proj4string = crs(
 plot(spdf, pch=".")
 plot(units, add=T, border="orange")
 LEMMA.units <- spdf
+LEMMA.units.bu <- LEMMA.units
 
 ### Save spatial data frame
 if( Sys.info()['sysname'] == "Windows" ) {
@@ -111,7 +112,6 @@ if( Sys.info()['sysname'] == "Windows" ) {
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
-
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_units_nokc", driver = "ESRI Shapefile")
 
 ### REPEAT WITH KC 
@@ -122,7 +122,6 @@ if( Sys.info()['sysname'] == "Windows" ) {
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
-
 kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
 kc <- spTransform(kc, crs(LEMMA))
 plot(kc, col="green")
@@ -178,7 +177,6 @@ LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'),
   final <- as.data.frame(final)
   final$All_Pol_NO <- (area(single)/10000)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (area(single)/10000)*900*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
-  final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
 print(Sys.time()-strt)
@@ -186,7 +184,6 @@ print(Sys.time()-strt)
 # Create a key for each pixel (row)
 key <- seq(1, nrow(LEMMA.kc)) 
 LEMMA.kc <- cbind(key, LEMMA.kc)
-
 
 # Rename variables whose names were lost in the cbind
 names(LEMMA.kc)[names(LEMMA.kc)=="V1"] <- "x"
@@ -200,6 +197,41 @@ spdf <- SpatialPointsDataFrame(coords=xy, data = LEMMA.kc, proj4string = crs(LEM
 plot(spdf, pch=".")
 plot(kc, add=T, border="orange")
 LEMMA.kc <- spdf
+LEMMA.kc_bu <- LEMMA.kc
 
 ### Save spatial data frame
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_kc", driver = "ESRI Shapefile")
+
+#####################################################################################
+### Calculate live biomass for each management unit
+#####################################################################################
+if( Sys.info()['sysname'] == "Windows" ) {
+  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
+} else {
+  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
+}
+LEMMA.units <- readOGR(dsn="LEMMA_units", layer = "LEMMA_units_nokc")
+units <- readOGR(dsn = "units", layer="units_nokc")
+units <- spTransform(units, crs(LEMMA.units))
+kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
+kc <- spTransform(kc, crs(LEMMA.units))
+
+### divide up results by management unit
+library(rgeos)
+
+strt<-Sys.time()
+intersect <- gIntersection(units[1,], LEMMA.units, byid=T) # TAKES A WHILE
+print(Sys.time()-strt)
+
+plot(units[8,])
+plot(ESP.intersect, add=T, col="pink", pch=".")
+
+ESP.pts.intersect <- strsplit(dimnames(ESP.intersect@coords)[[1]], " ")
+ESP.pts.intersect.id <- as.numeric(sapply(ESP.pts.intersect,"[[",2))
+ESP.pts.extract <- ESP_16[ESP.pts.intersect.id, ]
+ESP_16 <- subset(ESP_16, ESP_16$key %in% ESP.pts.intersect.id)
+plot(ESP_16, add=T, col="pink", pch=".")
+
+writeOGR(obj=ESP_16, dsn = "Results_2016", layer = "Results_2016_ESP_mask", driver = "ESRI Shapefile")
+
+

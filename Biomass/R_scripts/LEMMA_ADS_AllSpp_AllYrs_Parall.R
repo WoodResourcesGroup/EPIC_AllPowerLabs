@@ -1,6 +1,3 @@
-install.packages("rgdal")
-install.packages("raster") 
-
 library(rgdal)  
 library(raster)  
 
@@ -250,6 +247,12 @@ if( Sys.info()['sysname'] == "Windows" ) {
   setwd("~/Documents/Box Sync/EPIC-Biomass/R Results")
 }
 write.csv(result.lemma.p, file = "LEMMA_ADS_AllSpp_AlYrs_011817.csv", row.names=F)
+
+### Save results as spatial data frame
+
+xy <- result.lemma.p[,c("x","y")]
+spdf <- SpatialPointsDataFrame(coords=xy, data=result.lemma.p,proj4string = crs(LEMMA))
+writeOGR(obj=spdf, dsn="Results_2012-2015",layer = "Results_2012-2015", driver="ESRI Shapefile")
 
 # Look at histograms of results
 library(ggplot2)

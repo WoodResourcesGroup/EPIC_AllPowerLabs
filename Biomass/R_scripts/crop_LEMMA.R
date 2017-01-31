@@ -1,3 +1,5 @@
+library(raster)
+
 if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 } else {

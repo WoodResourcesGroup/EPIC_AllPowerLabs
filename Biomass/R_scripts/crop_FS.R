@@ -49,4 +49,7 @@ if( Sys.info()['sysname'] == "Windows" ) {
 
 writeOGR(obj=FS, dsn="tempdir",layer = "FS", driver="ESRI Shapefile", overwrite_layer = TRUE)
 
+FS_LTMU <- subset(FS_Units, FS_Units$FORESTNAME=="Lake Tahoe Basin Management Unit")
+plot(FS_LTMU)
+writeOGR(obj=FS_LTMU, dsn="tempdir",layer = "FS_LTMU", driver="ESRI Shapefile", overwrite_layer = TRUE)
 

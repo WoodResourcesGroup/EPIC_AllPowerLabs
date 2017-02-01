@@ -196,3 +196,115 @@ names(results)[names(results)=="V3"] <- "D_BM_kg"
 names(results)[names(results)=="V4"] <- "relNO"
 names(results)[names(results)=="V5"] <- "PlotID"
 
+### Convert to a spatial data frame
+xy <- results[,c("x","y")]
+spdf <- SpatialPointsDataFrame(coords=xy, data = results, proj4string = crs(LEMMA))
+
+### Plot to make sure results match unit perimeter matches drought polygons
+plot(spdf, pch=".")
+plot(drought, add=T, border="blue")
+plot(unit, add=T, border="orange")
+
+### Save spatial data frame
+writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
+setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
+save(spdf, file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
+load(file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
+
+### Save version masked to just the management unit
+
+## try converting to raster for this part
+try.raster <- rasterFromXYZ(spdf[,c("x","y","D_BM_kgh")], crs = crs(spdf))
+plot(try.raster)
+raster.small <- mask(try.raster, unit)
+  
+  crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
+clip2 <- mask(clip1, single) # fit the cropped LEMMA data to the shape of the polygon
+
+
+library(rgeos)
+unit <- spTransform(unit, crs(spdf))
+strt<-Sys.time()
+intersect <- gIntersects(spdf, unit, byid=T) 
+intersect.df <- as.data.frame(intersect)
+length(subset(intersect.df, intersect.df=="TRUE"))
+
+testspdf <- subset(spdf, spdf$key %in% intersect)
+print(Sys.time()-strt)
+# Takes 30 min on Turbo!
+
+KCNP.pts.intersect.id <- as.numeric(sapply(KCNP.pts.intersect,"[[",2))
+KCNP.pts.extract <- KCNP_16[KCNP.pts.intersect.id, ]
+KCNP_16 <- subset(KCNP_16, KCNP_16$key %in% KCNP.pts.intersect.id)
+plot(KCNP_16, add=T, col="pink", pch=".")
+plot(drought_KCNP, add=T)
+
+writeOGR(obj=KCNP_16, dsn = "Results_2016", layer = "Results_2016_KCNP_mask", driver = "ESRI Shapefile")
+
+### For editing: clear variables in loop
+remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
+       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
+remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
+remove(no.pixels, QMD_DOM, tab)
+
+# Use area of KCNP to calculate dead biomass density 
+KCNP_16 <- readOGR(dsn = "Results_2016", layer = "Results_2016_KCNP_mask")
+KCNP_16_D_BM_sum_Mg <- sum(KCNP_16$D_BM_kg)/1000                                                               
+KCNP_16_D_BM_sum_Mg
+area(kc) # area in square meters
+area.KCNP.ha <- sum(area(kc))/10000
+area.KCNP.live.ha <- 752969700/10000 # from script LEMMA_live_units
+KCNP_DBM_Mgha_16 <- KCNP_16_D_BM_sum_Mg/area.KCNP.ha
+KCNP_DBM_Mgha_16
+
+KCNP_DBM_Mgha_16_Liveonly <- KCNP_16_D_BM_sum_Mg/area.KCNP.live.ha
+KCNP_DBM_Mgha_16_Liveonly
+
+
+### Check stuff out 
+
+##### NEED TO GO THROUGH THESE FOR SQNP, NAMES ARE DIFFERENT AFTER READING SPATIAL FILE AND I HAVEN'T CHECKED THESE TESTS
+
+# Define Mg/ha
+KCNP_16$D_BM_Mgh <- KCNP_16$D_BM_kgh/1000
+plot(sort(KCNP_16$D_BM_Mgh))
+plot(sort(KCNP_16$D_BM_Mgh), ylim=c(0,500)) # There's an inflection point at around 500 Mgh and I 
+## want to figure out what's going on there. Plot results in ArcMap with diff color for < and 
+## > 200 Mgh
+max(KCNP_16$D_BM_Mgh)
+
+# Max Mg per pixel of dead biomass is 100,000. That's way too high! Investigate further below.
+hist(KCNP_16$D_BM_Mgh, breaks=100)
+length(subset(KCNP_16$D_BM_Mgh, KCNP_16$D_BM_Mgh<0))
+nrow(KCNP_16)
+# How do dead trees per polygon and relative number of dead trees per pixel look?
+hist(KCNP_16$relNO)
+plot(sort(KCNP_16$relNO))
+plot(sort(KCNP_16$relNO), ylim=c(0,100))
+## There's a stark inflection point at 20 dead trees per pixel. I might need to change the way I assign
+## relative number of dead trees
+max(KCNP_16$relNO)
+# It looks like my results are showing relNO of trees per pixel as high as 84, which seems reasonable
+# Investigate how high that is by comparing to THA
+hist(KCNP_16$THA*.09)
+max(KCNP_16$THA*.09) # higher than relNO, as it should be, because it includes live trees
+max(KCNP_16$Pol.NO_TREES1/(KCNP_16$Pol.Shap_Ar/10000)) # average dead trees per acre across polygon is close to relNO. Good!
+LEMMA_KCNP <- crop(LEMMA, extent(units[9,])) # crop LEMMA GLN data to the size of that polygon
+LEMMA_KCNP <- mask(LEMMA_KCNP, units[9,]) # fit the cropped LEMMA data to the shape of the polygon
+hist(LEMMA_KCNP@data@attributes[[1]]$TPH_GE_3) # total TPH should not exceed 10,000, so I'm good
+hist(KCNP_16$THA)
+hist((LEMMA_KCNP@data@attributes[[1]]$BPH_GE_3_CRM/1000)) # total biomass per hectare goes up to 1000 Mg, so above max of 
+max((LEMMA_KCNP@data@attributes[[1]]$BPH_GE_3_CRM/1000))
+# dead biomass per hectare of 1000 seems ok
+
+### Compare LEMMA total biomass per hectare to results estimates
+hist(KCNP_16$All_BM_kgha/1000)
+
+# Check average dead biomass per pixel averaged across all pixels in each polygon to see if they look ok
+plot(unique(KCNP_16$Pol.NO_TREES1/KCNP_16$Pol.Shap_Ar), main="number of dead trees per sq m in polygon")
+# Compare to that of the original drought polygon layer
+points(drought_KCNP$NO_TREES1/drought_KCNP$Shap_Ar, main="number of dead trees per sq m in polygon from original drought data", col="pink")
+### THESE TWO PLOTS ARE IDENTICAL, AS THEY SHOULD BE
+
+
+

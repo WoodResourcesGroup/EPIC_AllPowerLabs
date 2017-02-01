@@ -1,38 +1,29 @@
 #########################################################################################################################
-######## TRY TO FIND ERRORS WITH TURBO LOOP BY RUNNING ALGORITHM ON ONLY DROUGHT POLYGONS IN **Sequoia National Park** IN 2016
+######## TRY TO FIND ERRORS WITH TURBO LOOP BY RUNNING ALGORITHM ON ONLY DROUGHT POLYGONS IN **Kings Canyon National Park** IN 2016
 #########################################################################################################################
-  
-  library(rgdal)  
-  library(raster)  
-  options(digits = 5)
 
-### SETWD based on whether it's Carmen's computer or Jose's computer)
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-}
+library(rgdal)  
+library(raster)  
+options(digits = 5)
+
+setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
 
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
 LEMMA <- raster("LEMMA.gri")
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data")
 drought <- readOGR("tempdir", "drought16")
 drought <- spTransform(drought, crs(LEMMA))
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 
-### Open Lassen perimeter to crop to it
+### Open ENF perimeter
 units <- readOGR(dsn = "units", layer = "units_nokc")
-units <- spTransform(units, crs(drought))
+units <- subset(units, units$UNIT=="ENF")
 
 ### Single out Sequoia
-drought_SQNP <- crop(drought, extent(units[9,])) # *****comment out this step for running on the entire drought data set*****
-writeOGR(drought_SQNP, dsn="drought_byunit", layer="drought_SQNP", driver="ESRI Shapefile")
+drought <- crop(drought, extent(units)) # *****comment out this step for running on the entire drought data set*****
+writeOGR(drought, dsn="drought_byunit", layer="drought_ENF", driver="ESRI Shapefile", overwrite_layer = T)
 
 ### Identify species in LEMMA
 spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
@@ -77,10 +68,9 @@ registerDoParallel(c1)
 ###################################################################
 # function that does the bulk of the analysis
 
-drought <- drought_SQNP
 inputs = 1:nrow(drought)
 
-result_SQNP <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
+result_ENF_wBA <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- drought[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
   clip2 <- mask(clip1, single) # fit the cropped LEMMA data to the shape of the polygon
@@ -150,7 +140,7 @@ result_SQNP <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos
   # problem here
   pmerge$relBA <- pmerge$BA_GE_3/sum(pmerge$BA_GE_3) # Create column for % of polygon BA in that pixel. 
   tot_NO <- single@data$NO_TREES1 # Total number of trees in the polygon
-  pmerge$relNO <- tot_NO*pmerge$relBA # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
+  pmerge$relNO <- tot_NO # Assign approximate number of trees in that pixel based on proportion of BA in the pixel 
   # and total number of trees in polygon
   pmerge$D_BM_kg <- pmerge$relNO*pmerge$BM_tree_kg # D_BM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
   
@@ -173,68 +163,47 @@ result_SQNP <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos
   
   # Bring it all together
   final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
-                 Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID) #
+                 Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
   final <- as.data.frame(final)
   final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
   final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
   return(final)
 }
-names(result_SQNP)[names(result_SQNP)=="V5"] <- "relBA"
-names(result_SQNP)[names(result_SQNP)=="V6"] <- "PlotID"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V5"] <- "relBA"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V6"] <- "PlotID"
 
 # Create a key for each pixel (row)
-key <- seq(1, nrow(result_SQNP)) 
-result_SQNP <- cbind(key, result_SQNP)
+key <- seq(1, nrow(result_ENF_wBA)) 
+result_ENF_wBA <- cbind(key, result_ENF_wBA)
 # Rename variables whose names were lost in the cbind
-names(result_SQNP)[names(result_SQNP)=="V1"] <- "x"
-names(result_SQNP)[names(result_SQNP)=="V2"] <- "y"
-names(result_SQNP)[names(result_SQNP)=="V3"] <- "D_BM_kg"
-names(result_SQNP)[names(result_SQNP)=="V4"] <- "relNO"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V1"] <- "x"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V2"] <- "y"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V3"] <- "D_BM_kg"
+names(result_ENF_wBA)[names(result_ENF_wBA)=="V4"] <- "relNO"
 
 ### Convert to a spatial data frame
-xy <- result_SQNP[,c("x","y")]
-spdf_SQNP <- SpatialPointsDataFrame(coords=xy, data = result_SQNP, proj4string = crs(LEMMA))
-SQNP_16 <- spdf_SQNP
+xy <- result_ENF_wBA[,c("x","y")]
+spdf <- SpatialPointsDataFrame(coords=xy, data = result_ENF_wBA, proj4string = crs(LEMMA))
+
 
 ### Save spatial data frame
-writeOGR(obj=spdf_SQNP, dsn = "Results_2016", layer = "Results_2016_SQNP", driver = "ESRI Shapefile")
+writeOGR(obj=spdf, dsn = "Results_2016", layer = "Results_2016_ENF_wBA", driver = "ESRI Shapefile")
 
 ### Save version masked to just the management unit
 library(rgeos)
-
 strt<-Sys.time()
-SQNP.intersect <- gIntersection(units[9,], SQNP_16, byid=T) 
+intersect <- gIntersection(spdf, units, byid=T) 
 print(Sys.time()-strt)
 # Takes 30 min on Turbo!
+KCNP.pts.intersect <- strsplit(dimnames(KCNP.intersect@coords)[[1]], " ")
+KCNP.pts.intersect.id <- as.numeric(sapply(KCNP.pts.intersect,"[[",2))
+KCNP.pts.extract <- KCNP_16[KCNP.pts.intersect.id, ]
+KCNP_16 <- subset(KCNP_16, KCNP_16$key %in% KCNP.pts.intersect.id)
+plot(KCNP_16, add=T, col="pink", pch=".")
+plot(drought_KCNP, add=T)
 
-plot(units[9,])
-plot(SQNP.intersect, add=T, col="pink", pch=".")
-
-SQNP.pts.intersect <- strsplit(dimnames(SQNP.intersect@coords)[[1]], " ")
-SQNP.pts.intersect.id <- as.numeric(sapply(SQNP.pts.intersect,"[[",2))
-SQNP.pts.extract <- SQNP_16[SQNP.pts.intersect.id, ]
-SQNP_16 <- subset(SQNP_16, SQNP_16$key %in% SQNP.pts.intersect.id)
-plot(SQNP_16, add=T, col="pink", pch=".")
-plot(drought_SQNP, add=T)
-
-writeOGR(obj=SQNP_16, dsn = "Results_2016", layer = "Results_2016_SQNP_mask", driver = "ESRI Shapefile")
-
-# Look at histograms of results
-library(ggplot2)
-qplot(result_ESP$D_BM_kg, geom = "histogram")
-
-qplot(result_ESP$D_BM_kgha,
-      geom="histogram",
-      binwidth = 2000,  
-      main = "Histogram of 2016 Mortality Biomass", 
-      xlab = "Biomass (kg/ha)",  
-      ylab = "Pixel Count",
-      fill=I("blue"), 
-      col=I("black"), 
-      alpha=I(.2),
-      xlim=c(0,max(result_ESP$D_BM_kgha)),
-      ylim=c(0,2000))
+writeOGR(obj=KCNP_16, dsn = "Results_2016", layer = "Results_2016_KCNP_mask", driver = "ESRI Shapefile")
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
@@ -242,50 +211,62 @@ remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_k
 remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
 remove(no.pixels, QMD_DOM, tab)
 
+# Use area of KCNP to calculate dead biomass density 
+KCNP_16 <- readOGR(dsn = "Results_2016", layer = "Results_2016_KCNP_mask")
+KCNP_16_D_BM_sum_Mg <- sum(KCNP_16$D_BM_kg)/1000                                                               
+KCNP_16_D_BM_sum_Mg
+area(kc) # area in square meters
+area.KCNP.ha <- sum(area(kc))/10000
+area.KCNP.live.ha <- 752969700/10000 # from script LEMMA_live_units
+KCNP_DBM_Mgha_16 <- KCNP_16_D_BM_sum_Mg/area.KCNP.ha
+KCNP_DBM_Mgha_16
 
-## Check that results look OK - compare NO_TREES, biomass per tree, biomass per pixel
+KCNP_DBM_Mgha_16_Liveonly <- KCNP_16_D_BM_sum_Mg/area.KCNP.live.ha
+KCNP_DBM_Mgha_16_Liveonly
+
+
+### Check stuff out 
 
 ##### NEED TO GO THROUGH THESE FOR SQNP, NAMES ARE DIFFERENT AFTER READING SPATIAL FILE AND I HAVEN'T CHECKED THESE TESTS
 
 # Define Mg/ha
-SQNP_16$D_BM_Mgh <- SQNP_16$D_BM_kgh/1000
-plot(sort(SQNP_16$D_BM_Mgh))
-max(SQNP_16$D_BM_Mgha)
+KCNP_16$D_BM_Mgh <- KCNP_16$D_BM_kgh/1000
+plot(sort(KCNP_16$D_BM_Mgh))
+plot(sort(KCNP_16$D_BM_Mgh), ylim=c(0,500)) # There's an inflection point at around 500 Mgh and I 
+## want to figure out what's going on there. Plot results in ArcMap with diff color for < and 
+## > 200 Mgh
+max(KCNP_16$D_BM_Mgh)
 
-# Max Mg per pixel of dead biomass is 94. That's maybe reasonable. Investigate further below.
-hist(SQNP_16$D_BM_Mgha)
-
+# Max Mg per pixel of dead biomass is 100,000. That's way too high! Investigate further below.
+hist(KCNP_16$D_BM_Mgh, breaks=100)
+length(subset(KCNP_16$D_BM_Mgh, KCNP_16$D_BM_Mgh<0))
+nrow(KCNP_16)
 # How do dead trees per polygon and relative number of dead trees per pixel look?
-hist(SQNP_16$relNO)
-max(SQNP_16$relNO)
+hist(KCNP_16$relNO)
+plot(sort(KCNP_16$relNO))
+plot(sort(KCNP_16$relNO), ylim=c(0,100))
+## There's a stark inflection point at 20 dead trees per pixel. I might need to change the way I assign
+## relative number of dead trees
+max(KCNP_16$relNO)
 # It looks like my results are showing relNO of trees per pixel as high as 84, which seems reasonable
 # Investigate how high that is by comparing to THA
-hist(SQNP_16$THA*.09)
-max(SQNP_16$THA*.09) # higher than relNO, as it should be, because it includes live trees
-max(SQNP_16$Pol.NO_TREES1/(SQNP_16$Pol.Shap_Ar/10000)) # average dead trees per acre across polygon is close to relNO. Good!
-LEMMA_SQNP <- crop(LEMMA, extent(units[9,])) # crop LEMMA GLN data to the size of that polygon
-LEMMA_SQNP <- mask(LEMMA_SQNP, units[9,]) # fit the cropped LEMMA data to the shape of the polygon
-hist(LEMMA_SQNP@data@attributes[[1]]$TPH_GE_3) # total TPH should not exceed 10,000, so I'm good
-hist(SQNP_16$THA)
-hist((LEMMA_SQNP@data@attributes[[1]]$BPH_GE_3_CRM/1000)) # total biomass per hectare goes up to 1000 Mg, so above max of 
-max((LEMMA_SQNP@data@attributes[[1]]$BPH_GE_3_CRM/1000))
+hist(KCNP_16$THA*.09)
+max(KCNP_16$THA*.09) # higher than relNO, as it should be, because it includes live trees
+max(KCNP_16$Pol.NO_TREES1/(KCNP_16$Pol.Shap_Ar/10000)) # average dead trees per acre across polygon is close to relNO. Good!
+LEMMA_KCNP <- crop(LEMMA, extent(units[9,])) # crop LEMMA GLN data to the size of that polygon
+LEMMA_KCNP <- mask(LEMMA_KCNP, units[9,]) # fit the cropped LEMMA data to the shape of the polygon
+hist(LEMMA_KCNP@data@attributes[[1]]$TPH_GE_3) # total TPH should not exceed 10,000, so I'm good
+hist(KCNP_16$THA)
+hist((LEMMA_KCNP@data@attributes[[1]]$BPH_GE_3_CRM/1000)) # total biomass per hectare goes up to 1000 Mg, so above max of 
+max((LEMMA_KCNP@data@attributes[[1]]$BPH_GE_3_CRM/1000))
 # dead biomass per hectare of 1000 seems ok
 
 ### Compare LEMMA total biomass per hectare to results estimates
-hist(SQNP_16$All_BM_kgha/1000)
+hist(KCNP_16$All_BM_kgha/1000)
 
 # Check average dead biomass per pixel averaged across all pixels in each polygon to see if they look ok
-plot(unique(SQNP_16$Pol.NO_TREES1/SQNP_16$Pol.Shap_Ar), main="number of dead trees per sq m in polygon")
+plot(unique(KCNP_16$Pol.NO_TREES1/KCNP_16$Pol.Shap_Ar), main="number of dead trees per sq m in polygon")
 # Compare to that of the original drought polygon layer
-points(drought_SQNP$NO_TREES1/drought_SQNP$Shap_Ar, main="number of dead trees per sq m in polygon from original drought data", col="pink")
+points(drought_KCNP$NO_TREES1/drought_KCNP$Shap_Ar, main="number of dead trees per sq m in polygon from original drought data", col="pink")
 ### THESE TWO PLOTS ARE IDENTICAL, AS THEY SHOULD BE
-
-# Use area of SQNP to calculate dead biomass density 
-### Crop SQNP_16 to actual shape of SQNP
-SQNP_16_D_BM_sum_Mg <- sum(SQNP_16$D_BM_Mg)
-SQNP_16_D_BM_sum_Mg
-area(units[9,]) # area in square meters
-area.SQNP.ha <- area(units[9,])/10000
-SQNP_DBM_Mgha_16 <- SQNP_16_D_BM_sum_Mg/area.SQNP.ha
-SQNP_DBM_Mgha_16
 

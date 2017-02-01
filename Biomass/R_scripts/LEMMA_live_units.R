@@ -79,7 +79,7 @@ LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos
   
   # Bring it all together
   final <- cbind(pmerge$x, pmerge$y,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, 
-                All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID) 
+                All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID,TREEPL) 
   final <- as.data.frame(final)
   final$All_Pol_NO <- (area(single)/10000)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (area(single)/10000)*900*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
@@ -173,7 +173,7 @@ LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'),
   
   # Bring it all together
   final <- cbind(pmerge$x, pmerge$y,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, 
-                 All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID) 
+                 All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID, TREEPL) 
   final <- as.data.frame(final)
   final$All_Pol_NO <- (area(single)/10000)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (area(single)/10000)*900*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
@@ -202,12 +202,19 @@ LEMMA.kc_bu <- LEMMA.kc
 ### Save spatial data frame
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_kc", driver = "ESRI Shapefile")
 
+LEMMA.kc.nonzero <- subset(LEMMA.kc, LEMMA.kc$All_BM_ > 0)
+# over half of pixels have zero biomass!
+plot(LEMMA.kc.nonzero, pch=".", add=T, col="orange")
+
+mean(LEMMA.kc$All_BM_)/1000
+mean(LEMMA.kc.nonzero$All_BM_)/1000
+
+# Calculate area to divide dead biomass by this from results
+area.kc.sqm <- length(LEMMA.kc.nonzero)*900
+
 ###############################################################################
 ### REPEAT WITH LTMU
 ###############################################################################
-
-LEMMA <- raster("LEMMA.gri")
-
 if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
 } else {
@@ -263,7 +270,7 @@ LEMMA.LTMU <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'
   
   # Bring it all together
   final <- cbind(pmerge$x, pmerge$y,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, 
-                 All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID) 
+                 All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Pol.ID, TREEPL) 
   final <- as.data.frame(final)
   final$All_Pol_NO <- (area(single)/10000)*THA # Estimate total number of trees in the polygon
   final$All_Pol_BM <- (area(single)/10000)*900*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
@@ -297,17 +304,70 @@ LEMMA.LTMU.spdf.nonzero <- subset(spdf, spdf$All_BM_kgha > 0)
 plot(LEMMA.LTMU.spdf.nonzero, pch=".")
 plot(FS_LTMU, add=T, border="orange")
 
+### Find mean live biomas
+mean(LEMMA.LTMU.spdf.nonzero$All_BM_kgha)/1000
+
 #####################################################################################
 ### Calculate live biomass for each management unit
 #####################################################################################
 
 # Only need to do the below steps if you erased results above
-#if( Sys.info()['sysname'] == "Windows" ) {
+if( Sys.info()['sysname'] == "Windows" ) {
   setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
 } else {
   setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
 }
-#strt<-Sys.time()
-#LEMMA.units <- readOGR(dsn="LEMMA_units", layer = "LEMMA_units_nokc")
-#print(Sys.time()-strt)
+strt<-Sys.time()
+LEMMA.units <- readOGR(dsn="LEMMA_units", layer = "LEMMA_units_nokc")
+print(Sys.time()-strt)
 
+# Add field for live BM in Mg/ha
+LEMMA.units$BM_L_Mgha <- LEMMA.units$All_BM_/1000
+
+# Average by management unit
+LEMMA.units$UNIT <- 0
+
+# this doesn't work yet
+#for(i in 1:nrow(LEMMA.units)){
+  if(LEMMA.units$Pol_ID %in% c(1,2,3,4,5,6)){
+    LEMMA.units$UNIT <- "MH"
+  } else {
+    LEMMA.units$UNIT <- 0
+  }
+}
+# Check using:
+summary(as.factor(LEMMA.units$Pol_ID))
+summary(as.factor(LEMMA.units$UNIT))
+
+LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <6)
+
+unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
+
+LEMMA.CSP <- LEMMA.units[,"Pol_ID"==7]
+LEMMA.ESP <- LEMMA.units[,"Pol_ID"==8]
+LEMMA.SQNP <- LEMMA.units[,"Pol_ID"==9]
+LEMMA.SNF <- LEMMA.units[,"Pol_ID"==10]
+LEMMA.ENF <- LEMMA.units[,"Pol_ID"==11]
+LEMMA.LNP <- LEMMA.units[,"Pol_ID"==12]
+
+save(LEMMA.CSP, file="LEMMA_units/LEMMA_CSP.Rdata")
+LEMMA.CSP <-load(file="LEMMA_CSP.Rdata")
+plot(LEMMA)
+
+UNIT <- c(as.character(unit.names), "KCNP", "LTMU")
+LEMMA.means <- as.data.frame(UNIT)
+LEMMA.means$BM_L_Mgha <- 0
+LEMMA.means$area.sqm <- 0
+LEMMA.means$BM_D_Mgha <- 0
+LEMMA.means$BM_D_tot <- 0
+LEMMA.means$noBA_BM_D_Mgha <- 0
+LEMMA.means$noBA_BM_D_tot <- 0
+LEMMA.means$noBA_BM_D_tot <- 0
+LEMMA.means$Perc_Ch <- 0
+LEMMA.means$noBA_Perc_Ch <- 0
+LEMMA.means[UNIT=="LTMU","BM_L_Mgha"] <- 153.2
+LEMMA.means[UNIT=="KCNP","BM_L_Mgha"] <- 145.6
+LEMMA.means[UNIT=="KCNP","BM_D_Mgha"] <- 28
+LEMMA.means[UNIT=="KCNP","BM_D_tot"] <- 2106348
+LEMMA.means[UNIT=="KCNP","noBA_BM_D_Mgha"] <- 19.3
+LEMMA.means[UNIT=="KCNP","noBA_BM_D_tot"] <- 1452081

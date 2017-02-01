@@ -3,8 +3,9 @@
 #########################################################################################################################
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-UNIT <- "ENF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+UNIT <- "SNF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
 library(rgdal)  

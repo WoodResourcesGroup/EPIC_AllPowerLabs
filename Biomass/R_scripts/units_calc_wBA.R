@@ -3,9 +3,9 @@
 #########################################################################################################################
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-UNIT <- "SNF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+UNIT <- "ENF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
 library(rgdal)  
@@ -211,8 +211,13 @@ plot(spdf, pch=".")
 plot(drought, add=T, border="blue")
 plot(unit, add=T, border="orange")
 
-### Save spatial data frame
+### Save spatial data frame - DO NOT TRY TO OPEN THE OGR FILE, USE THE .RDATA ONE INSTEAD!
 writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_wBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
+testspdf <- spdf
+setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
+save(testspdf, file=paste("Results_2016_",UNIT,"_wBA.Rdata", sep=""))
+load(file=paste("Results_2016_",UNIT,"_wBA.Rdata", sep=""))
+
 
 ### Save version masked to just the management unit
 library(rgeos)

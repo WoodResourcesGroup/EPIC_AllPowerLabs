@@ -1,7 +1,8 @@
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-UNIT <- "ENF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+UNIT <- "LNP"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
 library(rgdal)  
@@ -84,6 +85,21 @@ registerDoParallel(c1)
 ###################################################################
 # Function that does the bulk of the analysis
 
+## TO RUN MULTIPLE UNITS IN ONE SESSION, CHANGE THE UNIT AND RUN FROM HERE DOWN AGAIN
+### Single out the unit of interest
+
+UNIT<-"LNP"
+
+if(UNIT %in% units$UNIT){
+  unit <- units[units$UNIT==UNIT,]
+} else if (UNIT=="KCNP"){
+  unit <- KCNP
+} else
+  unit <- LTMU
+
+drought <- crop(drought_bu, extent(unit)) # *****comment out this step for running on the entire drought data set*****
+#writeOGR(drought, dsn="drought_byunit", layer=paste("drought_", UNIT, sep=""), driver="ESRI Shapefile", overwrite_layer = T)
+#above is optional
 inputs = 1:nrow(drought)
 
 results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {

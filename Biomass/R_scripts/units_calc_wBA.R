@@ -5,7 +5,7 @@
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
 #EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-UNIT <- "SNF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
+UNIT <- ""  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
 library(rgdal)  
@@ -213,6 +213,11 @@ plot(unit, add=T, border="orange")
 
 ### Save spatial data frame
 writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_wBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
+setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
+save(spdf, file=paste("Results_2016_",UNIT,"_wBA.Rdata", sep=""))
+load(file=paste("Results_2016_",UNIT,"_wBA.Rdata", sep=""))
+assign(paste("spdf_",UNIT,sep=""), spdf)
+
 
 ### Save version masked to just the management unit
 library(rgeos)

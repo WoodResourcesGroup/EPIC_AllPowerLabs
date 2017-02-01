@@ -212,13 +212,27 @@ save(spdf, file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
 load(file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
 
 ### Save version masked to just the management unit
+
+## try converting to raster for this part
+try.raster <- rasterFromXYZ(spdf[,c("x","y","D_BM_kgh")], crs = crs(spdf))
+plot(try.raster)
+raster.small <- mask(try.raster, unit)
+  
+  crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
+clip2 <- mask(clip1, single) # fit the cropped LEMMA data to the shape of the polygon
+
+
 library(rgeos)
+unit <- spTransform(unit, crs(spdf))
 strt<-Sys.time()
-intersect <- gIntersection(spdf, unit, byid=T) 
+intersect <- gIntersects(spdf, unit, byid=T) 
+intersect.df <- as.data.frame(intersect)
+length(subset(intersect.df, intersect.df=="TRUE"))
+
+testspdf <- subset(spdf, spdf$key %in% intersect)
 print(Sys.time()-strt)
 # Takes 30 min on Turbo!
 
-KCNP.pts.intersect <- strsplit(dimnames(KCNP.intersect@coords)[[1]], " ")
 KCNP.pts.intersect.id <- as.numeric(sapply(KCNP.pts.intersect,"[[",2))
 KCNP.pts.extract <- KCNP_16[KCNP.pts.intersect.id, ]
 KCNP_16 <- subset(KCNP_16, KCNP_16$key %in% KCNP.pts.intersect.id)

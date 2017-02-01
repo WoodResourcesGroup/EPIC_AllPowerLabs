@@ -3,19 +3,14 @@
 #########################################################################################################################
 library(rgdal)
 
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+### Define EPIC as the EPIC-Biomass folder for easier setwd later on
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
+
+
+setwd(paste(EPIC, "/GIS Data", sep=""))
 units <- readOGR(dsn = "units", layer="units_nokc")
 
-### SETWD based on whether it's Carmen's computer or Jose's computer)
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/LEMMA_gnn_sppsz_2014_08_28/")
-}
+setwd(paste(EPIC, "/GIS Data/LEMMA_gnn_sppsz_2014_08_28/", sep=""))
 
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
 LEMMA <- raster("LEMMA.gri")
@@ -107,21 +102,13 @@ LEMMA.units <- spdf
 LEMMA.units.bu <- LEMMA.units
 
 ### Save spatial data frame
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Battles Lab/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+setwd(paste(EPIC, "/GIS Data", sep=""))
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_units_nokc", driver = "ESRI Shapefile")
 
 ### REPEAT WITH KC 
 ###############################################################################
 
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+setwd(paste(EPIC, "/GIS Data", sep=""))
 kc <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
 kc <- spTransform(kc, crs(LEMMA))
 plot(kc, col="green")
@@ -215,11 +202,7 @@ area.kc.sqm <- length(LEMMA.kc.nonzero)*900
 ###############################################################################
 ### REPEAT WITH LTMU
 ###############################################################################
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+setwd(paste(EPIC, "/GIS Data", sep=""))
 FS_LTMU <- readOGR(dsn = "tempdir", layer = "FS_LTMU")
 FS_LTMU <- spTransform(FS_LTMU, crs(LEMMA))
 
@@ -312,11 +295,8 @@ mean(LEMMA.LTMU.spdf.nonzero$All_BM_kgha)/1000
 #####################################################################################
 
 # Only need to do the below steps if you erased results above
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass"
+setwd(paste(EPIC, "/GIS Data/", sep=""))
 strt<-Sys.time()
 LEMMA.units <- readOGR(dsn="LEMMA_units", layer = "LEMMA_units_nokc")
 print(Sys.time()-strt)
@@ -329,11 +309,11 @@ LEMMA.units$UNIT <- 0
 
 # this doesn't work yet
 #for(i in 1:nrow(LEMMA.units)){
-  if(LEMMA.units$Pol_ID %in% c(1,2,3,4,5,6)){
-    LEMMA.units$UNIT <- "MH"
-  } else {
-    LEMMA.units$UNIT <- 0
-  }
+if(LEMMA.units$Pol_ID %in% c(1,2,3,4,5,6)){
+  LEMMA.units$UNIT <- "MH"
+} else {
+  LEMMA.units$UNIT <- 0
+}
 }
 # Check using:
 summary(as.factor(LEMMA.units$Pol_ID))
@@ -343,7 +323,13 @@ LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <6)
 
 unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
 
-LEMMA.CSP <- LEMMA.units[,"Pol_ID"==7]
+i <- 1
+
+for(i in 1:length(unit.names)) {
+  spdf <- subset(LEMMA.units, LEMMA.units$Pol_ID==(i+6))
+  assign(paste("LEMMA.", unit.names[1], sep=""), spdf)
+}
+LEMMA.CSP <- subset(LEMMA.units, LEMMA.units$Pol_ID==7)
 LEMMA.ESP <- LEMMA.units[,"Pol_ID"==8]
 LEMMA.SQNP <- LEMMA.units[,"Pol_ID"==9]
 LEMMA.SNF <- LEMMA.units[,"Pol_ID"==10]

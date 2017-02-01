@@ -343,7 +343,13 @@ LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <6)
 
 unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
 
-LEMMA.CSP <- LEMMA.units[,"Pol_ID"==7]
+i <- 1
+
+for(i in 1:length(unit.names)) {
+  spdf <- subset(LEMMA.units, LEMMA.units$Pol_ID==(i+6))
+  assign(paste("LEMMA.", unit.names[1], sep=""), spdf)
+}
+LEMMA.CSP <- subset(LEMMA.units, LEMMA.units$Pol_ID==7)
 LEMMA.ESP <- LEMMA.units[,"Pol_ID"==8]
 LEMMA.SQNP <- LEMMA.units[,"Pol_ID"==9]
 LEMMA.SNF <- LEMMA.units[,"Pol_ID"==10]

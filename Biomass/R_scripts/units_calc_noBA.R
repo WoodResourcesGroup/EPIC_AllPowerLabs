@@ -2,7 +2,7 @@
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
 EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 #EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-UNIT <- "LNP"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
+UNIT <- "KCNP"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
 library(rgdal)  
@@ -87,8 +87,6 @@ registerDoParallel(c1)
 
 ## TO RUN MULTIPLE UNITS IN ONE SESSION, CHANGE THE UNIT AND RUN FROM HERE DOWN AGAIN
 ### Single out the unit of interest
-
-UNIT<-"SNF"
 
 if(UNIT %in% units$UNIT){
   unit <- units[units$UNIT==UNIT,]
@@ -222,8 +220,8 @@ plot(drought, add=T, border="blue")
 plot(unit, add=T, border="orange")
 
 ### Save spatial data frame
-setwd(paste(EPIC, "/GIS Data/", sep=""))
-writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
+##setwd(paste(EPIC, "/GIS Data/", sep=""))
+##writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
 setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
 save(spdf, file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
 

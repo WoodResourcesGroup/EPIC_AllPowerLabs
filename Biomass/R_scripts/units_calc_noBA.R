@@ -1,7 +1,7 @@
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 UNIT <- "LNP"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
@@ -88,7 +88,7 @@ registerDoParallel(c1)
 ## TO RUN MULTIPLE UNITS IN ONE SESSION, CHANGE THE UNIT AND RUN FROM HERE DOWN AGAIN
 ### Single out the unit of interest
 
-UNIT<-"LNP"
+UNIT<-"ENF"
 
 if(UNIT %in% units$UNIT){
   unit <- units[units$UNIT==UNIT,]
@@ -225,37 +225,46 @@ plot(unit, add=T, border="orange")
 writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
 setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
 save(spdf, file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
-load(file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
 
+setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
+load(file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
+assign(paste("spdf_",UNIT,sep=""), spdf)
 ### Save version masked to just the management unit
 
 ## try converting to raster for this part
-try.raster <- rasterFromXYZ(spdf[,c("x","y","D_BM_kgh")], crs = crs(spdf))
+xyz <- as.data.frame(cbind(spdf@data$x, spdf@data$y, spdf@data$D_BM_kg))
+try.raster <- rasterFromXYZ(xyz, crs = crs(spdf))
 plot(try.raster)
-raster.small <- mask(try.raster, unit)
-  
-  crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
-clip2 <- mask(clip1, single) # fit the cropped LEMMA data to the shape of the polygon
-
-
-library(rgeos)
-unit <- spTransform(unit, crs(spdf))
+plot(unit, add=T)
 strt<-Sys.time()
-intersect <- gIntersects(spdf, unit, byid=T) 
-intersect.df <- as.data.frame(intersect)
-length(subset(intersect.df, intersect.df=="TRUE"))
+raster.mask <- mask(try.raster, unit)
+print(Sys.time()-strt)
 
-testspdf <- subset(spdf, spdf$key %in% intersect)
+plot(raster.small)
+plot(unit, add=T)
+plot(drought, add=T, border="blue")
+sum_D_BM_Mg <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
+save(sum_D_BM_Mg, file=paste(UNIT, "_sum_D_BM_Mg_noBA.Rdata", sep=""))
+
+
+############################################################################
+### TESTS
+### DO IT THE OLD WAY TO MAKE SURE RESULTS ARE CORRECT
+
+strt<-Sys.time()
+intersect <- gIntersection(unit, spdf_CSP, byid=T) 
 print(Sys.time()-strt)
 # Takes 30 min on Turbo!
-
+KCNP.pts.intersect <- strsplit(dimnames(intersect@coords)[[1]], " ")
 KCNP.pts.intersect.id <- as.numeric(sapply(KCNP.pts.intersect,"[[",2))
-KCNP.pts.extract <- KCNP_16[KCNP.pts.intersect.id, ]
-KCNP_16 <- subset(KCNP_16, KCNP_16$key %in% KCNP.pts.intersect.id)
-plot(KCNP_16, add=T, col="pink", pch=".")
-plot(drought_KCNP, add=T)
+KCNP.pts.extract <- spdf[KCNP.pts.intersect.id, ]
+test.intersect <- subset(spdf, spdf$key %in% KCNP.pts.intersect.id)
 
-writeOGR(obj=KCNP_16, dsn = "Results_2016", layer = "Results_2016_KCNP_mask", driver = "ESRI Shapefile")
+### Compare
+length(subset(test.intersect, test.intersect$D_BM_kgha>0)) ## SAME AS ABOVE!
+mean(subset(test.intersect$D_BM_kg, test.intersect$D_BM_kg>0)) ## SAME AS ABOVE!
+mean(subset(raster.mask@data@values, raster.mask@data@values>0)) ## same as above!
+
 
 ### For editing: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

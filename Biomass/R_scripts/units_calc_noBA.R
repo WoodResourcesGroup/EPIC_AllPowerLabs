@@ -222,8 +222,8 @@ plot(drought, add=T, border="blue")
 plot(unit, add=T, border="orange")
 
 ### Save spatial data frame
-setwd(paste(EPIC, "/GIS Data/", sep=""))
-writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
+##setwd(paste(EPIC, "/GIS Data/", sep=""))
+##writeOGR(obj=spdf, dsn = "Results_2016", layer = paste("Results_2016_",UNIT,"_noBA", sep=""), driver = "ESRI Shapefile", overwrite_layer = T)
 setwd(paste(EPIC, "/GIS Data/Results_2016", sep=""))
 save(spdf, file=paste("Results_2016_",UNIT,"_noBA.Rdata", sep=""))
 

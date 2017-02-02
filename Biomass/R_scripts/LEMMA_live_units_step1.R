@@ -1,19 +1,19 @@
 #########################################################################################################################
-######## CALCULATE TOTAL LIVE BIOMASS IN EACH MANAGEMENT UNIT FROM LEMMA DATA
+######## CALCULATE TOTAL LIVE BIOMASS IN EACH MANAGEMENT UNIT FROM LEMMA DATA - STEP 1
 #########################################################################################################################
 library(rgdal)
+library(raster)
 
 ### Define EPIC as the EPIC-Biomass folder for easier setwd later on
 EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
 
+### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
+setwd(paste(EPIC, "/GIS Data/LEMMA_gnn_sppsz_2014_08_28/", sep=""))
+LEMMA <- raster("LEMMA.gri")
 
+### Open units perimeters
 setwd(paste(EPIC, "/GIS Data", sep=""))
 units <- readOGR(dsn = "units", layer="units_nokc")
-
-setwd(paste(EPIC, "/GIS Data/LEMMA_gnn_sppsz_2014_08_28/", sep=""))
-
-### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
-LEMMA <- raster("LEMMA.gri")
 units <- spTransform(units, crs(LEMMA))
 
 ### Set up parallel cores for faster runs
@@ -104,6 +104,25 @@ LEMMA.units.bu <- LEMMA.units
 ### Save spatial data frame
 setwd(paste(EPIC, "/GIS Data", sep=""))
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_units_nokc", driver = "ESRI Shapefile")
+
+# Add field for live BM in Mg/ha
+LEMMA.units$BM_L_Mgha <- LEMMA.units$All_BM_/1000
+
+### Separate out LEMMA.units by unit and save individual chunks for faster referencing 
+# Start with units that are in the spdf units_nokc and have only one polygon per unit
+unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
+for(i in 1:length(unit.names)) {
+  spdf <- subset(LEMMA.units, LEMMA.units$Pol_ID==(i+6))
+  assign(paste("LEMMA.", unit.names[i], sep=""), spdf)
+  writeOGR(obj=spdf, dsn = "LEMMA_units", layer = paste("LEMMA_",unit.names[i],sep=""), 
+           driver = "ESRI Shapefile", overwrite_layer = T)
+}
+# This loop takes a few min
+
+# Then do MH
+LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <7)
+plot(LEMMA.MH)
+writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_MH", driver = "ESRI Shapefile", overwrite_layer = T)
 
 ### REPEAT WITH KC 
 ###############################################################################
@@ -208,7 +227,7 @@ FS_LTMU <- spTransform(FS_LTMU, crs(LEMMA))
 
 # start timer
 strt<-Sys.time()
-inputs = 1:nrow(FS_LTMU) # units[3:8] is all polygons in MH
+inputs = 1:nrow(FS_LTMU) 
 LEMMA.LTMU <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
   single <- FS_LTMU[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -270,6 +289,8 @@ names(LEMMA.LTMU)[names(LEMMA.LTMU)=="V1"] <- "x"
 names(LEMMA.LTMU)[names(LEMMA.LTMU)=="V2"] <- "y"
 names(LEMMA.LTMU)[names(LEMMA.LTMU)=="V3"] <- "relBA"
 names(LEMMA.LTMU)[names(LEMMA.LTMU)=="V4"] <- "FIA_ID"
+# Add field for live BM in Mg/ha
+LEMMA.LTMU$BM_L_Mgha <- LEMMA.LTMU$All_BM_/1000
 
 ### Convert to a spatial data frame
 xy <- LEMMA.LTMU[,c("x","y")]
@@ -280,80 +301,3 @@ LEMMA.LTMU_bu <- LEMMA.LTMU
 
 ### Save spatial data frame
 writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_LTMU", driver = "ESRI Shapefile")
-
-### Maybe delete pixels with zero biomass according to LEMMA
-LEMMA.LTMU.nonzero <- subset(LEMMA.LTMU, LEMMA.LTMU$All_BM_kgha >0)
-LEMMA.LTMU.spdf.nonzero <- subset(spdf, spdf$All_BM_kgha > 0)
-plot(LEMMA.LTMU.spdf.nonzero, pch=".")
-plot(FS_LTMU, add=T, border="orange")
-
-### Find mean live biomas
-mean(LEMMA.LTMU.spdf.nonzero$All_BM_kgha)/1000
-
-#####################################################################################
-### Calculate live biomass for each management unit
-#####################################################################################
-
-# Only need to do the below steps if you erased results above
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass"
-setwd(paste(EPIC, "/GIS Data/", sep=""))
-strt<-Sys.time()
-LEMMA.units <- readOGR(dsn="LEMMA_units", layer = "LEMMA_units_nokc")
-print(Sys.time()-strt)
-
-# Add field for live BM in Mg/ha
-LEMMA.units$BM_L_Mgha <- LEMMA.units$All_BM_/1000
-
-# Average by management unit
-LEMMA.units$UNIT <- 0
-
-# this doesn't work yet
-#for(i in 1:nrow(LEMMA.units)){
-if(LEMMA.units$Pol_ID %in% c(1,2,3,4,5,6)){
-  LEMMA.units$UNIT <- "MH"
-} else {
-  LEMMA.units$UNIT <- 0
-}
-}
-# Check using:
-summary(as.factor(LEMMA.units$Pol_ID))
-summary(as.factor(LEMMA.units$UNIT))
-
-LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <6)
-
-unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
-
-i <- 1
-
-for(i in 1:length(unit.names)) {
-  spdf <- subset(LEMMA.units, LEMMA.units$Pol_ID==(i+6))
-  assign(paste("LEMMA.", unit.names[1], sep=""), spdf)
-}
-LEMMA.CSP <- subset(LEMMA.units, LEMMA.units$Pol_ID==7)
-LEMMA.ESP <- LEMMA.units[,"Pol_ID"==8]
-LEMMA.SQNP <- LEMMA.units[,"Pol_ID"==9]
-LEMMA.SNF <- LEMMA.units[,"Pol_ID"==10]
-LEMMA.ENF <- LEMMA.units[,"Pol_ID"==11]
-LEMMA.LNP <- LEMMA.units[,"Pol_ID"==12]
-
-save(LEMMA.CSP, file="LEMMA_units/LEMMA_CSP.Rdata")
-LEMMA.CSP <-load(file="LEMMA_CSP.Rdata")
-plot(LEMMA)
-
-UNIT <- c(as.character(unit.names), "KCNP", "LTMU")
-LEMMA.means <- as.data.frame(UNIT)
-LEMMA.means$BM_L_Mgha <- 0
-LEMMA.means$area.sqm <- 0
-LEMMA.means$BM_D_Mgha <- 0
-LEMMA.means$BM_D_tot <- 0
-LEMMA.means$noBA_BM_D_Mgha <- 0
-LEMMA.means$noBA_BM_D_tot <- 0
-LEMMA.means$noBA_BM_D_tot <- 0
-LEMMA.means$Perc_Ch <- 0
-LEMMA.means$noBA_Perc_Ch <- 0
-LEMMA.means[UNIT=="LTMU","BM_L_Mgha"] <- 153.2
-LEMMA.means[UNIT=="KCNP","BM_L_Mgha"] <- 145.6
-LEMMA.means[UNIT=="KCNP","BM_D_Mgha"] <- 28
-LEMMA.means[UNIT=="KCNP","BM_D_tot"] <- 2106348
-LEMMA.means[UNIT=="KCNP","noBA_BM_D_Mgha"] <- 19.3
-LEMMA.means[UNIT=="KCNP","noBA_BM_D_tot"] <- 1452081

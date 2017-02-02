@@ -90,8 +90,8 @@ registerDoParallel(c1)
 ## TO RUN MULTIPLE UNITS IN ONE SESSION, CHANGE THE UNIT AND RUN FROM HERE DOWN AGAIN
 ### Single out the unit of interest
 
-UNIT<-"LNP"
-
+UNIT<-"MH"
+strt<-Sys.time()
 if(UNIT %in% units$UNIT){
   unit <- units[units$UNIT==UNIT,]
 } else if (UNIT=="KCNP"){
@@ -242,7 +242,7 @@ strt<-Sys.time()
 raster.mask <- mask(try.raster, unit)
 print(Sys.time()-strt)
 
-plot(raster.mask)
+plot(raster.mask, col="red")
 plot(unit, add=T)
 plot(drought, add=T, border="blue")
 sum_D_BM_Mg <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
@@ -252,6 +252,8 @@ save(sum_D_BM_Mg, file=paste(UNIT, "_1415_D_BM_Mg_noBA.Rdata", sep=""))
 remove(sum_D_BM_Mg)
 load(file=paste(UNIT, "_1415_D_BM_Mg_noBA.Rdata", sep=""))
 assign(paste("sum_BM_1415_",UNIT,sep=""), sum_D_BM_Mg)
+
+print(Sys.time()-strt)
 
 ### For editing only: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

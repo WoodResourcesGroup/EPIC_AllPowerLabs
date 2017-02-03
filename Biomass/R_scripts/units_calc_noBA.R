@@ -1,5 +1,5 @@
 #########################################################################################################################
-###  THIS SCRIPT CALCULATES BM OF DEAD TREES BY UNIT FOR 2012-2015, NON-BASAL AREA METHOD
+###  THIS SCRIPT CALCULATES BM OF DEAD TREES BY UNIT FOR 2012-2016, NON-BASAL AREA METHOD
 #########################################################################################################################
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########

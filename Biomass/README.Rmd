@@ -49,22 +49,33 @@ All results are in X/Y coordinates that should be projected in EPSG: 5070.
     - Includes equations predicting biomass based on diameter at breast height for major classes of conifer species
     -   These equations were used to estimate biomass in drought mortality polygons
       
-# Process
-Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass in the file *R_scripts/LEMMA_droughtmortality_pixels.R* . The steps can be summarized as follows:
+# Process and Scripts Order
+Data from LEMMA and drought mortality polygons were combined to estimate dead tree biomass. The steps can be summarized as follows, with the script performing each task in parentheses:
 
-1.  Crop `LEMMA` data to include only California
-2.  Tranform drought mortality polygon data (`drought`) to the same CRS as `LEMMA`, namely EPSG 5070
-3.  Trim `drought` to exclude polygons that are 2 acres or smaller and/or have only 1 dead tree in them
-4.  Create vectors of parameters for diameter -> biomass equations for each conifer class
-5.  For each polygon
+## Setup for both analyses
+1. Crop `LEMMA` data to include only California (*1_crop_LEMMA.R*)
+2. Transform ADS data to the same crs as `LEMMA` and save it as .Rdata for easier loading (*2_transform_ADS.R*)
+
+## Setup specific to whole-state analysis
+1.  Trim `drought` to exclude polygons that are 2 acres or smaller and/or have only 1 dead tree in them
+
+## Setup specific to management units analysis
+1. Crop FS management unit boundaries to include only units of interest and transform to same crs as `LEMMA` (*crop_FS.R*)
+2. Crop NPS boundaries to Lassen and save (*crop_lnp.R*)
+3. Combine unit layers that can be combined and save (*units_overlay.R*)
+4. Calculate live biomass from LEMMA GNN data by averaging component ratio method biomass of trees > 2.5 cm dbh across all LEMMA GNN pixels with >0 biomass (*LEMMA_live_units_step1* and *LEMMA_live_units_step2*)
+
+## Dead biomass calculations
+1.  Create vectors of parameters for diameter -> biomass equations for each tree class based on Jenkins equations
+2.  For each polygon
     1)  crop `LEMMA` to the size and shape of the polygon
     2)  extract coordinates of each `LEMMA` pixel that falls within the polygon
-    3. extract corresponding FIA plot IDs for each `LEMMA` pixel in the polygon
-    4. for each pixel within the polygon
-        1. assign a diameter -> biomass equation based on the most common conifer species in that pixel
-        2. calculate average per-tree biomass using the above equation and the quadratic mean diameter of dominant and codominant conifers (from `LEMMA`)
-    5. combine these results into a data frame with one row
-    6. bind the data frame to that of other polygons
+    3) extract corresponding FIA plot IDs for each `LEMMA` pixel in the polygon
+    4) for each pixel within the polygon
+        1. assign a diameter -> biomass equation based on the most common tree species in that pixel
+        2. calculate average per-tree biomass using the above equation and the quadratic mean diameter of dominant and codominant trees (from `LEMMA`)
+    5) combine these results into a data frame with one row
+    6) bind the data frame to that of other polygons
 7. Create a unique key for each pixel 
 8. Write results to .csv file
 
@@ -106,13 +117,3 @@ The following tests were performed on a randomly selected polygon within `drough
 7. `Pol.x` and `Pol.y` from results match `coordinates()` of the polygon
 8. `Pol.NO_TREE` from results matches the sum of `relNO` for all pixels
 9. `All_Pol_CON_NO` from results matches the sum of conifers per pixel calculated by hand from `TPHC_GE_3`
-
-# Further Manipulation
-There are a few components of the script that will most likely be altered in future runs. They are summarized below.
-
-| Line Number|       Step  |
-|:-----------|:------------|
-|   60       |        Specify min polygon size|       
-| 60         |      Specify min number of dead tree per polygon |    
-| 176        |        Select size of sample for testing the loop |    
-| 199        | Name of results file |

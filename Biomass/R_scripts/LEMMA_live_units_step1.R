@@ -1,6 +1,9 @@
 #########################################################################################################################
 ######## CALCULATE TOTAL LIVE BIOMASS IN EACH MANAGEMENT UNIT FROM LEMMA DATA - STEP 1
 #########################################################################################################################
+
+## *NOTE: could save some time by saving each LEMMA_units result as .Rdata instead of spatial data
+
 library(rgdal)
 library(raster)
 

@@ -89,8 +89,8 @@ registerDoParallel(c1)
 # Function that does the bulk of the analysis
 
 ### Single out the unit of interest
-unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MHSF")
-
+unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
+j <- 9
 for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
@@ -242,7 +242,8 @@ for(j in 1:length(unit.names)) {
   remove(sum_D_BM_Mg)
   load(file=paste(UNIT,"_", YEARS,"_BM_Mg_noBA.Rdata", sep=""))
   assign(paste("sum_BM_",YEARS,"_",UNIT,sep=""), sum_D_BM_Mg)
-  
+  remove(sum_D_BM_Mg)
+  remove(spdf)
   print(Sys.time()-strt)
 }
 

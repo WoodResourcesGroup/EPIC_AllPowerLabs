@@ -6,7 +6,8 @@
 EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 #EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 #YEARS <- "1213"
-YEARS <- "1415"
+#YEARS <- "1415"
+YEARS <- "2016"
 #########################################################################################################################
 
 library(rgdal)  
@@ -21,12 +22,16 @@ LEMMA <- raster("LEMMA.gri")
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
 load("drought.Rdata")
 drought_bu <- drought
+load("drought16.Rdata")
+drought16_bu <- drought16
 
 if(YEARS=="1213"){
   drought <- subset(drought, drought$RPT_YR %in% c(2012,2013))
-} else {
+} else if(YEARS=="1415") {
   drought <- subset(drought, drought$RPT_YR %in% c(2014,2015))  
-}
+} else 
+  drought <- drought16
+
 drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 
 ### Open unit perimeters - all are in the layer "units" besides KCNP and LTMU -- do these steps every 
@@ -36,6 +41,7 @@ units <- readOGR(dsn = "units", layer = "units_nokc")
 units <- spTransform(units, crs(LEMMA))
 KCNP <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
 KCNP <- spTransform(KCNP, crs(LEMMA))
+
 LTMU <- readOGR(dsn = "tempdir", layer = "FS_LTMU")
 LTMU <- spTransform(LTMU, crs(LEMMA))
 
@@ -85,7 +91,7 @@ registerDoParallel(c1)
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MHSF")
 
-for(j in 3){ #1:length(unit.names)) {
+for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -164,7 +170,7 @@ for(j in 3){ #1:length(unit.names)) {
     # Find biomass per pixel using biomass per tree and estimated number of trees
     pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
     # problem here
-    tot_NO <- single@data$NO_TREE # Total number of trees in the polygon
+    tot_NO <- single@data$NO_TREES1 # Total number of trees in the polygon
     pmerge$relNO <- ifelse(pmerge$BA_GE_3>0.1, tot_NO/length(subset(pmerge$BA_GE_3, pmerge$BA_GE_3>0.01)), 0)
     # and total number of trees in polygon
     pmerge$D_BM_kg <- pmerge$relNO*pmerge$BM_tree_kg # D_BM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
@@ -177,7 +183,7 @@ for(j in 3){ #1:length(unit.names)) {
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge)) # Create year vector
-    Pol.NO_TREE <- rep(single@data$NO_TREE, nrow(pmerge)) # Create number of dead trees vector
+    Pol.NO_TREES1 <- rep(single@data$NO_TREES1, nrow(pmerge)) # Create number of dead trees vector
     Pol.Shap_Ar <- rep(single@data$Shap_Ar, nrow(pmerge)) # Create area vector
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
     
@@ -187,11 +193,11 @@ for(j in 3){ #1:length(unit.names)) {
     THA <- pmerge$TPH_GE_3 
     
     # Bring it all together
-    final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREE, 
+    final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
                    Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
     final <- as.data.frame(final)
-    final$All_Pol_NO <- (single@data$Shap_Ar/10000*900)*THA # Estimate total number of trees in the polygon
-    final$All_Pol_BM <- (single@data$Shap_Ar/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
+    final$All_Pol_NO <- (single@data$Shape_Area/10000*900)*THA # Estimate total number of trees in the polygon
+    final$All_Pol_BM <- (single@data$Shape_Area/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
     final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
     return(final)
   }
@@ -225,24 +231,24 @@ for(j in 3){ #1:length(unit.names)) {
   plot(unit, add=T)
   strt<-Sys.time()
   raster.mask <- mask(try.raster, unit)
-  print((Sys.time()-strt), "mask time")
   
   plot(raster.mask, col="red")
   plot(unit, add=T)
   plot(drought, add=T, border="blue")
-  sum_D_BM_Mg_1415 <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
+  sum_D_BM_Mg <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
   
-  setwd(paste(EPIC, "/GIS Data/Results_1415", sep=""))
-  save(sum_D_BM_Mg_1415, file=paste(UNIT, "_1415_D_BM_Mg_noBA.Rdata", sep=""))
-  remove(sum_D_BM_Mg_1415)
-  load(file=paste(UNIT, "_1415_D_BM_Mg_noBA.Rdata", sep=""))
-  assign(paste("sum_BM_1415_",UNIT,sep=""), sum_D_BM_Mg_1415)
+  setwd(paste(EPIC, "/GIS Data/Results", sep=""))
+  save(sum_D_BM_Mg, file=paste(UNIT,"_", YEARS,"_BM_Mg_noBA.Rdata", sep=""))
+  remove(sum_D_BM_Mg)
+  load(file=paste(UNIT,"_", YEARS,"_BM_Mg_noBA.Rdata", sep=""))
+  assign(paste("sum_BM_",YEARS,"_",UNIT,sep=""), sum_D_BM_Mg)
   
   print(Sys.time()-strt)
 }
 
 ### For editing only: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
-       ext, i, num, Pol.ID, Pol.NO_TREE, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
+       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
 remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
-remove(no.pixels, QMD_DOM, tab)
+remove(no.pixels, QMD_DOM, tab, results)
+remove(raster.mask, try.raster, spdf, spdf_ESP, key)

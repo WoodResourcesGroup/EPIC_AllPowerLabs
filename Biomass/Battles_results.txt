@@ -1,5 +1,6 @@
+__________________
 LASSEN
-___________
+__________________
 
 Total dead biomass from 2014 and 2015:
 
@@ -11,16 +12,43 @@ Total dead biomass in 2016:
 177652
 
 Dead biomass in 2016 in Mg/ha:
-4.08
+4.1
 
+__________________
+SEQUOIA
+__________________
+Total dead biomass in 2016:
+8810673
 
+Dead biomass in 2016 in Mg/ha:
+53.5 
 
-
+__________________
 MOUNTAIN HOME
-______________
+__________________
 
 Total dead biomass from 2014 to 2015:
 
 
 Dead biomass from 2014 to 2015 in Mg/ha:
-14,670
+
+
+Total dead biomass in 2016:
+
+
+Dead biomass in 2016 in Mg/ha:
+
+__________________
+CALAVERAS
+__________________
+
+
+Dead biomass in 2016 in Mg/ha:
+48.7
+
+__________________
+ED Z'BERG
+__________________
+
+Dead biomass in 2016 in Mg/ha:
+0.10

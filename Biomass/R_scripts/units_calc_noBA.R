@@ -36,14 +36,14 @@ drought_bu <- drought # backup so that I don't need to re-read if I accidentally
 
 ### Open unit perimeters - all are in the layer "units" besides KCNP and LTMU -- do these steps every 
 ### time no matter which one you're running
-setwd(paste(EPIC, "/GIS Data", sep=""))
-units <- readOGR(dsn = "units", layer = "units_nokc")
+setwd(paste(EPIC, "/GIS Data/units", sep=""))
+load(file="units.Rdata")
 units <- spTransform(units, crs(LEMMA))
-KCNP <- readOGR(dsn = "Boundary_KingsNP_20100209", layer = "Boundary_KingsNP_20100209")
+load(file="KCNP.Rdata")
 KCNP <- spTransform(KCNP, crs(LEMMA))
-
-LTMU <- readOGR(dsn = "tempdir", layer = "FS_LTMU")
-LTMU <- spTransform(LTMU, crs(LEMMA))
+setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
+load(file="FS_LTMU.Rdata")
+LTMU <- spTransform(FS_LTMU, crs(LEMMA))
 
 ### Identify species in LEMMA
 spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
@@ -91,7 +91,7 @@ registerDoParallel(c1)
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MHSF")
 
-for(j in 3){ #1:length(unit.names)) {
+for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -184,7 +184,7 @@ for(j in 3){ #1:length(unit.names)) {
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge)) # Create year vector
     Pol.NO_TREES1 <- rep(single@data$NO_TREES1, nrow(pmerge)) # Create number of dead trees vector
-    Pol.Shap_Ar <- rep(single@data$Shap_Ar, nrow(pmerge)) # Create area vector
+    Pol.Shap_Ar <- rep(single@data[,as.numeric(length(single@data))], nrow(pmerge)) # Create area vector
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
     
     # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
@@ -196,8 +196,8 @@ for(j in 3){ #1:length(unit.names)) {
     final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
                    Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
     final <- as.data.frame(final)
-    final$All_Pol_NO <- (single@data$Shape_Area/10000*900)*THA # Estimate total number of trees in the polygon
-    final$All_Pol_BM <- (single@data$Shape_Area/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
+    final$All_Pol_NO <- (single@data[,as.numeric(length(single@data))]/10000*900)*THA # Estimate total number of trees in the polygon
+    final$All_Pol_BM <- (single@data[,as.numeric(length(single@data))]/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
     final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
     return(final)
   }

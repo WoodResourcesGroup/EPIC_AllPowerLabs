@@ -1,19 +1,16 @@
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 
+library(rgdal)
+library(raster)
+library(rgeos)
 
-if( Sys.info()['sysname'] == "Windows" ) {
-  setwd("C:/Users/Carmen/Box Sync/EPIC-Biomass/GIS Data/")
-} else {
-  setwd("~/Documents/Box Sync/EPIC-Biomass/GIS Data/")
-}
-
+setwd(paste(EPIC, "/GIS Data", sep=""))
 
 nat_parks <- readOGR(dsn = "Nat_Parks", layer = "nps_boundary")
-plot(nat_parks)
 
-as.data.frame(sort(lnp$PARKNAME))
+LNP <- subset(nat_parks, nat_parks@data$PARKNAME=="Lassen Volcanic")
+plot(LNP)
 
-lnp <- subset(nat_parks, nat_parks@data$PARKNAME=="Lassen Volcanic")
-plot(lnp)
-
-writeOGR(obj=lnp, dsn="tempdir",layer = "LNP", driver="ESRI Shapefile", overwrite_layer = TRUE)
-
+setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
+save(LNP, file="LNP.Rdata")

@@ -74,13 +74,13 @@ for(i in 1:length(unit.names)){
 }
 
 
-df[unit.names=="KCNP","BM_D_Mgha"] <- 28
-df[unit.names=="KCNP","BM_D_tot"] <- 2106348
-df[unit.names=="KCNP","noBA_BM_D_Mgha"] <- 19.3
-df[unit.names=="KCNP","noBA_BM_D_tot"] <- 1452081
-
 df$noBA_BM_D_Mgha <- df$noBA_BM_D_tot/as.numeric(paste(df$L.area.ha))
 df$noBA_BM_D_Mgha_1415 <-df$noBA_1415_BM_D_tot/as.numeric(paste(df$L.area.ha))
 df$noBA_tot_D_Mgha <- df$noBA_BM_D_Mgha+df$noBA_BM_D_Mgha_1415
 df$noBA_Perc_Ch <- df$noBA_tot_D_Mgha/as.numeric(paste(df$live.BM))
-names(df)
+
+setwd(paste(EPIC, "/R Results", sep=""))
+save(df, file = "RESULTS_TABLE.Rdata")
+load(file="RESULTS_TABLE.Rdata")
+
+write.csv(df, "results_table.csv", row.names = T)

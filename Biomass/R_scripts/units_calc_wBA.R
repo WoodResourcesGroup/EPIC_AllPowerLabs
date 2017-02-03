@@ -8,6 +8,8 @@ EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BI
 UNIT <- "ENF"  ## Define which unit you're doing. Options are: MH  CSP  ESP  SQNP SNF  ENF  LNP  KCNP  LTMU
 #########################################################################################################################
 
+###I THINK THERE'S AN ERROR IN LOOP WITH RELNO - CHECK!
+
 library(rgdal)  
 library(raster)  
 options(digits = 5)

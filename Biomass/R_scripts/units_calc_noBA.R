@@ -90,7 +90,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
-j <- 9
+
 for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()

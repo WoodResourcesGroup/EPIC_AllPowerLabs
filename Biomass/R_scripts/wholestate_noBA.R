@@ -3,11 +3,11 @@
 #########################################################################################################################
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-YEARS <- "1213"
+EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+#YEARS <- "1213"
 #YEARS <- "1415"
-#YEARS <- "2016"
+YEARS <- "2016"
 #########################################################################################################################
 
 library(rgdal)  
@@ -88,11 +88,6 @@ registerDoParallel(c1)
 # Function that does the bulk of the analysis
 
 # Use LTMU to test
-setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
-load(file="FS_LTMU.Rdata")
-LTMU <- spTransform(FS_LTMU, crs(LEMMA))
-drought <- crop(drought, extent(LTMU))
-
 inputs = 1:nrow(drought)
 
 # start timer
@@ -221,10 +216,9 @@ save(spdf, file=paste("Results_wholestate",YEARS,"_noBA.Rdata", sep=""))
 load(file=paste("Results_wholestate",YEARS,"_noBA.Rdata", sep=""))
 assign(paste("spdf_",YEARS,sep=""), spdf)
 
-
-### For editing only: clear variables in loop
-remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
-       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
-remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
-remove(no.pixels, QMD_DOM, tab, results)
-remove(raster.mask, try.raster, spdf, spdf_ESP, key)
+# ### For editing only: clear variables in loop
+# remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg,
+#        ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
+# remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
+# remove(no.pixels, QMD_DOM, tab, results)
+# # remove(raster.mask, try.raster, spdf, spdf_ESP, key)

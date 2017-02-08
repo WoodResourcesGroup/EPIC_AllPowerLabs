@@ -3,11 +3,11 @@
 #########################################################################################################################
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-YEARS <- "1213"
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+#YEARS <- "1213"
 #YEARS <- "1415"
-#YEARS <- "2016"
+YEARS <- "2016"
 #########################################################################################################################
 
 library(rgdal)  
@@ -17,6 +17,11 @@ options(digits = 5)
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
 setwd(paste(EPIC, "/GIS Data/LEMMA_gnn_sppsz_2014_08_28/", sep=""))
 LEMMA <- raster("LEMMA.gri")
+
+### Open LEMMA PLOT data
+setwd(paste(EPIC))
+plots <- read.csv("SPPSZ_ATTR_LIVE.csv")
+land_types <- unique(plot$ESLF_NAME)
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
@@ -90,7 +95,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
-
+j <- 3
 for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
@@ -102,10 +107,15 @@ for(j in 1:length(unit.names)) {
     unit <- LTMU
   drought <- crop(drought_bu, extent(unit)) 
   inputs = 1:nrow(drought)
+  i <- 3
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
-    clip2 <- mask(clip1, single) # fit the cropped LEMMA data to the shape of the polygon
+    # fit the cropped LEMMA data to the shape of the polygon, unless the polygon is too small to do so
+    if(length(clip1) >= 4){
+      clip2 <- mask(clip1, single)
+    } else 
+      clip2 <- clip1
     pcoords <- cbind(clip2@data@values, coordinates(clip2)) # save the coordinates of each pixel
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords) # get rid of NAs in coordinates table (NAs are from empty cells in box around polygon)
@@ -132,9 +142,6 @@ for(j in 1:length(unit.names)) {
     
     # The below for subloop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
     # the most common species in each raster cell:
-    merge$BM_tree_kg <- 0 # create biomass per tree variable
-    merge$D_BM_kg <- 0 # create dead biomass variable
-    merge$relNO <- 0 # create relative number of trees variable
     for (i in 1:nrow(merge)) {
       cell <- merge[i,]
       if (cell$TREEPLBA %in% Cedars_Larch) { 

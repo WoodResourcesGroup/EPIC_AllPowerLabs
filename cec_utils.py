@@ -1,15 +1,42 @@
 from sqlalchemy import create_engine as ce
 import itertools as it
-import csv
 from numpy import linspace
-from openpyxl import load_workbook
- 
+import pandas as pd
+import xlwings as xlw
 
 FRCSDIR = 'FRCS'
 
 dbname = 'apl_cec'
 host = 'switch-db2.erg.berkeley.edu'
 user = 'ptittmann'
+
+colIndex = {'A': 'Stand',
+            'B': 'State',
+            'C': 'Slope',   
+            'D': 'AYD',
+            'E': 'Treatment Area',
+            'F': 'Elev',
+            'G': 'System',
+            'H': 'CT/ac',
+            'I': 'CT residue fraction',
+            'J': 'ft3/CT',
+            'K': 'lb/ft3 CT',
+            'L': 'CT hardwood fraction',
+            'M': 'ST/ac',
+            'N': 'ST residue fraction',
+            'O': 'ft3/ST',
+            'P': 'lb/ft3 ST',
+            'Q': 'ST hardwood fraction',
+            'R': 'LT/ac',
+            'S': 'LT residue fraction',
+            'T': 'ft3/LT',
+            'U': 'lb/ft3 LT',
+            'V': 'LT hardwood fraction',
+            'W': 'Include move-in cost?',
+            'X': 'Move-in miles',
+            'Y': 'Collect & chip residues?',
+            'Z': 'Partial cut?',
+            'AA': 'Include loading costs?'}
 
 def dbconfig(name, echoCmd=True):
     """
@@ -23,55 +50,35 @@ def dbconfig(name, echoCmd=True):
     engine = ce('postgresql:///{0}'.format(name), echo=echoCmd)
     return engine
 
-
-def iterHarvestSystems(output='frcs_batch.xlsx', intervals = 20, maxAYD=2500, minAYD=0):
-    wb2 = load_workbook(FRCSDIR+'/'+output)
-    print wb2.get_sheet_names()
-
-    tpa = linspace(20,500,intervals)
-    cuFt = 65.44 # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
+def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
+    tpa = range(20,500,intervals) # all trees are chip trees
+    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals) # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
     slp = linspace(0, 100, intervals)
     ayd = linspace(minAYD, maxAYD, intervals)
     trtArea = linspace(1, 20, intervals)
     elev = [0]
-    comb = [['Stand',
-             'State',
-             'Slope',
-             'AYD',
-             'TreatmentArea',
-             'Elev',
-             'Harvesting System',
-             'CT/ac',
-             'CT residue fraction',
-             'ft3/CT']]
+    cols = ['C','D','E','F','H','J']
+    prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
+    prod['A'] = ['frcs_batch_'+str(i) for i in range(len(prod))]
+    prod['B'] = 'CA'
+    prod['G'] = 'Ground-Based Mech WT'
+    prod['I'] = resFrac
+    prod['K'] = 60
+    return prod
 
-    for idx, itm in enumerate(it.product(slp, ayd, trtArea, elev, tpa)):
-        if itm[0] <= 50:
-            comb.append([idx,
-                         'CA',
-                         itm[0],
-                         itm[1],
-                         itm[2],
-                         itm[3],
-                         'Ground-Based Mech WT',
-                         int(itm[4]),
-                         resFrac,
-                         cuFt]
-                        )
-        else:
-            comb.append([idx,
-                         'CA',
-                         itm[0],
-                         itm[1],
-                         itm[2],
-                         itm[3],
-                         'Cable Manual WT',
-                         int(itm[4]),
-                         resFrac,
-                         cuFt])
-
-    with open(FRCSDIR+'/'+output, "wb") as f:
-        writer = csv.writer(f)
-        writer.writerows(comb)
+def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
+    if len(df)/maxRows == 0:
+        books = [0]
+    else:
+        books = range(len(df)/maxRows)
+    for b in books:
+        wb = xlw.Book()
+        sht = wb.sheets[0]
+        data = df[b*maxRows:(b+1)*maxRows]
+        for c in df.columns:
+            sht.range(c+'1').options(index=False, header=False).value = colIndex[c]
+            sht.range(c+'2').options(index=False, header=False).value = data[c]
+        wb.save(output+str(b)+'.xlsx')
+        wb.close
     

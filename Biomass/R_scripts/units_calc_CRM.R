@@ -107,8 +107,8 @@ for(j in 1:length(unit.names)) {
     unit <- LTMU
   drought <- crop(drought_bu, extent(unit)) 
   inputs = 1:nrow(drought)
-  i <- 3
-  results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'), .errorhandling="remove") %dopar% {
+  #i <- 3
+  results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
     # fit the cropped LEMMA data to the shape of the polygon, unless the polygon is too small to do so
@@ -120,17 +120,14 @@ for(j in 1:length(unit.names)) {
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords) # get rid of NAs in coordinates table (NAs are from empty cells in box around polygon)
     Pol.ID <- rep(i, nrow(pcoords)) # create a Polygon ID
-    ext <- extract(clip2, single) # extracts data from the raster - each extracted value is the FIA plot # of the raster cell, which corresponds to detailed data in the attribute table of LEMMA
-    tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
-    s <- sum(tab[[1]]) # Counts total raster cells the polygon - this is different from length(clip2tg) because it doesn't include NAs
-    mat <- as.data.frame(tab)
-    mat2 <- as.data.frame(tab[[1]]/s) # gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
-    mat2 <- merge(mat, mat2, by="Var1") # creates table with FIA plot IDs in polygon, number of each, and relative frequency of each
-    
-    # extract attribute information from LEMMA for each plot number contained in the polygon:
-    L.in.mat <- subset(LEMMA@data@attributes[[1]], LEMMA@data@attributes[[1]][,"ID"] %in% 
-                         mat[,1])[,c("ID","BA_GE_3","BPH_GE_3_CRM","TPH_GE_3","QMD_DOM","TREEPLBA")]
-    
+    #ext <- extract(clip2, single) # extracts data from the raster - each extracted value is the FIA plot # of the raster cell, which corresponds to detailed data in the attribute table of LEMMA
+    #tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
+    counted <- pcoords %>% count(V1)
+    mat <- as.data.frame(counted)
+    s <- sum(mat[2]) # Counts total raster cells the polygon - this is different from length(clip2tg) because it doesn't include NAs
+    freq <- (mat[2]/s) # gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
+    mat2 <- cbind(mat, freq) # creates table with FIA plot IDs in polygon, number of each, and relative frequency of each
+    colnames(mat2)[3] <- "freq"
     ### Attribute meanings from LEMMA GLN:
     ### BA_GE_3 = basal area of live trees >= 2.5 cm dbh (m^2/ha)
     ### BPH_GE_3_CRM = Component Ratio Method biomass of all live trees >=2.5 cm dbh (kg/ha)
@@ -138,74 +135,48 @@ for(j in 1:length(unit.names)) {
     ### QMD_DOM = 	Quadratic mean diameter of all dominant and codominant trees (cm)
     ### TREEPLBA = Tree species with plurality of basal area
     
-    merge <- merge(L.in.mat, mat2, by.y = "Var1", by.x = "ID") # merge LEMMA data with polygon data into one table
-    
-    # The below for subloop calculates biomass per tree based on the average dbh of dominant and codominant trees for 
-    # the most common species in each raster cell:
-    for (i in 1:nrow(merge)) {
-      cell <- merge[i,]
-      if (cell$TREEPLBA %in% Cedars_Larch) { 
-        num <- (B0[1] + B1[1]*log(cell$QMD_DOM)) # apply formula for biomass, but w/o the exp. 
-      } else if (cell$TREEPLBA %in% Dougfirs) {
-        num <- (B0[2] + B1[2]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% Firs) {
-        num <- (B0[3] + B1[3]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% Pines) {
-        num <- (B0[4] + B1[4]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% Spruces) {
-        num <- (B0[5] + B1[5]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% mh) {
-        num <- (B0[6] + B1[6]*log(cell$QMD_DOM))  
-      } else if (cell$TREEPLBA %in% wo) {
-        num <- (B0[7] + B1[7]*log(cell$QMD_DOM))  
-      } else if (cell$TREEPLBA %in% mb) {
-        num <- (B0[8] + B1[8]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% aa) {
-        num <- (B0[9] + B1[9]*log(cell$QMD_DOM))
-      } else if (cell$TREEPLBA %in% mo) {
-        num <- (B0[10] + B1[10]*log(cell$QMD_DOM))
-      } else {
-        num <- 0
-      }
-      if (num == 0) {
-        merge[i,]$BM_tree_kg <- 0 # assign 0 if no trees
-      } else {
-        merge[i,]$BM_tree_kg <- exp(num) # finish the formula to assign biomass per tree in that pixel
-      }
-    }
-    
+    merge <- merge(mat2, plots, by.x = "V1", by.y="VALUE")
+
     # Find biomass per pixel using biomass per tree and estimated number of trees
-    pmerge <- merge(pcoords, merge, by.x ="V1", by.y = "ID") # pmerge has a line for every pixel
+    pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
     # problem here
     tot_NO <- single@data$NO_TREES1 # Total number of trees in the polygon
-    pmerge$relNO <- ifelse(pmerge$BA_GE_3>0.1, tot_NO/length(subset(pmerge$BA_GE_3, pmerge$BA_GE_3>0.01)), 0)
-    # and total number of trees in polygon
-    pmerge$D_BM_kg <- pmerge$relNO*pmerge$BM_tree_kg # D_BM_kg is total dead biomass in that pixel, based on biomass per tree and estimated number of trees in pixel
+    pmerge$relliveNO <- pmerge$TPH_GE_25/sum(pmerge$TPH_GE_25)
+    pmerge$relNO <- tot_NO*pmerge$relliveNO
+    
+    # Important variables: pmerge$TPH_GE_25 (density of live trees >=25 cm, in trees/ha)
+    #                      pmerge$BPH_GE_25_CRM (CRM biomass of live trees >= 25 cm in kg/ha)
+    
+    # Find biomass of dead trees in pixel using CRM biomass
+    pmerge$BM_tree_kg <- pmerge$BPH_GE_25_CRM/pmerge$TPH_GE_25
+    pmerge$D_BM_kg <-  pmerge$relNO*pmerge$BM_tree_kg
+    # D_BM_kg is total dead biomass in that pixel
     
     # Create vectors that are the same length as pmerge to combine into final table:
     D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
     Av_BM_TR <- D_Pol_BM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
     QMD_DOM <- pmerge$QMD_DOM # Find the average of the pixels' quadratic mean diameters 
-    TREEPL <-  pmerge$TREEPLBA # Find the tree species that has a plurality in the most pixels
+    TREEPL <-  as.character(pmerge$TREEPLBA) # Find the tree species that has a plurality in the most pixels
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge)) # Create year vector
     Pol.NO_TREES1 <- rep(single@data$NO_TREES1, nrow(pmerge)) # Create number of dead trees vector
     Pol.Shap_Ar <- rep(single@data[,as.numeric(length(single@data))], nrow(pmerge)) # Create area vector
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
-    
+    D_BM_kg <- pmerge$D_BM_kg
+    D_BM_kgha <- pmerge$D_BM_kg/.09
     # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
     All_BM_kgha <- pmerge$BPH_GE_3_CRM 
     All_Pol_BM_kgha <- rep(mean(pmerge$BPH_GE_3_CRM),nrow(pmerge)) # Average across polygons
     THA <- pmerge$TPH_GE_3 
-    
+    THA_25 <- pmerge$TPH_GE_25
+    BPH_GE_25_CRM <- pmerge$BPH_GE_25_CRM
     # Bring it all together
-    final <- cbind(pmerge$x, pmerge$y, pmerge$D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
-                   Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
+    final <- cbind(pmerge$x, pmerge$y, D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
+                   Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, THA_25, BPH_GE_25_CRM, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
     final <- as.data.frame(final)
     final$All_Pol_NO <- (single@data[,as.numeric(length(single@data))]/10000*900)*THA # Estimate total number of trees in the polygon
     final$All_Pol_BM <- (single@data[,as.numeric(length(single@data))]/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
-    final$D_BM_kgha <- final$V3/.09 # Find kg per ha of dead biomass
     return(final)
   }
   # Create a key for each pixel (row)
@@ -214,9 +185,15 @@ for(j in 1:length(unit.names)) {
   # Rename variables whose names were lost in the cbind
   names(results)[names(results)=="V1"] <- "x"
   names(results)[names(results)=="V2"] <- "y"
-  names(results)[names(results)=="V3"] <- "D_BM_kg"
+  #names(results)[names(results)=="V3"] <- "D_BM_kg"
   names(results)[names(results)=="V4"] <- "relNO"
   names(results)[names(results)=="V5"] <- "PlotID"
+  # Find pixels with more dead biomass than live biomass
+  toohigh <- subset(results, as.numeric(paste(results$D_BM_kg))>as.numeric(paste(results$BPH_GE_25_CRM)))
+                    
+  toodense <- subset(results, results$relNO>results$THA_25)
+  # Test that stuff adds up
+  
   ### Convert to a spatial data frame
   xy <- results[,c("x","y")]
   spdf <- SpatialPointsDataFrame(coords=xy, data = results, proj4string = crs(LEMMA))

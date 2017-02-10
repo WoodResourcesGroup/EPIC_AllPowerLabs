@@ -5,24 +5,29 @@ library(rgdal)
 library(raster)
 
 ### Define EPIC as the EPIC-Biomass folder for easier setwd later on
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 ### Define where the cec-apl folder is
 CEC <- "~/cec_apl/"
 
-### STEP NOT INCLUDED: OPENING EACH UNIT'S LEMMA LIVE RESULTS - "GIS Data/LEMMA_units/LEMMA.[unit name]"
-# Example
-setwd(paste(EPIC, "/GIS Data", sep=""))
-LEMMA.LTMU <- readOGR(dsn="LEMMA_units", layer="LEMMA_LTMU")
-# takes about 20 min per unit
-LEMMA.KCNP <- readOGR(dsn="LEMMA_units", layer = "LEMMA_kc")
-LEMMA.MHSF <- readOGR(dsn="LEMMA_units", layer = "LEMMA_MH")
 
+# Load results of live biomass analysis and resave them as .Rdata for faster future loading
+
+unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MHSF")
+
+for(i in 1:length(unit.names)){
+  setwd(paste(EPIC, "/GIS Data", sep=""))
+  spdf <- readOGR(dsn="LEMMA_units", layer = paste("LEMMA_",unit.names[i], sep=""))
+  setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
+  save(spdf, file=paste("LEMMA_",unit.names[i],".Rdata", sep=""))
+  assign(paste("LEMMA.",unit.names[i],sep=""),spdf)
+  remove(spdf)
+}
 
 #####################################################################################
 ### Crop each unit's live LEMMA results to only include pixels with nonzero biomass, 
 ### then calculate mean live basal area and SAVE IT
 #####################################################################################
-unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MHSF")
 sum_BM_MHSF <- sum_BM_MH
 live.BM <- numeric()
 L.area.ha <- numeric()
@@ -38,4 +43,4 @@ for(i in 1:length(unit.names)){
 }
 df <- as.data.frame(cbind(unit.names, live.BM, L.area.ha))
 setwd(paste(CEC, "/Biomass/Results", sep=""))
-save(df, file = "RESULTS_TABLE.Rdata")
+save(df, file = "RESULTS_TABLE_CRM.Rdata")

@@ -5,9 +5,9 @@
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
 #EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-#YEARS <- "1213"
+YEARS <- "1213"
 #YEARS <- "1415"
-YEARS <- "2016"
+#YEARS <- "2016"
 #########################################################################################################################
 
 library(rgdal)  
@@ -21,7 +21,8 @@ LEMMA <- raster("LEMMA.gri")
 ### Open LEMMA PLOT data
 setwd(paste(EPIC))
 plots <- read.csv("SPPSZ_ATTR_LIVE.csv")
-land_types <- unique(plot$ESLF_NAME)
+land_types <- unique(plots$ESLF_NAME)
+for_types <- unique(plots$FORTYPBA)[2:932]
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
@@ -95,8 +96,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
-j <- 3
-for(j in 1:length(unit.names)) {
+for(j in 3){#1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -106,8 +106,8 @@ for(j in 1:length(unit.names)) {
   } else  ## assign polygon of interest
     unit <- LTMU
   drought <- crop(drought_bu, extent(unit)) 
-  inputs = 1:nrow(drought)
-  #i <- 3
+  inputs =1:nrow(drought)
+  #i <- 6
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -119,7 +119,6 @@ for(j in 1:length(unit.names)) {
     pcoords <- cbind(clip2@data@values, coordinates(clip2)) # save the coordinates of each pixel
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords) # get rid of NAs in coordinates table (NAs are from empty cells in box around polygon)
-    Pol.ID <- rep(i, nrow(pcoords)) # create a Polygon ID
     #ext <- extract(clip2, single) # extracts data from the raster - each extracted value is the FIA plot # of the raster cell, which corresponds to detailed data in the attribute table of LEMMA
     #tab <- lapply(ext, table) # creates a table that counts how many of each raster value there are in the polygon
     counted <- pcoords %>% count(V1)
@@ -141,20 +140,29 @@ for(j in 1:length(unit.names)) {
     pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
     # problem here
     tot_NO <- single@data$NO_TREES1 # Total number of trees in the polygon
-    pmerge$relliveNO <- pmerge$TPH_GE_25/sum(pmerge$TPH_GE_25)
-    pmerge$relNO <- tot_NO*pmerge$relliveNO
+    pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
+    pmerge$live <- pmerge$TPH_GE_25/sum(pmerge$TPH_GE_25, na.rm=T)
+    pmerge$relNO <- tot_NO*pmerge$live
+    pmerge$BM_tree_kg <- pmerge$BPH_GE_25_CRM/pmerge$TPH_GE_25
+    pmerge$BM_tree_kg[is.na(pmerge$BM_tree_kg)] <- 0
     
+    for(l in 1:nrow(pmerge)) {
+      if(pmerge[l,"TPH_GE_25"]<pmerge[l,"relNO"]) {
+        pmerge[l,"D_BM_kg"] <- pmerge[l,"BPH_GE_25_CRM"] # I add the 0.01 to make it easier to tell these plots later
+      } else pmerge[l,"D_BM_kg"] <- pmerge[l,"relNO"]*pmerge[l,"BM_tree_kg"]
+    }
+    pmerge$trunc <- ifelse(pmerge$D_BM_kg==pmerge$BPH_GE_25_CRM & pmerge$D_BM_kg!=0, 1,0)
     # Important variables: pmerge$TPH_GE_25 (density of live trees >=25 cm, in trees/ha)
     #                      pmerge$BPH_GE_25_CRM (CRM biomass of live trees >= 25 cm in kg/ha)
     
     # Find biomass of dead trees in pixel using CRM biomass
-    pmerge$BM_tree_kg <- pmerge$BPH_GE_25_CRM/pmerge$TPH_GE_25
-    pmerge$D_BM_kg <-  pmerge$relNO*pmerge$BM_tree_kg
+    
+    
     # D_BM_kg is total dead biomass in that pixel
     
     # Create vectors that are the same length as pmerge to combine into final table:
+    Pol.ID <- rep(i, nrow(pmerge)) # create a Polygon ID
     D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
-    Av_BM_TR <- D_Pol_BM_kg/tot_NO # Calculate average biomass per tree based on total polygon biomass and number of trees in the polygon
     QMD_DOM <- pmerge$QMD_DOM # Find the average of the pixels' quadratic mean diameters 
     TREEPL <-  as.character(pmerge$TREEPLBA) # Find the tree species that has a plurality in the most pixels
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
@@ -163,37 +171,35 @@ for(j in 1:length(unit.names)) {
     Pol.NO_TREES1 <- rep(single@data$NO_TREES1, nrow(pmerge)) # Create number of dead trees vector
     Pol.Shap_Ar <- rep(single@data[,as.numeric(length(single@data))], nrow(pmerge)) # Create area vector
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
-    D_BM_kg <- pmerge$D_BM_kg
     D_BM_kgha <- pmerge$D_BM_kg/.09
     # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
-    All_BM_kgha <- pmerge$BPH_GE_3_CRM 
+    BPH_GE_3_CRM <- pmerge$BPH_GE_3_CRM 
     All_Pol_BM_kgha <- rep(mean(pmerge$BPH_GE_3_CRM),nrow(pmerge)) # Average across polygons
     THA <- pmerge$TPH_GE_3 
     THA_25 <- pmerge$TPH_GE_25
     BPH_GE_25_CRM <- pmerge$BPH_GE_25_CRM
     # Bring it all together
-    final <- cbind(pmerge$x, pmerge$y, D_BM_kg, pmerge$relNO,pmerge$relBA, pmerge$V1, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
-                   Pol.Shap_Ar,D_Pol_BM_kg,All_BM_kgha,All_Pol_BM_kgha,THA, THA_25, BPH_GE_25_CRM, QMD_DOM,Av_BM_TR, Pol.ID, TREEPL) #
-    final <- as.data.frame(final)
-    final$All_Pol_NO <- (single@data[,as.numeric(length(single@data))]/10000*900)*THA # Estimate total number of trees in the polygon
-    final$All_Pol_BM <- (single@data[,as.numeric(length(single@data))]/10000*900)*All_Pol_BM_kgha # Estimate total tree biomass in the polygon
+    #final <- cbind.data.frame(pmerge$x, pmerge$y, D_BM_kg)
+    pmerge <- pmerge[,c("V1","x", "y", "D_BM_kg", "relNO","FORTYPBA", "ESLF_NAME", "trunc")]
+    final <- cbind(pmerge, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
+                   Pol.Shap_Ar,D_Pol_BM_kg,BPH_GE_3_CRM,All_Pol_BM_kgha,THA, THA_25, BPH_GE_25_CRM, QMD_DOM,Pol.ID, TREEPL) #
     return(final)
   }
   # Create a key for each pixel (row)
   key <- seq(1, nrow(results)) 
   results <- cbind(key, results)
   # Rename variables whose names were lost in the cbind
-  names(results)[names(results)=="V1"] <- "x"
-  names(results)[names(results)=="V2"] <- "y"
-  #names(results)[names(results)=="V3"] <- "D_BM_kg"
-  names(results)[names(results)=="V4"] <- "relNO"
-  names(results)[names(results)=="V5"] <- "PlotID"
+  names(results)[names(results)=="V1"] <- "PlotID"
   # Find pixels with more dead biomass than live biomass
-  toohigh <- subset(results, as.numeric(paste(results$D_BM_kg))>as.numeric(paste(results$BPH_GE_25_CRM)))
-                    
-  toodense <- subset(results, results$relNO>results$THA_25)
+  toohigh <- subset(results, results$D_BM_kg>results$BPH_GE_25_CRM)
+  toohigh
   # Test that stuff adds up
-  
+  aggregate(results$relNO, by=list(Category=results$Pol.ID), FUN=sum)
+  drought$NO_TREES1
+  testresults <- results$BPH_GE_25_CRM/results$THA_25*results$relNO
+  test <- testresults - results$D_BM_kg
+  unique(test < 0.5 & test > -0.5) # these should all be true or NA. If they're not, make sure the appropriate rows have "trunc" = 1
+  (test < 0.5 & test > -0.5)
   ### Convert to a spatial data frame
   xy <- results[,c("x","y")]
   spdf <- SpatialPointsDataFrame(coords=xy, data = results, proj4string = crs(LEMMA))
@@ -202,9 +208,9 @@ for(j in 1:length(unit.names)) {
   plot(drought, add=T, border="pink")
   plot(unit, add=T, border="orange")
   
-  setwd(paste(EPIC, "/GIS Data/Results", sep=""))
-  save(spdf, file=paste("Results_",YEARS, "_",UNIT,"_noBA.Rdata", sep=""))
-  load(file=paste("Results_",YEARS, "_",UNIT,"_noBA.Rdata", sep=""))
+  setwd(paste(EPIC, "/GIS Data/Results/Results_CRM", sep=""))
+  save(spdf, file=paste("Results_",YEARS, "_",UNIT,"_CRM.Rdata", sep=""))
+  load(file=paste("Results_",YEARS, "_",UNIT,"_CRM.Rdata", sep=""))
   assign(paste("spdf_",YEARS, "_",UNIT,sep=""), spdf)
   ### Save version masked to just the management unit
   
@@ -213,18 +219,16 @@ for(j in 1:length(unit.names)) {
   try.raster <- rasterFromXYZ(xyz, crs = crs(spdf))
   plot(try.raster)
   plot(unit, add=T)
-  strt<-Sys.time()
+  #strt<-Sys.time()
   raster.mask <- mask(try.raster, unit)
-  
-  plot(raster.mask, col="red")
-  plot(unit, add=T)
-  plot(drought, add=T, border="blue")
   sum_D_BM_Mg <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
   
-  setwd(paste(EPIC, "/GIS Data/Results", sep=""))
-  save(sum_D_BM_Mg, file=paste(UNIT,"_", YEARS,"_BM_Mg_noBA.Rdata", sep=""))
+  setwd(paste(EPIC, "/GIS Data/Results/Results_CRM", sep=""))
+  save(raster.mask, file=paste(UNIT,"_raster_",YEARS,".Rdata",sep=""))
+  
+  save(sum_D_BM_Mg, file=paste(UNIT,"_", YEARS,"_BM_Mg_CRM.Rdata", sep=""))
   remove(sum_D_BM_Mg)
-  load(file=paste(UNIT,"_", YEARS,"_BM_Mg_noBA.Rdata", sep=""))
+  load(file=paste(UNIT,"_", YEARS,"_BM_Mg_CRM.Rdata", sep=""))
   assign(paste("sum_BM_",YEARS,"_",UNIT,sep=""), sum_D_BM_Mg)
   remove(sum_D_BM_Mg)
   remove(spdf)

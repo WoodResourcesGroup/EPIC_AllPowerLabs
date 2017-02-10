@@ -8,8 +8,8 @@ library(rgdal)
 library(raster)
 
 ### Define EPIC as the EPIC-Biomass folder for easier setwd later on
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
-#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # for Turbo
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
 setwd(paste(EPIC, "/GIS Data/LEMMA_gnn_sppsz_2014_08_28/", sep=""))
@@ -20,6 +20,10 @@ setwd(paste(EPIC))
 plots <- read.csv("SPPSZ_ATTR_LIVE.csv")
 land_types <- unique(plots$ESLF_NAME)
 for_types <- unique(plots$FORTYPBA)[2:932]
+# Make plots smaller 
+plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", 
+"BPH_GE_3_CRM","BPH_GE_25_CRM", "FORTYPBA", "ESLF_NAME", 
+"TREEPLBA","QMDC_DOM")]
 
 ### Open units perimeters
 setwd(paste(EPIC, "/GIS Data", sep=""))
@@ -36,6 +40,14 @@ setwd(paste(EPIC, "/GIS Data", sep=""))
 FS_LTMU <- readOGR(dsn = "tempdir", layer = "FS_LTMU")
 FS_LTMU <- spTransform(FS_LTMU, crs(LEMMA))
 
+
+# crop LEMMA to make it more manageable
+LEMMA <- crop(LEMMA, extent(units)) # takes a few moments
+
+###############################################################################
+### FOR ALL UNITS EXCEPT KCNP AND LTMU 
+###############################################################################
+
 ### Set up parallel cores for faster runs
 library(doParallel)
 library(foreach)
@@ -44,19 +56,16 @@ no_cores <- detectCores() - 1 # Use all but one core on your computer
 c1 <- makeCluster(no_cores)
 registerDoParallel(c1)
 
-### function that does the bulk of the analysis
-
+### Function that does the bulk of the analysis
 inputs = 1:nrow(units)
 strt<-Sys.time()
 # foreach loop
+i <- 10
 LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','dplyr'), .errorhandling="remove") %dopar% {
   single <- units[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
   # fit the cropped LEMMA data to the shape of the polygon, unless the polygon is too small to do so
-  if(length(clip1) >= 4){
-    clip2 <- mask(clip1, single)
-  } else 
-    clip2 <- clip1
+  clip2 <- mask(clip1, single) #takes a long time for SNF for some reason
   pcoords <- cbind(clip2@data@values, coordinates(clip2)) # save the coordinates of each pixel
   pcoords <- as.data.frame(pcoords)
   pcoords <- na.omit(pcoords) # get rid of NAs in coordinates table (NAs are from empty cells in box around polygon)
@@ -72,20 +81,19 @@ LEMMA.units <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos
   
   # Find biomass per pixel using biomass per tree and estimated number of trees
   pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
+  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
    # Create vectors that are the same length as pmerge to combine into final table:
   Pol.Pixels <- rep(nrow(pmerge), nrow(pmerge)) # number of pixels
   Pol.ID <- rep(i, nrow(pmerge))
   # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
   UNIT <- rep(single@data$UNIT, nrow(pmerge))
-  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
-  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", "TPH_GE_50","TPH_GE_75",
-                      "BPH_GE_3_CRM","BPHC_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
+  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", 
+                      "BPH_GE_3_CRM","BPH_GE_25_CRM","FORTYPBA", "ESLF_NAME", 
                       "TREEPLBA","QMDC_DOM")]
   final <- cbind(pmerge, Pol.Pixels,Pol.ID, UNIT)
   return(final)
 }
 print(Sys.time()-strt)
-#takes 1 hr on Turbo
 
 # Create a key for each pixel (row)
 key <- seq(1, nrow(LEMMA.units)) 
@@ -104,39 +112,34 @@ plot(units, add=T, border="orange")
 LEMMA_units <- spdf
 setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
 save(LEMMA_units, file="LEMMA_units.Rdata")
-#setwd(paste(EPIC, "/GIS Data", sep=""))
-#writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_units", driver = "ESRI Shapefile")
 
+###*****Workaround: did SNF separately. Saved it below:
+# Create a key for each pixel (row)
+LEMMA.units <- final
+key <- seq(1, nrow(LEMMA.units)) 
+LEMMA.units <- cbind(key, LEMMA.units)
 
-## NEED TO MAKE SURE THE BELOW LOOP WORKS
+# Rename variables whose names were lost in the cbind
+names(LEMMA.units)[names(LEMMA.units)=="V1"] <- "FIA_ID"
 
-### Separate out LEMMA.units by unit and save individual chunks for faster referencing 
-# Start with units that are in the spdf units_nokc and have only one polygon per unit
-# unit.names <- c("CSP", "ESP", "SQNP", "SNF", "ENF", "LNP")
-# for(i in 1:length(unit.names)) {
-#   spdf <- subset(LEMMA_units, LEMMA_units$Pol_ID==(i+6))
-#   assign(paste("LEMMA.", unit.names[i], sep=""), spdf)
-#   #writeOGR(obj=spdf, dsn = "LEMMA_units", layer = paste("LEMMA_",unit.names[i],sep=""), 
-#    #        driver = "ESRI Shapefile", overwrite_layer = T)
-#   setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
-#   save(spdf, file=paste("LEMMA", unit.names[i]))
-# }
-# This loop takes a few min
+### Convert to a spatial data frame
+xy <- LEMMA.units[,c("x","y")]
+spdf <- SpatialPointsDataFrame(coords=xy, data = LEMMA.units, proj4string = crs(LEMMA))
+plot(spdf, pch=".")
+plot(units, add=T, border="orange")
 
-# Then do MH
-# LEMMA.MH <- subset(LEMMA.units, LEMMA.units$Pol_ID <7)
-# plot(LEMMA.MH)
-# writeOGR(obj=spdf, dsn = "LEMMA_units", layer = "LEMMA_MH", driver = "ESRI Shapefile", overwrite_layer = T)
+### Save spatial data frame
+LEMMA_SNF <- spdf
+setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
+save(LEMMA_SNF, file="LEMMA_SNF.Rdata")
 
 ###############################################################################
 ### REPEAT WITH KC 
 ###############################################################################
-
+units <- kc
 inputs = 1:nrow(units)
 strt<-Sys.time()
-# foreach loop
-# to do for KCNP and LTMU, uncomment the below lines
-units <- kc
+i <- 1
 LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','dplyr'), .errorhandling="remove") %dopar% {
   single <- units[i,] # select one polygon
   clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -160,14 +163,15 @@ LEMMA.kc <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','
   
   # Find biomass per pixel using biomass per tree and estimated number of trees
   pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
+  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
   # Create vectors that are the same length as pmerge to combine into final table:
   Pol.Pixels <- rep(nrow(pmerge), nrow(pmerge)) # number of pixels
+  Pol.ID <- rep(i, nrow(pmerge))
   # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
-  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
-  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", "TPH_GE_50","TPH_GE_75",
-                      "BPH_GE_3_CRM","BPHC_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
+  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", 
+                      "BPH_GE_3_CRM","BPH_GE_25_CRM","FORTYPBA", "ESLF_NAME", 
                       "TREEPLBA","QMDC_DOM")]
-  final <- pmerge
+  final <- cbind(pmerge, Pol.Pixels,Pol.ID)
   return(final)
 }
 print(Sys.time()-strt)
@@ -184,23 +188,15 @@ xy <- LEMMA.kc[,c("x","y")]
 spdf <- SpatialPointsDataFrame(coords=xy, data = LEMMA.kc, proj4string = crs(LEMMA))
 plot(spdf, pch=".")
 plot(units, add=T, border="orange")
-#LEMMA.kc <- spdf
-#LEMMA.kc.bu <- LEMMA.kc
-
-# Add field for live BM in Mg/ha
-#LEMMA.kc$BM_L_Mgha <- LEMMA.kc$All_BM_/1000
 
 ### Save spatial data frame
-LEMMA_kc <- spdf
+LEMMA_KCNP <- spdf
 setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
-save(LEMMA_units, file="LEMMA_kc.Rdata")
+save(LEMMA_KCNP, file="LEMMA_KCNP.Rdata")
 
 ###############################################################################
 ### REPEAT WITH LTMU
-###############################################################################
-
-# foreach loop
-# to do for KCNP and LTMU, uncomment the below lines
+############################################################################### 
 units <- FS_LTMU
 inputs = 1:nrow(units)
 strt<-Sys.time()
@@ -227,14 +223,15 @@ LEMMA.LTMU <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos'
   
   # Find biomass per pixel using biomass per tree and estimated number of trees
   pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
+  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
   # Create vectors that are the same length as pmerge to combine into final table:
   Pol.Pixels <- rep(nrow(pmerge), nrow(pmerge)) # number of pixels
+  Pol.ID <- rep(i, nrow(pmerge))
   # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
-  pmerge <- subset(pmerge, pmerge$FORTYPBA %in% for_types)
-  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", "TPH_GE_50","TPH_GE_75",
-                      "BPH_GE_3_CRM","BPHC_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
+  pmerge <- pmerge[,c("V1","x", "y", "TPH_GE_3","TPH_GE_25", 
+                      "BPH_GE_3_CRM","BPH_GE_25_CRM","FORTYPBA", "ESLF_NAME", 
                       "TREEPLBA","QMDC_DOM")]
-  final <- pmerge
+  final <- cbind(pmerge, Pol.Pixels,Pol.ID)
   return(final)
 }
 print(Sys.time()-strt)
@@ -251,13 +248,11 @@ xy <- LEMMA.LTMU[,c("x","y")]
 spdf <- SpatialPointsDataFrame(coords=xy, data = LEMMA.LTMU, proj4string = crs(LEMMA))
 plot(spdf, pch=".")
 plot(units, add=T, border="orange")
-#LEMMA.LTMU <- spdf
-#LEMMA.LTMU.bu <- LEMMA.LTMU
 
 ### Save spatial data frame
 LEMMA_LTMU <- spdf
 setwd(paste(EPIC, "/GIS Data/LEMMA_units", sep=""))
-save(LEMMA_units, file="LEMMA_LTMU.Rdata")
+save(LEMMA_LTMU, file="LEMMA_LTMU.Rdata")
 
 ### For editing only: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 

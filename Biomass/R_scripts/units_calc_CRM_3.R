@@ -26,9 +26,9 @@ setwd(paste(EPIC))
 plots <- read.csv("SPPSZ_ATTR_LIVE.csv")
 land_types <- unique(plots$ESLF_NAME)
 for_types <- unique(plots$FORTYPBA)[2:932]
-plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", "TPH_GE_50",
-                  "BPH_GE_3_CRM","BPHC_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
-                  "TREEPLBA","QMDC_DOM")]
+plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", 
+                  "BPH_GE_3_CRM","BPH_GE_25_CRM", "FORTYPBA", "ESLF_NAME", 
+                  "TREEPLBA","QMD_DOM")]
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
@@ -89,7 +89,7 @@ BM_eqns <- cbind(types, B0, B1)
 # *Note* Species groups (SG) include aspen/alder/cottonwood/willow (aa), hard maple/oak/hickory/beech (mo), mixed hardwood (mh), soft maple/birch (mb), cedar/larch (cl), Douglas-fir (df), true fir/hemlock (tf), pine (pi), spruce (sp), and woodland conifer and softwood (wo).
 
 # crop LEMMA to make it more manageable
-LEMMA <- crop(LEMMA, extent(units)) # takes a few moments
+LEMMAt <- crop(LEMMA, extent(units)) # takes a few moments
 
 ### Set up parallel cores for faster runs
 library(doParallel)
@@ -107,7 +107,8 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
-for(j in 9){#1:length(unit.names)) {
+#j <- 9
+for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -118,7 +119,7 @@ for(j in 9){#1:length(unit.names)) {
     unit <- LTMU
   drought <- crop(drought_bu, extent(unit)) 
   inputs =1:nrow(drought)
-  #i <- 6
+  #i <- 1
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -138,13 +139,6 @@ for(j in 9){#1:length(unit.names)) {
     freq <- (mat[2]/s) # gives fraction of polygon occupied by each plot type. Adds up to 1 for each polygon.
     mat2 <- cbind(mat, freq) # creates table with FIA plot IDs in polygon, number of each, and relative frequency of each
     colnames(mat2)[3] <- "freq"
-    ### Attribute meanings from LEMMA GLN:
-    ### BA_GE_3 = basal area of live trees >= 2.5 cm dbh (m^2/ha)
-    ### BPH_GE_3_CRM = Component Ratio Method biomass of all live trees >=2.5 cm dbh (kg/ha)
-    ### TPH_GE_3 = Density of live trees >=2.5 cm dbh (trees/ha)
-    ### QMD_DOM = 	Quadratic mean diameter of all dominant and codominant trees (cm)
-    ### TREEPLBA = Tree species with plurality of basal area
-    
     merge <- merge(mat2, plots, by.x = "V1", by.y="VALUE")
 
     # Find biomass per pixel using biomass per tree and estimated number of trees
@@ -157,16 +151,14 @@ for(j in 9){#1:length(unit.names)) {
     pmerge$BM_tree_kg <- pmerge$BPH_GE_3_CRM/pmerge$TPH_GE_3
     pmerge$BM_tree_kg[is.na(pmerge$BM_tree_kg)] <- 0
     for(l in 1:nrow(pmerge)) {
-      if(pmerge[l,"TPH_GE_25"]<pmerge[l,"relNO"]) {
-        pmerge[l,"D_BM_kg"] <- pmerge[l,"BPH_GE_25_CRM"] # I add the 0.01 to make it easier to tell these plots later
+      if(pmerge[l,"TPH_GE_3"]<pmerge[l,"relNO"]) {
+        pmerge[l,"D_BM_kg"] <- pmerge[l,"BPH_GE_3_CRM"] # I add the 0.01 to make it easier to tell these plots later
       } else pmerge[l,"D_BM_kg"] <- pmerge[l,"relNO"]*pmerge[l,"BM_tree_kg"]
     }
-    pmerge$trunc <- ifelse(pmerge$D_BM_kg==pmerge$BPH_GE_25_CRM & pmerge$D_BM_kg!=0, 1,0)
+    pmerge$trunc <- ifelse(pmerge$D_BM_kg==pmerge$BPH_GE_3_CRM & pmerge$D_BM_kg!=0, 1,0)
     # Create vectors that are the same length as pmerge to combine into final table:
     Pol.ID <- rep(i, nrow(pmerge)) # create a Polygon ID
     D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
-    QMD_DOM <- pmerge$QMD_DOM # Find the average of the pixels' quadratic mean diameters 
-    TREEPL <-  as.character(pmerge$TREEPLBA) # Find the tree species that has a plurality in the most pixels
     Pol.x <- rep(gCentroid(single)@coords[1], nrow(pmerge)) # Find coordinates of center of polygon
     Pol.y <- rep(gCentroid(single)@coords[2], nrow(pmerge))
     RPT_YR <- rep(single@data$RPT_YR, nrow(pmerge)) # Create year vector
@@ -174,17 +166,9 @@ for(j in 9){#1:length(unit.names)) {
     Pol.Shap_Ar <- rep(single@data[,as.numeric(length(single@data))], nrow(pmerge)) # Create area vector
     Pol.Pixels <- rep(s, nrow(pmerge)) # number of pixels
     D_BM_kgha <- pmerge$D_BM_kg/.09
-    # Estimate biomass of live AND dead trees based on LEMMA values of biomass per pixel:
-    BPH_GE_3_CRM <- pmerge$BPH_GE_3_CRM 
-    All_Pol_BM_kgha <- rep(mean(pmerge$BPH_GE_3_CRM),nrow(pmerge)) # Average across polygons
-    THA <- pmerge$TPH_GE_3 
-    THA_25 <- pmerge$TPH_GE_25
-    BPH_GE_25_CRM <- pmerge$BPH_GE_25_CRM
     # Bring it all together
-    #final <- cbind.data.frame(pmerge$x, pmerge$y, D_BM_kg)
-    pmerge <- pmerge[,c("V1","x", "y", "D_BM_kg", "relNO","FORTYPBA", "ESLF_NAME", "trunc")]
-    final <- cbind(pmerge, Pol.x, Pol.y, RPT_YR,Pol.NO_TREES1, 
-                   Pol.Shap_Ar,D_Pol_BM_kg,BPH_GE_3_CRM,All_Pol_BM_kgha,THA, THA_25, BPH_GE_25_CRM, QMD_DOM,Pol.ID, TREEPL) #
+    final <- cbind(pmerge, Pol.x, Pol.y, Pol.ID, D_Pol_BM_kg, RPT_YR, Pol.NO_TREES1, 
+                   Pol.Shap_Ar,Pol.Pixels, D_BM_kgha) #
     return(final)
   }
   # Create a key for each pixel (row)
@@ -207,7 +191,7 @@ for(j in 9){#1:length(unit.names)) {
   spdf <- SpatialPointsDataFrame(coords=xy, data = results, proj4string = crs(LEMMA))
   setwd(paste(EPIC, "/GIS Data/Results/Results_CRM", sep=""))
   save(spdf, file=paste("Results_",YEARS, "_",UNIT,"_3_CRM.Rdata", sep=""))
-  load(file=paste("Results_",YEARS, "_",UNIT,"_CRM.Rdata", sep=""))
+  load(file=paste("Results_",YEARS, "_",UNIT,"_3_CRM.Rdata", sep=""))
   assign(paste("spdf_",YEARS, "_",UNIT,sep=""), spdf)
   ### Save version masked to just the management unit
   ## Convert to raster to more easily crop and sum

@@ -5,8 +5,9 @@
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
 #EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-YEARS <- "1213"
+#YEARS <- "1213"
 #YEARS <- "1415"
+YEARS <- "1215"
 #YEARS <- "2016"
 #########################################################################################################################
 
@@ -35,6 +36,8 @@ if(YEARS=="1213"){
   drought <- subset(drought, drought$RPT_YR %in% c(2012,2013))
 } else if(YEARS=="1415") {
   drought <- subset(drought, drought$RPT_YR %in% c(2014,2015))  
+} else if(YEARS=="1215") {
+  drought <- subset(drought, drought$RPT_YR %in% c(2012,2013,2014,2015))
 } else 
   drought <- drought16
 
@@ -96,7 +99,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
-for(j in 3){#1:length(unit.names)) {
+for(j in 1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -152,14 +155,6 @@ for(j in 3){#1:length(unit.names)) {
       } else pmerge[l,"D_BM_kg"] <- pmerge[l,"relNO"]*pmerge[l,"BM_tree_kg"]
     }
     pmerge$trunc <- ifelse(pmerge$D_BM_kg==pmerge$BPH_GE_25_CRM & pmerge$D_BM_kg!=0, 1,0)
-    # Important variables: pmerge$TPH_GE_25 (density of live trees >=25 cm, in trees/ha)
-    #                      pmerge$BPH_GE_25_CRM (CRM biomass of live trees >= 25 cm in kg/ha)
-    
-    # Find biomass of dead trees in pixel using CRM biomass
-    
-    
-    # D_BM_kg is total dead biomass in that pixel
-    
     # Create vectors that are the same length as pmerge to combine into final table:
     Pol.ID <- rep(i, nrow(pmerge)) # create a Polygon ID
     D_Pol_BM_kg <- rep(sum(pmerge$D_BM_kg), nrow(pmerge)) # Sum biomass over the entire polygon 
@@ -191,41 +186,31 @@ for(j in 3){#1:length(unit.names)) {
   # Rename variables whose names were lost in the cbind
   names(results)[names(results)=="V1"] <- "PlotID"
   # Find pixels with more dead biomass than live biomass
-  toohigh <- subset(results, results$D_BM_kg>results$BPH_GE_25_CRM)
-  toohigh
+  # toohigh <- subset(results, results$D_BM_kg>results$BPH_GE_25_CRM)
+  # toohigh
   # Test that stuff adds up
-  aggregate(results$relNO, by=list(Category=results$Pol.ID), FUN=sum)
-  drought$NO_TREES1
-  testresults <- results$BPH_GE_25_CRM/results$THA_25*results$relNO
-  test <- testresults - results$D_BM_kg
-  unique(test < 0.5 & test > -0.5) # these should all be true or NA. If they're not, make sure the appropriate rows have "trunc" = 1
-  (test < 0.5 & test > -0.5)
+  # aggregate(results$relNO, by=list(Category=results$Pol.ID), FUN=sum)
+  # drought$NO_TREES1
+  # testresults <- results$BPH_GE_25_CRM/results$THA_25*results$relNO
+  # test <- testresults - results$D_BM_kg
+  # unique(test < 0.5 & test > -0.5) # these should all be true or NA. If they're not, make sure the appropriate rows have "trunc" = 1
+  # (test < 0.5 & test > -0.5)
   ### Convert to a spatial data frame
   xy <- results[,c("x","y")]
   spdf <- SpatialPointsDataFrame(coords=xy, data = results, proj4string = crs(LEMMA))
-  ### Plot to make sure results match unit perimeter matches drought polygons
-  plot(spdf, pch=".")
-  plot(drought, add=T, border="pink")
-  plot(unit, add=T, border="orange")
-  
   setwd(paste(EPIC, "/GIS Data/Results/Results_CRM", sep=""))
   save(spdf, file=paste("Results_",YEARS, "_",UNIT,"_CRM.Rdata", sep=""))
   load(file=paste("Results_",YEARS, "_",UNIT,"_CRM.Rdata", sep=""))
   assign(paste("spdf_",YEARS, "_",UNIT,sep=""), spdf)
   ### Save version masked to just the management unit
-  
   ## Convert to raster to more easily crop and sum
   xyz <- as.data.frame(cbind(spdf@data$x, spdf@data$y, spdf@data$D_BM_kg))
   try.raster <- rasterFromXYZ(xyz, crs = crs(spdf))
-  plot(try.raster)
-  plot(unit, add=T)
   #strt<-Sys.time()
   raster.mask <- mask(try.raster, unit)
   sum_D_BM_Mg <- sum(subset(raster.mask@data@values, raster.mask@data@values>0))/1000
-  
   setwd(paste(EPIC, "/GIS Data/Results/Results_CRM", sep=""))
   save(raster.mask, file=paste(UNIT,"_raster_",YEARS,".Rdata",sep=""))
-  
   save(sum_D_BM_Mg, file=paste(UNIT,"_", YEARS,"_BM_Mg_CRM.Rdata", sep=""))
   remove(sum_D_BM_Mg)
   load(file=paste(UNIT,"_", YEARS,"_BM_Mg_CRM.Rdata", sep=""))

@@ -59,38 +59,11 @@ setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
 load(file="FS_LTMU.Rdata")
 LTMU <- spTransform(FS_LTMU, crs(LEMMA))
 
-### Identify species in LEMMA
-spp <- LEMMA@data@attributes[[1]][,"TREEPLBA"]
-spp.names <- sort(unique(spp))
-
-### Group conifers by genus based on plants.usda.gov
-Cedars_Larch <- c("CADE27", "THPL", "CHLA", "CHNO", "LALY", "LAOC", "SEGI2", "SESE3") 
-Dougfirs <- c("PSMA", "PSME") 
-Firs <- c("ABAM", "ABBR", "ABGRC", "ABLA", "ABPRSH", "TSHE", "TSME")
-Pines <- c("PIAL", "PIAR", "PIAT", "PIBA", "PICO", "PICO3", "PIFL2", "PIJE", "PILA", "PILO", "PIMO", "PIMO3", "PIMU", "PIPO", "PIRA2", "PISA2") 
-Spruces <- c("PIEN", "PISI") 
-
-### Group hardwoods and junipers by Jenkins species group based on Jenkins et al 2003 and plants.usda.gov
-hardwood.names <- subset(spp.names, !spp.names %in% c(Cedars_Larch, Dougfirs, Firs, Pines, Spruces))
-mh <- c("JUHI", "AECA", "ARME", "CHCH7", "CONU4", "FRLA", "LIDE3", "PLRA", "PRVI", "UMCA")
-wo <- c("JUCA7", "JUOC", "ACGL", "CELE3", "CUSA3", "JUOS", "OLTE", "PREM", "PRGLT", "PRPU")
-mb <- c("ACMA3", "BEPA", "BEPAC", "")
-aa <- c("ALRH2", "ALRU2", "POBAT", "POFR2", "POTR5", "SAAL2", "SALIX", "SANI")
-mo <- c("QUAG", "QUDO", "QUEN", "QUERC", "QUGA4", "QUKE", "QULO", "QUWI2", "QUCH2")
-
-### Create table of dia -> biomass conversion parameters based on Jenkins paper - for now only broken down by broad genus category, but could do it by individual species later if we want
-# Source: J. C. Jenkins, D. C. Chojnacky, L. S. Heath, and R. A. Birdsey, "National-scale biomass estimators for United States tree species," For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
-# biomass = exp(B0 + B1*ln(dbh))
-types <- c("Cedars_Larch", "Dougfirs", "Firs", "Pines", "Spruces", "mh", "wo", "mb", "aa", "mo")
-B0 <- as.numeric(c(-2.0336, -2.2304, -2.5384, -2.5356, -2.0773, -2.4800, -.7152, -1.9123, -2.2094, -2.0127))
-B1 <- as.numeric(c(2.2592, 2.4435, 2.4814, 2.4349, 2.3323, 2.4835, 1.7029, 2.3651, 2.3867, 2.4342))
-BM_eqns <- cbind(types, B0, B1)
-
 # *Note* Species groups (SG) include aspen/alder/cottonwood/willow (aa), hard maple/oak/hickory/beech (mo), mixed hardwood (mh), soft maple/birch (mb), cedar/larch (cl), Douglas-fir (df), true fir/hemlock (tf), pine (pi), spruce (sp), and woodland conifer and softwood (wo).
 
 # crop LEMMA to make it more manageable
-LEMMAt <- crop(LEMMA, extent(units)) # takes a few moments
-
+#LEMMAt <- crop(LEMMA, extent(units)) # takes a few moments
+#LEMMA <- LEMMAt # only if the above works
 ### Set up parallel cores for faster runs
 library(doParallel)
 detectCores()
@@ -108,7 +81,7 @@ registerDoParallel(c1)
 ### Single out the unit of interest
 unit.names <- c("LNP", "ENF","ESP","LTMU","CSP","SNF","SQNP","KCNP", "MH")
 #j <- 9
-for(j in 1:length(unit.names)) {
+for(j in 8:9){#1:length(unit.names)) {
   UNIT <- unit.names[j]  ### Single out the unit of interest
   strt<-Sys.time()
   if(UNIT %in% units$UNIT){
@@ -123,11 +96,11 @@ for(j in 1:length(unit.names)) {
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
-    # fit the cropped LEMMA data to the shape of the polygon, unless the polygon is too small to do so
     if(length(clip1) >= 4){
       clip2 <- mask(clip1, single)
     } else 
       clip2 <- clip1
+    # fit the cropped LEMMA data to the shape of the polygon
     pcoords <- cbind(clip2@data@values, coordinates(clip2)) # save the coordinates of each pixel
     pcoords <- as.data.frame(pcoords)
     pcoords <- na.omit(pcoords) # get rid of NAs in coordinates table (NAs are from empty cells in box around polygon)
@@ -140,7 +113,6 @@ for(j in 1:length(unit.names)) {
     mat2 <- cbind(mat, freq) # creates table with FIA plot IDs in polygon, number of each, and relative frequency of each
     colnames(mat2)[3] <- "freq"
     merge <- merge(mat2, plots, by.x = "V1", by.y="VALUE")
-
     # Find biomass per pixel using biomass per tree and estimated number of trees
     pmerge <- merge(pcoords, merge, by ="V1") # pmerge has a line for every pixel
     # problem here

@@ -2,11 +2,14 @@
 ###  THIS SCRIPT CALCULATES BM OF DEAD TREES BY IN THE WHOLE STATE FOR 2012-2016, CRM METHOD
 #########################################################################################################################
 
-### CURRENTLY SET TO CALCULATE DEAD TREES AS >3CM
+### CURRENTLY SET TO CALCULATE DEAD TREES AS >25CM
 
 ##### ***THINGS YOU NEED TO CHANGE BETWEEN RUNS*** #########
 #EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
 EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+
+### FOR JOSE'S MAC
+#EPIC <- "~/Documents/Box Sync/EPIC-Biomass/"
 #########################################################################################################################
 
 library(rgdal)  

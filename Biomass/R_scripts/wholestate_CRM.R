@@ -27,7 +27,7 @@ land_types <- unique(plots$ESLF_NAME)
 for_types <- unique(plots$FORTYPBA)[2:932]
 plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", "TPH_GE_50",
                   "BPH_GE_3_CRM","BPH_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
-                  "TREEPLBA","QMDC_DOM")]
+                  "TREEPLBA","QMD_DOM")]
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
@@ -54,7 +54,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 YEARS <- c("1215","2016")
-for(j in 1:2){
+for(j in 1){#:2){
   YEAR <- YEARS[j]
   strt<-Sys.time()
   if(YEAR=="1215") {
@@ -62,7 +62,7 @@ for(j in 1:2){
   } else 
     drought <- drought16
   drought_bu <- drought
-  inputs=1:nrow(drought)
+  inputs=1:10#nrow(drought)
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -154,7 +154,7 @@ for(j in 1:2){
 
 ### For editing only: clear variables in loop
 remove(cell, final, L.in.mat, mat, mat2, merge, pcoords, pmerge, zeros, All_BM_kgha, All_Pol_BM_kgha, Av_BM_TR, D_Pol_BM_kg, 
-       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMDC_DOM, RPT_YR, s)
+       ext, i, num, Pol.ID, Pol.NO_TREES1, Pol.Pixels, Pol.Shap_Ar, Pol.x, Pol.y, QMD_DOM, RPT_YR, s)
 remove(clip1, clip2, single, spp, spp.names, THA, tot_NO, TREEPL, types)
 remove(no.pixels, QMD_DOM, tab, results)
 remove(raster.mask, try.raster, spdf, spdf_ESP, key,j,l)

@@ -208,17 +208,17 @@ Output Variables
 <tr class="odd">
 <td align="left"><code>relNO</code></td>
 <td align="left">Estimated number of dead trees in pixel</td>
-<td align="left">Number of dead trees from <code>drought</code> (<code>Pol.NO_TREE</code>), divied up based on <code>live_ratio</code> (below)</td>
+<td align="left">Number of dead trees from <code>drought</code> (<code>Pol.NO_TREE</code>), divied up based on <code>live_ratio</code> </td>
 </tr>
 <tr class="odd">
 <td align="left"><code>BPH_abs</code></td>
 <td align="left">Biomass of live trees >25 cm in the pixel (kg)</td>
-<td align="left">BPH_GE_25_CRM multiplied by .09 (below)</td>
+<td align="left">BPH_GE_25_CRM multiplied by .09 </td>
 </tr>
 <tr class="odd">
 <td align="left"><code>BM_tree_kg</code></td>
 <td align="left">Estimated biomass per tree for trees >25 cm</td>
-<td align="left">BPH_GE_25_CRM divided by TPH_GE_25 (below)</td>
+<td align="left">BPH_GE_25_CRM divided by TPH_GE_25</td>
 </tr>
 
 <tr class="even">
@@ -227,20 +227,9 @@ Output Variables
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
 <tr class="odd">
-<td align="left"><code>relNO</code></td>
-<td align="left">Approximate number of dead trees in pixel</td>
-<td align="left">Number of dead trees from <code>drought</code> (<code>Pol.NO_TREE</code>), divied up based on <code>relBA</code> (below)</td>
-</tr>
-<tr class="even">
-<td align="left"><code>relBA</code></td>
-<td align="left">Pixel basal area (<code>BA_GE_3</code>) relative to sum of <code>BA_GE_3</code> of all pixels in the polygon</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-
-<tr class="even">
-<td align="left"><code>Pol.ID</code></td>
-<td align="left">Polygon ID</td>
-<td align="left">Analysis</td>
+<td align="left"><code>trunc</code></td>
+<td align="left">1 if estimated dead biomass equals live biomass  (truncated), 0 if dead biomass is less than live biomass</td>
+<td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
 <tr class="odd">
 <td align="left"><code>Pol.x</code></td>
@@ -252,13 +241,23 @@ Output Variables
 <td align="left">Y coordinate of polygon centroid</td>
 <td align="left"><code>drought</code></td>
 </tr>
+<tr class="even">
+<td align="left"><code>Pol.ID</code></td>
+<td align="left">Polygon ID</td>
+<td align="left">Analysis</td>
+</tr>
+<tr class="even">
+<td align="left"><code>D_Pol_BM_kg</code></td>
+<td align="left">Polygon dead biomass in kg, sum of <code>D_BM_kg</code> of all pixels in the polygon</td>
+<td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
+</tr>
 <tr class="odd">
 <td align="left"><code>RPT_YR</code></td>
 <td align="left">Year mortality was reported</td>
 <td align="left"><code>drought</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>Pol.NO_TREE</code></td>
+<td align="left"><code>Pol.NO_TREES1</code></td>
 <td align="left">Number of dead trees in the polygon</td>
 <td align="left"><code>drought</code></td>
 </tr>
@@ -268,49 +267,14 @@ Output Variables
 <td align="left"><code>drought</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>D_Pol_BM_kg</code></td>
-<td align="left">Polygon dead biomass in kg, sum of <code>D_BM_kg</code> of all pixels in the polygon</td>
+<td align="left"><code>Pol.Pixels</code></td>
+<td align="left">Number of pixels in the polygon</td>
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
 </tr>
-<tr class="odd">
-<td align="left"><code>All_BM_kgha</code></td>
-<td align="left">Biomass density of all trees &gt;= 2.5 cm dbh, dead or alive (<code>BPHC_GE_3_CRM</code>)</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
 <tr class="even">
-<td align="left"><code>All_Pol_BM_kgha</code></td>
-<td align="left">Average density of all trees (mean <code>ALL_BM_kgha</code> of all pixels in polygon)</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>THA</code></td>
-<td align="left">Trees &gt;=2.5 cm dbh per hectare, dead or alive (<code>TPH_GE_3</code>)</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="even">
-<td align="left"><code>QMD_DOM</code></td>
-<td align="left">Quadratic mean diameter in cm of dominant and codominant trees</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>TREEPL</code></td>
-<td align="left">Most common tree species in the pixel</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="even">
-<td align="left"><code>Av_BM_TR</code></td>
-<td align="left">Average per-tree biomass of dead trees, in kg (<code>D_Pol_CONBM_k</code>/<code>Pol.NO_TREE</code>)</td>
+<td align="left"><code>D_BM_kgha</code></td>
+<td align="left">Estimated biomass of dead trees in the pixel in kg/ha</td>
 <td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>All_Pol_NO</code></td>
-<td align="left">Total number of trees in the polygon, from <code>Pol.Shap_Ar</code> and <code>THA</code></td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="even">
-<td align="left"><code>All_Pol_BM</code></td>
-<td align="left">Total trees in the polygon, from <code>Pol.Shap.Ar</code> and <code>All_Pol_CONBM_kgha</code></td>
-<td align="left"><code>LEMMA</code></td>
 </tr>
 </tbody>
 </table>

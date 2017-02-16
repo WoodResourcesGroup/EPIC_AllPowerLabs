@@ -132,13 +132,28 @@ Output Variables
 <td align="left">Analysis</td>
 </tr>
 <tr class="even">
+<td align="left"><code>PlotID</code></td>
+<td align="left">Corresponding FIA plot ID</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
 <td align="left"><code>x</code></td>
 <td align="left">X coordinate of pixel center</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left"><code>y</code></td>
 <td align="left">Y coordinate of pixel center</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>n</code></td>
+<td align="left">Number of pixels with this pixel's PlotID in the polygon</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>freq</code></td>
+<td align="left">Proportion of pixels in polygon with this pixel's PlotID</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
 <tr class="even">
@@ -156,11 +171,7 @@ Output Variables
 <td align="left">Pixel basal area (<code>BA_GE_3</code>) relative to sum of <code>BA_GE_3</code> of all pixels in the polygon</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
-<tr class="odd">
-<td align="left"><code>PlotID</code></td>
-<td align="left">Corresponding FIA plot ID</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
+
 <tr class="even">
 <td align="left"><code>Pol.ID</code></td>
 <td align="left">Polygon ID</td>

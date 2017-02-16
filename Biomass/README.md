@@ -61,12 +61,6 @@ Sources
     -   Aerial detection survey results from manually recording tree mortality from aircraft
     -   Methods described [here](http://www.fs.usda.gov/detail/r5/forest-grasslandhealth/?cid=fsbdev3_046721)
 
-### References
-
-1.  Jenkins, J. C., D. C. Chojnacky, L. S. Heath, and R. A. Birdsey. "National-scale biomass estimators for United States tree species." For. Sci., vol. 49, no. 1, pp. 12-35, 2003.
-    -   Includes equations predicting biomass based on diameter at breast height for major classes of tree species
-    -   These equations were used to estimate biomass in drought mortality polygons
-
 Process and Scripts Order
 =========================
 
@@ -156,6 +150,77 @@ Output Variables
 <td align="left">Proportion of pixels in polygon with this pixel's PlotID</td>
 <td align="left"><code>LEMMA</code></td>
 </tr>
+<tr class="odd">
+<td align="left"><code>TPH_GE_3</code></td>
+<td align="left">Number of live trees per hectare over 2.5 cm dbh</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>TPH_GE_25</code></td>
+<td align="left">Number of live trees per hectare over 25 cm dbh</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>TPH_GE_50</code></td>
+<td align="left">Number of live trees per hectare over 50 cm dbh</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>BPH_GE_3_CRM</code></td>
+<td align="left">Biomass per hectare of live trees over 2.5 cm (kg/ha)</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>BPH_GE_25_CRM</code></td>
+<td align="left">Biomass per hectare of live trees over 25 cm (kg/ha)</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>BPH_GE_50_CRM</code></td>
+<td align="left">Biomass per hectare of live trees over 50 cm (kg/ha)</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>FORTYPBA</code></td>
+<td align="left">Forest type according to basal area</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>ESLF_NAME</code></td>
+<td align="left">Land use category</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>TREEPLBA</code></td>
+<td align="left">Most common tree species in the pixel according to basal area</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>QMD_DOM</code></td>
+<td align="left">Quadratic mean diameter in cm of dominant and codominant trees</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>live_ratio</code></td>
+<td align="left">Proportion of live trees >25 cm dbh of the entire polgyon that are in this pixel</td>
+<td align="left"><code>LEMMA</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>relNO</code></td>
+<td align="left">Estimated number of dead trees in pixel</td>
+<td align="left">Number of dead trees from <code>drought</code> (<code>Pol.NO_TREE</code>), divied up based on <code>live_ratio</code> (below)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>BPH_abs</code></td>
+<td align="left">Biomass of live trees >25 cm in the pixel (kg)</td>
+<td align="left">BPH_GE_25_CRM multiplied by .09 (below)</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>BM_tree_kg</code></td>
+<td align="left">Estimated biomass per tree for trees >25 cm</td>
+<td align="left">BPH_GE_25_CRM divided by TPH_GE_25 (below)</td>
+</tr>
+
 <tr class="even">
 <td align="left"><code>D_BM_kg</code></td>
 <td align="left">Estimated biomass of dead trees in the pixel in kg</td>

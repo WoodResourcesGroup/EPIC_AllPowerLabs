@@ -27,7 +27,7 @@ land_types <- unique(plots$ESLF_NAME)
 for_types <- unique(plots$FORTYPBA)[2:932]
 plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", "TPH_GE_50",
                   "BPH_GE_3_CRM","BPH_GE_25_CRM","BPH_GE_50_CRM", "FORTYPBA", "ESLF_NAME", 
-                  "TREEPLBA","QMD_DOM")]
+                  "TREEPLBA","QMD_DOM", "VPH_GE_25")]
 
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
@@ -54,7 +54,7 @@ registerDoParallel(c1)
 
 ### Single out the unit of interest
 YEARS <- c("1215","2016")
-for(j in 1){#:2){
+for(j in 1:2){
   YEAR <- YEARS[j]
   strt<-Sys.time()
   if(YEAR=="1215") {
@@ -62,7 +62,7 @@ for(j in 1){#:2){
   } else 
     drought <- drought16
   drought_bu <- drought
-  inputs=1:10#nrow(drought)
+  inputs=1:nrow(drought)
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon
@@ -99,6 +99,7 @@ for(j in 1){#:2){
     pmerge$live.ratio <- (pmerge$TPH_GE_25)/sum(pmerge$TPH_GE_25, na.rm=T)
     pmerge$relNO <- tot_NO*pmerge$live.ratio
     pmerge$BPH_abs <- pmerge$BPH_GE_25_CRM*(900/10000)
+    pmerge$VPT <- pmerge$VPH_GE_25/pmerge$TPH_GE_25
     pmerge$BM_tree_kg <- pmerge$BPH_GE_25_CRM/pmerge$TPH_GE_25
     pmerge$BM_tree_kg[is.na(pmerge$BM_tree_kg)] <- 0
     for(l in 1:nrow(pmerge)) {

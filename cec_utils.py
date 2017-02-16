@@ -3,8 +3,16 @@ import itertools as it
 from numpy import linspace
 import pandas as pd
 import xlwings as xlw
+import tempfile as tf
+import shutil, os
+import sqlite3
 
 FRCSDIR = 'FRCS'
+inputFile = 'FRCS_TestDataOffset.xlsx'
+sheetName = 'Input'
+frcsModel = "FRCS-West.xls"
+batchLoadMacro = "Module1.LoadDataFromXLSX"
+batchPrcMacro = "Sheet32.Process_Batch_Click"
 
 dbname = 'apl_cec'
 host = 'switch-db2.erg.berkeley.edu'
@@ -51,6 +59,9 @@ def dbconfig(name, echoCmd=True):
     return engine
 
 def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
+    """
+    Returns a pandas dataframe with the combinatorial product of all input variables
+    """
     tpa = range(20,500,intervals) # all trees are chip trees
     cuFt = linspace(65.44*0.5, 65.44*1.5, intervals) # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
@@ -68,6 +79,10 @@ def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
     return prod
 
 def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
+    """
+    breaks pandas dataframe into individual Excel files for digestion by FRCS
+    """
+    xlw.App(visible=False)
     if len(df)/maxRows == 0:
         books = [0]
     else:
@@ -75,10 +90,45 @@ def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
     for b in books:
         wb = xlw.Book()
         sht = wb.sheets[0]
+        sht.name = sheetName
         data = df[b*maxRows:(b+1)*maxRows]
         for c in df.columns:
             sht.range(c+'1').options(index=False, header=False).value = colIndex[c]
             sht.range(c+'2').options(index=False, header=False).value = data[c]
-        wb.save(output+str(b)+'.xlsx')
+        wb.save(os.path.join(FRCSDIR,
+                             output+str(b)+'.xlsx'))
         wb.close
+    
+
+def runFRCS(batchFile, output='frcs.db'):
+    """
+    this function is meant to be multi-processed: one for each frcs_batch file
+    """
+    con = sqlite3.connect(os.path.join(FRCSDIR,output))
+    tDir = tf.mkdtemp()
+    frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
+    frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
+    print frcsIn
+    xlw.App(visible=False)
+    shutil.copy(os.path.join(FRCSDIR,frcsModel),
+                tDir)
+    
+    shutil.copy(os.path.join(FRCSDIR,batchFile),
+                tDir)
+    os.rename(os.path.join(tDir,batchFile),
+              frcsIn)
+    frcsObj = xlw.Book(frcs)
+    batchImport = frcsObj.app.macro(batchLoadMacro)
+    batchProcess = frcsObj.app.macro(batchPrcMacro)
+    batchImport()
+    batchProcess()
+    frcsObj.save()
+    frcsObj.close()
+    outSheet = pd.read_excel(frcs,
+                             sheetname = 'data')
+    outSheet.to_sql('frcs_cost',
+                    con,
+                    if_exists='append')
+    shutil.rmtree(tDir)
+    
     

@@ -21,10 +21,10 @@ Assumptions
 ===========
 
 1.  Aerial detection surveys (ADS) accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
-2.  LEMMA GNN accurately estimates the average size and species trees in each 30 x 30 m pixel.
-3.  Dead trees in an ADS polygon are evenly distributed across the whole polygon, excluding parts of the polygon where LEMMA GNN shows no live trees
-4.  All dead trees in a given LEMMA GNN pixel are of the most common tree species in that pixel
-5.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant trees in that pixel, as calculated by FIA data and represented in LEMMA GNN model results.
+2.  LEMMA GNN accurately estimates the component ratio biomass and number of live trees in each 30 x 30 m pixel.
+3.  Dead trees in an ADS polygon are distributed across the polygon proportionally to pixels' densities of trees >25 cm dbh - in other words, if one pixel has twice the live trees >25 cm than other pixel in the same polygon according to LEMMA, it will also have twice the dead trees.
+4.  The per-tree biomass of each dead tree is equal to the average component ratio biomass of trees over 25 cm in that pixel.
+5.  If ADS detects more dead trees than the LEMMA dataset shows to exist in a pixel, then the biomass of dead trees in that pixel is equal to the total live biomass in the pixel according to LEMMA. In other words, dead biomass cannot exceed live biomass.
 
 Projection
 ==========

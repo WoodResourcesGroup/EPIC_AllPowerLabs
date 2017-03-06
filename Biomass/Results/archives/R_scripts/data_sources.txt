@@ -1,0 +1,5 @@
+GET STATE FOREST DATA FROM HERE http://frap.fire.ca.gov/data/frapgisdata-sw-ownership13_2_download 
+
+Sequoia: Boundary_SequoiaNP_20100209
+
+Kings Canyon: Boundary_KingsNP_20100209

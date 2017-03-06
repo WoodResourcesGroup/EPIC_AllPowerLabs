@@ -14,6 +14,7 @@ EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 
 library(rgdal)  
 library(raster)  
+library(dplyr)
 options(digits = 5)
 
 ### Open GNN LEMMA data (see script crop_LEMMA.R for where LEMMA.gri comes from)
@@ -32,11 +33,10 @@ plots <- plots[,c("VALUE","TPH_GE_3","TPH_GE_25", "TPH_GE_50",
 ### OPEN DROUGHT MORTALITY POLYGONS (see script transform_ADS.R for where "drought" comes from)
 setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
 load("drought.Rdata")
-drought_bu <- drought
+drought1215 <- drought
+drought1215_bu <- drought
 load("drought16.Rdata")
 drought16_bu <- drought16
-
-drought_bu <- drought # backup so that I don't need to re-read if I accidentally override drought
 
 ### Set up parallel cores for faster runs
 library(doParallel)
@@ -53,16 +53,28 @@ registerDoParallel(c1)
 # Function that does the bulk of the analysis
 
 ### Single out the unit of interest
+
+### JUST TO TEST! CROP TO CRMORT SIZE:
+# setwd(paste(EPIC, "/GIS Data/tempdir", sep=""))
+# CR_mort <- raster("CR_mort.tif")
+# drought1215 <- crop(drought1215, extent(CR_mort))
+# drought16 <- crop(drought16, extent(CR_mort))
+
 YEARS <- c("1215","2016")
 for(j in 1:2){
   YEAR <- YEARS[j]
   strt<-Sys.time()
   if(YEAR=="1215") {
-    drought <- subset(drought, drought$RPT_YR %in% c(2012,2013,2014,2015))
+    drought <- subset(drought1215, drought1215$RPT_YR %in% c(2012,2013,2014,2015))
   } else 
     drought <- drought16
   drought_bu <- drought
   inputs=1:nrow(drought)
+  library(doParallel)
+  detectCores()
+  no_cores <- detectCores() - 1 # Use all but one core on your computer
+  c1 <- makeCluster(no_cores)
+  registerDoParallel(c1)
   results <- foreach(i=inputs, .combine = rbind, .packages = c('raster','rgeos','tidyr','dplyr'), .errorhandling="remove") %dopar% {
     single <- drought[i,] # select one polygon
     clip1 <- crop(LEMMA, extent(single)) # crop LEMMA GLN data to the size of that polygon

@@ -80,12 +80,13 @@ Data from LEMMA and drought mortality polygons were combined to estimate dead tr
 | Code          |       Description  | Source(s) of data                |
 |:--------------|:-------------------|:---------------------------------|
 |   `key`         |       Unique pixel ID|     Analysis                   |
+| `PlotID`          |       Corresponding FIA plot ID|       `LEMMA`        |
 |   `x`           |       X coordinate of pixel center |     `LEMMA`        |    
 |   `y`           |       Y coordinate of pixel center |     `LEMMA`        |
 |   `D_BM_kg`  |       Estimated biomass of dead trees in the pixel in kg | `LEMMA` & `drought` |     
 | `relNO`         | Approximate number of dead trees in pixel | Number of dead trees from `drought` (`Pol.NO_TREE`), divied up based on `relBA` (below)|
 | `relBA`         | Pixel basal area (`BA_GE_3`)  relative to sum of `BA_GE_3` of all pixels in the polygon |  `LEMMA`
-| `PlotID`          |       Corresponding FIA plot ID|       `LEMMA`          |
+
 | `Pol.ID`        |        Polygon ID |    Analysis |
 | `Pol.x`         | X coordinate of polygon centroid | `drought` |
 | `Pol.y`         | Y coordinate of polygon centroid | `drought` |

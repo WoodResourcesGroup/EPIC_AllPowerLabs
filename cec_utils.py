@@ -74,4 +74,3 @@ def iterHarvestSystems(output='frcs_batch.xlsx', intervals = 20, maxAYD=2500, mi
     with open(FRCSDIR+'/'+output, "wb") as f:
         writer = csv.writer(f)
         writer.writerows(comb)
-    

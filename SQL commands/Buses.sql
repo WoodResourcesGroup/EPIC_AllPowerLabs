@@ -1,1 +1,0 @@
-﻿select "GU Name", st_y(centroid_geom), st_x(centroid_geom), production from "Billion_TON"."KDF_Frst_LOGT_GIS" WHERE basis = 'Fed+' and "State Abbreviation" = 'CA' and year = 2015 and "price_trgt" = 100 ORDER BY "State Abbreviation" DESC, "County FIPS Code" ASC, price_trgt ASC

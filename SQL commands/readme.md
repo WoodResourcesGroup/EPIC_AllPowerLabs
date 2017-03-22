@@ -1,0 +1,1 @@
+# SQL commands for simulation of dead biomass harvesting

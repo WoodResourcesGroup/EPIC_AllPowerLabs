@@ -46,6 +46,7 @@ colIndex = {'A': 'Stand',
             'Z': 'Partial cut?',
             'AA': 'Include loading costs?'}
 
+
 def dbconfig(name, echoCmd=True):
     """
     returns a database engine object for querys and inserts
@@ -54,16 +55,18 @@ def dbconfig(name, echoCmd=True):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    #conString = '//username:{pwd}@{host}:{name}
+    # conString = '//username:{pwd}@{host}:{name}
     engine = ce('postgresql:///{0}'.format(name), echo=echoCmd)
     return engine
 
-def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
+
+def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
     """
-    Returns a pandas dataframe with the combinatorial product of all input variables
+    Returns a pandas dataframe with the combinatorial
+    product of all input variables
     """
-    tpa = range(20,500,intervals) # all trees are chip trees
-    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals) # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
+    tpa = range(20, 500, intervals)  # all trees are chip trees
+    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
     slp = linspace(0, 100, intervals)
     ayd = linspace(minAYD, maxAYD, intervals)

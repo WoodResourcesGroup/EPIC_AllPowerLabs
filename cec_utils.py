@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine as ce
 import itertools as it
-from numpy import linspace
+from numpy import linspace, ceil
 import pandas as pd
 import xlwings as xlw
 import tempfile as tf
@@ -81,16 +81,21 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
     prod['K'] = 60
     return prod
 
-def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
+def batchForFRCS(df, maxRows=10000, output='frcs_batch'):
     """
     breaks pandas dataframe into individual Excel files for digestion by FRCS
     """
+    files = []
     xlw.App(visible=False)
     if len(df)/maxRows == 0:
         books = [0]
     else:
-        books = range(len(df)/maxRows)
+        books = range(int(ceil(len(df)/float(maxRows))))
     for b in books:
+        path = os.path.join(FRCSDIR,
+                            output+str(b)+'.xlsx')
+        files.append(path)
+        print 'writing batch file to {0}'.format(path)
         wb = xlw.Book()
         sht = wb.sheets[0]
         sht.name = sheetName
@@ -98,9 +103,10 @@ def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
         for c in df.columns:
             sht.range(c+'1').options(index=False, header=False).value = colIndex[c]
             sht.range(c+'2').options(index=False, header=False).value = data[c]
-        wb.save(os.path.join(FRCSDIR,
-                             output+str(b)+'.xlsx'))
+        wb.save(path)
         wb.close()
+        del wb
+    return files
 
 
 def runFRCS(batchFile, output='frcs.db'):

@@ -64,7 +64,7 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input variables
-    """
+    """    
     tpa = range(20, 500, intervals)  # all trees are chip trees
     cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
@@ -76,12 +76,13 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
     prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
     prod['A'] = ['frcs_batch_'+str(i) for i in range(len(prod))]
     prod['B'] = 'CA'
-    prod['G'] = 'Ground-Based Mech WT'
+    prod.loc[prod['C'] > 60, 'G'] = 'Cable Manual WT'
+    prod.loc[prod['C'] < 60, 'G'] = 'Ground-Based Mech WT'
     prod['I'] = resFrac
     prod['K'] = 60
     return prod
 
-def batchForFRCS(df, maxRows=10000, output='frcs_batch'):
+def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
     """
     breaks pandas dataframe into individual Excel files for digestion by FRCS
     """
@@ -98,14 +99,14 @@ def batchForFRCS(df, maxRows=10000, output='frcs_batch'):
         print 'writing batch file to {0}'.format(path)
         wb = xlw.Book()
         sht = wb.sheets[0]
-        sht.name = sheetName
+        sht.name = sname
         data = df[b*maxRows:(b+1)*maxRows]
         for c in df.columns:
             sht.range(c+'1').options(index=False, header=False).value = colIndex[c]
             sht.range(c+'2').options(index=False, header=False).value = data[c]
         wb.save(path)
         wb.close()
-        del wb
+        del sht
     return files
 
 
@@ -122,9 +123,9 @@ def runFRCS(batchFile, output='frcs.db'):
     shutil.copy(os.path.join(FRCSDIR,frcsModel),
                 tDir)
     
-    shutil.copy(os.path.join(FRCSDIR,batchFile),
+    shutil.copy(batchFile,
                 tDir)
-    os.rename(os.path.join(tDir,batchFile),
+    os.rename(batchFile,
               frcsIn)
     frcsObj = xlw.Book(frcs)
     batchImport = frcsObj.app.macro(batchLoadMacro)

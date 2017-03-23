@@ -10,3 +10,9 @@ import cec_utils as ut
 
 runs = ut.iterateVariables(intervals=3)
 batchFiles = ut.batchForFRCS(runs)
+
+if __name__ == '__main__':
+    pool = multi.Pool()
+    pool.map(ut.runFRCS, batchFiles)
+    pool.close() 
+    pool.join()

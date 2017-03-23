@@ -8,7 +8,8 @@ declare
 	i lemmav2.lemma_clusterquantity.pol_id%TYPE;
 BEGIN
   FOR i IN 
-  select pol_id as i from lemmav2.lemma_clusterquantity
+  -- this line makes sure only polygons with more than 1 cluster are crated.
+  select pol_id as i from lemmav2.lemma_clusterquantity where cluster_quantity > 1
   LOOP 
     RAISE NOTICE 'Created_polygon %', i;
     INSERT INTO lemmav2.lemma_clusters

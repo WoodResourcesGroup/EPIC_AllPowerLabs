@@ -45,12 +45,11 @@ order by count(*) desc limit 10
 
 --- test 2 
 set search_path  = lemmav2, public; 
-select x, y, array_agg("RPT_YR") as year, (array_agg("Pol.ID") over(PARTITION BY "Pol.ID" 
-          ORDER BY "Pol.Shap_Ar" DESC))[1] as pol_id, 
-max("Pol.Shap_Ar") as polygon_area, 
-max("BPH_abs") as total_bm_2012, array_agg(trunc) trunc_hist, sum("D_BM_kg") as "D_BM_kg", sum("D_BM_kg") > max("BPH_abs") as truncation,
+select x, y, array_agg("RPT_YR" order by "Pol.Shap_Ar" desc, "RPT_YR" desc) as year, array_agg("Pol.ID" order by "Pol.Shap_Ar" desc, "RPT_YR" desc) as pol_id_h, 
+array_agg("Pol.Shap_Ar" order by "Pol.Shap_Ar" desc, "RPT_YR" desc) as polygon_area,
+max("BPH_abs") as total_bm_2012, sum("D_BM_kg") as "D_BM_kg_sum", max("D_BM_kg") as "D_BM_kg_max", sum("D_BM_kg") > max("BPH_abs") as truncation,
 count(*)
 from (select * from lemma_1215 union select * from lemma_2016) as foo where trunc != 1 
-group by x, y, "Pol.ID"
+group by x, y
 having count(*) > 1
-order by count(*) desc limit 10
+order by count(*) desc 

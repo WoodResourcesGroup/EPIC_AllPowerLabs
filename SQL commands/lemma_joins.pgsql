@@ -34,3 +34,14 @@ from (select * from lemma_1215 union select * from lemma_2016) as foo where trun
 group by x, y
 having count(*) > 1
 order by count(*) desc 
+
+-- Modified version that records the pol_id
+
+set search_path  = lemmav2, public; 
+select x, y, array_agg("RPT_YR") as year, array_agg("Pol.ID") as pol_id, max("BPH_abs") as total_bm_2012, array_agg(trunc) trunc_hist, sum("D_BM_kg") as "D_BM_kg", sum("D_BM_kg") > max("BPH_abs") as truncation,
+count(*)
+from (select * from lemma_1215 union select * from lemma_2016) as foo where trunc != 1 
+group by x, y
+having count(*) > 1
+order by count(*) desc 
+

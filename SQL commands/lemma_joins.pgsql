@@ -29,7 +29,7 @@ count(*), geom
 from (select * from lemma_1215 union select * from lemma_2016) as foo
 group by x, y, geom, "TREEPLBA"
 having count(*) = 1
-order by count(*) desc); -- 21 549 68
+order by count(*) desc); -- 21 549 683
 
   --- Original Query working
 

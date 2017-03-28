@@ -41,8 +41,7 @@ group by x, y
 having count(*) > 1
 order by count(*) desc 
 
--- check query 
---- test 2 
+-- check query for the number of independent pixels
 set search_path  = lemmav2, public; 
 select x, y, count(*)
 from lemma_total 

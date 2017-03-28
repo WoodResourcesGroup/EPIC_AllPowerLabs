@@ -1,7 +1,7 @@
 -- Calculate the clusters and their information 
 DROP TABLE IF EXISTS lemmav2.lemma_clusters;
 CREATE TABLE lemmav2.lemma_clusters
-(kmeans_cluster_number integer, pol_id integer, geom geometry, D_BM_kg_sum double precision);
+(key integer, pol_id integer, kmeans_cluster_number integer, D_BM_kg double precision, geom geometry);
 
 DO $$ 
 declare 
@@ -13,9 +13,11 @@ BEGIN
   LOOP 
     RAISE NOTICE 'Created_polygon %', i;
     INSERT INTO lemmav2.lemma_clusters
-    SELECT ST_ClusterKMeans(geom, (SELECT cluster_quantity FROM lemmav2.lemma_clusterquantity WHERE pol_id = i)) OVER (), pol_id_h[1] as pol_id, geom, "D_BM_kg_sum" as D_BM_kg_sum 
+    SELECT pol_id_h[1] as pol_id, key as key, 
+      ST_ClusterKMeans(geom, (SELECT cluster_quantity FROM lemmav2.lemma_clusterquantity WHERE pol_id = i)) OVER (), 
+      "D_BM_kg_sum" as D_BM_kg, geom
     FROM lemmav2.lemma_total
-    WHERE lemmav2.lemma_total.pol_id_h[1] = i 
+    WHERE lemmav2.lemma_total.polygon_area_h[1] = i 
     ORDER BY pol_id;
     
   END LOOP;

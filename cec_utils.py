@@ -4,7 +4,7 @@ from numpy import linspace, ceil
 import pandas as pd
 import xlwings as xlw
 import tempfile as tf
-import shutil, os
+import shutil, os, sys
 import sqlite3
 
 FRCSDIR = 'FRCS'
@@ -46,7 +46,6 @@ colIndex = {'A': 'Stand',
             'Z': 'Partial cut?',
             'AA': 'Include loading costs?'}
 
-
 def dbconfig(name, echoCmd=True):
     """
     returns a database engine object for querys and inserts
@@ -56,11 +55,11 @@ def dbconfig(name, echoCmd=True):
     echoCmd = True/False wheather sqlalchemy echos commands
     """
     # conString = '//username:{pwd}@{host}:{name}
-    engine = ce('postgresql:///{0}'.format(name), echo=echoCmd)
+    engine = ce('postgresql://pete:0tt3rb33@localhost:5433/{0}'.format(name), echo=echoCmd)
     return engine
 
 
-def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
+def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input variables
@@ -74,7 +73,7 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA'):
     elev = [0]
     cols = ['C','D','E','F','H','J']
     prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
-    prod['A'] = ['frcs_batch_'+str(i) for i in range(len(prod))]
+    prod['A'] = [std_name+str(i) for i in range(len(prod))]
     prod['B'] = 'CA'
     prod.loc[prod['C'] > 60, 'G'] = 'Cable Manual WT'
     prod.loc[prod['C'] < 60, 'G'] = 'Ground-Based Mech WT'
@@ -107,6 +106,7 @@ def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
         wb.save(path)
         wb.close()
         del sht
+        del wb
     return files
 
 
@@ -114,11 +114,12 @@ def runFRCS(batchFile, output='frcs.db'):
     """
     this function is meant to be multi-processed: one for each frcs_batch file
     """
-    con = sqlite3.connect(os.path.join(FRCSDIR,output))
+    #con = sqlite3.connect(os.path.join(FRCSDIR,output))
+    #reload(xlw)
+    pgEng = dbconfig(name='frcs')
     tDir = tf.mkdtemp()
     frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
     frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
-    print frcsIn
     xlw.App(visible=False)
     shutil.copy(os.path.join(FRCSDIR,frcsModel),
                 tDir)
@@ -128,15 +129,25 @@ def runFRCS(batchFile, output='frcs.db'):
     os.rename(batchFile,
               frcsIn)
     frcsObj = xlw.Book(frcs)
+    print 'created frcs model for run in: %s'%(frcs)
+    sys.stdout.flush()
     batchImport = frcsObj.app.macro(batchLoadMacro)
     batchProcess = frcsObj.app.macro(batchPrcMacro)
     batchImport()
+    print 'imported batch parameters for %s'%(batchFile)
+    sys.stdout.flush()
     batchProcess()
+    print 'processed batch: %s'%(batchFile)
+    sys.stdout.flush()
     frcsObj.save()
     frcsObj.close()
     outSheet = pd.read_excel(frcs,
                              sheetname='data')
     outSheet.to_sql('frcs_cost',
-                    con,
-                    if_exists='append')
+                    pgEng,
+                    if_exists='append',
+                    index = False)
+    print 'wrote output to from {0} to database'.format(batchFile)
+    sys.stdout.flush()
     shutil.rmtree(tDir)
+    #con.close()

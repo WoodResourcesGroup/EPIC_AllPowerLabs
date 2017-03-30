@@ -1,4 +1,4 @@
--- Get the sum of drad biomass 
+-- Get the sum of dead biomass 
 set search_path  = lemmav2, public;
 drop table lemma_total;
 create table lemma_total as

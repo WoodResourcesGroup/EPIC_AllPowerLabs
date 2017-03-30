@@ -21,5 +21,6 @@ The results show that out of the 83,491 polygons only 24,173 are larger than 25 
 ### ```kmeans_clustering.pgsql``` 
 **Resulting table: lemma_clusters**
 
+This query is split into two parts, the first one only applies for polygons with areas large eonugh to have 2 or more clusters. 
 
 

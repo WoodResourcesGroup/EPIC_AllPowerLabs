@@ -15,8 +15,8 @@ batchLoadMacro = "Module1.LoadDataFromXLSX"
 batchPrcMacro = "Sheet32.Process_Batch_Click"
 
 dbname = 'apl_cec'
-host = 'switch-db2.erg.berkeley.edu'
 user = 'ptittmann'
+passwd = 'biomassisfun'
 
 colIndex = {'A': 'Stand',
             'B': 'State',
@@ -46,7 +46,7 @@ colIndex = {'A': 'Stand',
             'Z': 'Partial cut?',
             'AA': 'Include loading costs?'}
 
-def dbconfig(name, echoCmd=True):
+def dbconfig(user,passwd,dbname, echo_i=False):
     """
     returns a database engine object for querys and inserts
     -------------
@@ -54,10 +54,10 @@ def dbconfig(name, echoCmd=True):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    # conString = '//username:{pwd}@{host}:{name}
-    engine = ce('postgresql://pete:0tt3rb33@localhost:5433/{0}'.format(name), echo=echoCmd)
+    str1 = ('postgresql+pg8000://' + user +':' + passw + '@switch-db2.erg.berkeley.edu:5432/' 
+            + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
+    engine = create_engine(str1,echo=echo_i)
     return engine
-
 
 def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """

@@ -116,7 +116,7 @@ def runFRCS(batchFile, output='frcs.db'):
     """
     #con = sqlite3.connect(os.path.join(FRCSDIR,output))
     #reload(xlw)
-    pgEng = dbconfig(name='frcs')
+    pgEng = dbconfig(user,passwd,dbname, echo_i=False):
     tDir = tf.mkdtemp()
     frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
     frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
@@ -145,6 +145,7 @@ def runFRCS(batchFile, output='frcs.db'):
                              sheetname='data')
     outSheet.to_sql('frcs_cost',
                     pgEng,
+                    schema='frcs,
                     if_exists='append',
                     index = False)
     print 'wrote output to from {0} to database'.format(batchFile)

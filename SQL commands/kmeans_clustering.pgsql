@@ -12,9 +12,9 @@ BEGIN
   --select pol_id as i from lemmav2.lemma_clusterquantity where cluster_quantity > 1 and pol_id < 1215001688
   -- Temporary lines added to avoid problems with the abnormal polygons. The 1215001688 is based on the first group of polygons
   -- that don't present any problems. 
-  select pol_id as i from lemmav2.lemma_clusterquantity 
-  where cluster_quantity > 1 and pol_id > 1215001688
-  except select pol_id from lemmav2.lemma_clusterabnormal
+select pol_id as i from lemmav2.lemma_clusterquantity 
+  where cluster_quantity > 1 and pol_id > 1215080060 and pol_id < 2016000000
+  except (select pol_id from lemmav2.lemma_clusterabnormal) order by i asc 
   LOOP 
     INSERT INTO lemmav2.lemma_clusters
     SELECT pol_id_h[1] as pol_id, key as key, 
@@ -36,6 +36,7 @@ BEGIN
   FOR i IN 
   -- this line makes sure only polygons with more than 1 cluster are crated.
   select pol_id as i from lemmav2.lemma_clusterquantity where cluster_quantity = 1
+  except (select pol_id from lemmav2.lemma_clusterabnormal) order by i asc limit 1000
   LOOP 
     RAISE NOTICE 'Created_polygon %', i;
     INSERT INTO lemmav2.lemma_clusters

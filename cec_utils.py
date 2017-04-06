@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine as ce
+from sqlalchemy import create_engine
 import itertools as it
 from numpy import linspace, ceil
 import pandas as pd
@@ -54,7 +54,7 @@ def dbconfig(user,passwd,dbname, echo_i=False):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    str1 = ('postgresql+pg8000://' + user +':' + passw + '@switch-db2.erg.berkeley.edu:5432/' 
+    str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
             + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
     engine = create_engine(str1,echo=echo_i)
     return engine
@@ -95,7 +95,7 @@ def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
         path = os.path.join(FRCSDIR,
                             output+str(b)+'.xlsx')
         files.append(path)
-        print 'writing batch file to {0}'.format(path)
+        print('writing batch file to {0}'.format(path))
         wb = xlw.Book()
         sht = wb.sheets[0]
         sht.name = sname
@@ -116,7 +116,8 @@ def runFRCS(batchFile, output='frcs.db'):
     """
     #con = sqlite3.connect(os.path.join(FRCSDIR,output))
     #reload(xlw)
-    pgEng = dbconfig(user,passwd,dbname, echo_i=False):
+    pgEng = dbconfig(user,passwd,dbname, echo_i=True)
+    print(pgEng)
     tDir = tf.mkdtemp()
     frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
     frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
@@ -129,15 +130,15 @@ def runFRCS(batchFile, output='frcs.db'):
     os.rename(batchFile,
               frcsIn)
     frcsObj = xlw.Book(frcs)
-    print 'created frcs model for run in: %s'%(frcs)
+    print('created frcs model for run in: %s'%(frcs))
     sys.stdout.flush()
     batchImport = frcsObj.app.macro(batchLoadMacro)
     batchProcess = frcsObj.app.macro(batchPrcMacro)
     batchImport()
-    print 'imported batch parameters for %s'%(batchFile)
+    print ('imported batch parameters for %s'%(batchFile))
     sys.stdout.flush()
     batchProcess()
-    print 'processed batch: %s'%(batchFile)
+    print( 'processed batch: %s'%(batchFile))
     sys.stdout.flush()
     frcsObj.save()
     frcsObj.close()
@@ -145,10 +146,10 @@ def runFRCS(batchFile, output='frcs.db'):
                              sheetname='data')
     outSheet.to_sql('frcs_cost',
                     pgEng,
-                    schema='frcs,
+                    schema='frcs',
                     if_exists='append',
                     index = False)
-    print 'wrote output to from {0} to database'.format(batchFile)
+    print('wrote output to from {0} to database'.format(batchFile))
     sys.stdout.flush()
     shutil.rmtree(tDir)
     #con.close()

@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 import itertools as it
 from numpy import linspace, ceil
 import pandas as pd
-import xlwings as xlw
+#import xlwings as xlw
 import tempfile as tf
 import shutil, os, sys
 import sqlite3

@@ -7,6 +7,7 @@ import tempfile as tf
 import shutil, os, sys
 import sqlite3
 from sklearn.cluster import KMeans
+import platform
 
 FRCSDIR = 'FRCS'
 inputFile = 'FRCS_TestDataOffset.xlsx'
@@ -64,7 +65,7 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 
     """
     Returns a pandas dataframe with the combinatorial
     product of all input theoretical input variables
-    """    
+    """
     tpa = range(20, 500, intervals)  # all trees are chip trees
     cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
@@ -83,15 +84,15 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 
     return prod
 
 
-def iterateValues(intervals=4, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
+def iterateValues(dbTable,intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
-    product of all input variables
+    product of all input variables derived from the input database
     """ 
-    tpa =  'foo' # all trees are chip trees
-    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
+    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac']).tolist()]
+    cuFt = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt']).tolist()]
     resFrac = 0.8
-    slp = linspace(0, 100, intervals)
+    slp = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['slope']).tolist()]
     ayd = linspace(minAYD, maxAYD, intervals)
     trtArea = linspace(1, 20, intervals)
     elev = [0]
@@ -181,13 +182,21 @@ def runFRCS(batchFile, output='frcs.db'):
     shutil.rmtree(tDir)
     #con.close()
 
+def queryDB(sql, limit = 10000):
+    eng = dbconfig(user,passwd,dbname)
+    sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt from lemmav2.lemma_total'
+    if limit == None:
+        df = pd.read_sql(sql, eng)
+    else:
+        df = pd.read_sql(sql+' limit {0}'.format(limit), eng)
+    return df
 
 def clusterFRCSVariable(df, nclust=4):
-    clust = KMeans(n_clusters=nclust, n_jobs=-1)
-    clust.fit(df)
-    # cats = clust.predict(df)
-    # clusterParams = {}
-    # for c in range(nclust):
-    #     clusterParams[c] = {'mean': df[(cats == c)].mean()[0],
-    #                         'stddev': df[(cats == c)].std()[0]}
+    if platform.platform().split('-')[0]=='Darwin':
+        j = 1
+    else:
+        j= -1
+    X=df.reshape(-1, 1)
+    clust = KMeans(n_clusters=nclust, n_jobs=j, random_state = 1)
+    clust.fit(X)
     return clust.cluster_centers_

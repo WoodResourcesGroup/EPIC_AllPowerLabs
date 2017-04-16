@@ -1,11 +1,13 @@
-from sqlalchemy import create_engine as ce
+from sqlalchemy import create_engine
 import itertools as it
-from numpy import linspace
+from numpy import linspace, ceil
 import pandas as pd
 import xlwings as xlw
 import tempfile as tf
-import shutil, os
+import shutil, os, sys
 import sqlite3
+from sklearn.cluster import KMeans
+import platform
 
 FRCSDIR = 'FRCS'
 inputFile = 'FRCS_TestDataOffset.xlsx'
@@ -15,12 +17,12 @@ batchLoadMacro = "Module1.LoadDataFromXLSX"
 batchPrcMacro = "Sheet32.Process_Batch_Click"
 
 dbname = 'apl_cec'
-host = 'switch-db2.erg.berkeley.edu'
 user = 'ptittmann'
+passwd = 'biomassisfun'
 
 colIndex = {'A': 'Stand',
             'B': 'State',
-            'C': 'Slope',   
+            'C': 'Slope',
             'D': 'AYD',
             'E': 'Treatment Area',
             'F': 'Elev',
@@ -46,7 +48,7 @@ colIndex = {'A': 'Stand',
             'Z': 'Partial cut?',
             'AA': 'Include loading costs?'}
 
-def dbconfig(name, echoCmd=True):
+def dbconfig(user,passwd,dbname, echo_i=False):
     """
     returns a database engine object for querys and inserts
     -------------
@@ -54,16 +56,18 @@ def dbconfig(name, echoCmd=True):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    #conString = '//username:{pwd}@{host}:{name}
-    engine = ce('postgresql:///{0}'.format(name), echo=echoCmd)
+    str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
+            + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
+    engine = create_engine(str1,echo=echo_i)
     return engine
 
-def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
+def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """
-    Returns a pandas dataframe with the combinatorial product of all input variables
+    Returns a pandas dataframe with the combinatorial
+    product of all input theoretical input variables
     """
-    tpa = range(20,500,intervals) # all trees are chip trees
-    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals) # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
+    tpa = range(20, 500, intervals)  # all trees are chip trees
+    cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
     slp = linspace(0, 100, intervals)
     ayd = linspace(minAYD, maxAYD, intervals)
@@ -71,64 +75,128 @@ def iterateVariables(intervals = 20, maxAYD = 2500, minAYD = 0, state='CA'):
     elev = [0]
     cols = ['C','D','E','F','H','J']
     prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
-    prod['A'] = ['frcs_batch_'+str(i) for i in range(len(prod))]
+    prod['A'] = [std_name+str(i) for i in range(len(prod))]
     prod['B'] = 'CA'
-    prod['G'] = 'Ground-Based Mech WT'
+    prod.loc[prod['C'] > 60, 'G'] = 'Cable Manual WT'
+    prod.loc[prod['C'] < 60, 'G'] = 'Ground-Based Mech WT'
     prod['I'] = resFrac
     prod['K'] = 60
     return prod
 
-def iterHarvestSystems(df, maxRows=60000, output='frcs_batch'):
+
+def iterateValues(dbTable,intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
+    """
+    Returns a pandas dataframe with the combinatorial
+    product of all input variables derived from the input database
+    """ 
+    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac']).tolist()]
+    cuFt = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt']).tolist()]
+    resFrac = 0.8
+    slp = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['slope']).tolist()]
+    ayd = linspace(minAYD, maxAYD, intervals)
+    trtArea = linspace(1, 20, intervals)
+    elev = [0]
+    cols = ['C','D','E','F','H','J']
+    prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
+    prod['A'] = [std_name+str(i) for i in range(len(prod))]
+    prod['B'] = 'CA'
+    prod.loc[prod['C'] > 60, 'G'] = 'Cable Manual WT'
+    prod.loc[prod['C'] < 60, 'G'] = 'Ground-Based Mech WT'
+    prod['I'] = resFrac
+    prod['K'] = 60
+    return prod
+
+
+
+
+def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
     """
     breaks pandas dataframe into individual Excel files for digestion by FRCS
     """
+    files = []
     xlw.App(visible=False)
     if len(df)/maxRows == 0:
         books = [0]
     else:
-        books = range(len(df)/maxRows)
+        books = range(int(ceil(len(df)/float(maxRows))))
     for b in books:
+        path = os.path.join(FRCSDIR,
+                            output+str(b)+'.xlsx')
+        files.append(path)
+        print('writing batch file to {0}'.format(path))
         wb = xlw.Book()
         sht = wb.sheets[0]
-        sht.name = sheetName
+        sht.name = sname
         data = df[b*maxRows:(b+1)*maxRows]
         for c in df.columns:
             sht.range(c+'1').options(index=False, header=False).value = colIndex[c]
             sht.range(c+'2').options(index=False, header=False).value = data[c]
-        wb.save(os.path.join(FRCSDIR,
-                             output+str(b)+'.xlsx'))
-        wb.close
-    
+        wb.save(path)
+        wb.close()
+        del sht
+        del wb
+    return files
+
 
 def runFRCS(batchFile, output='frcs.db'):
     """
     this function is meant to be multi-processed: one for each frcs_batch file
     """
-    con = sqlite3.connect(os.path.join(FRCSDIR,output))
+    #con = sqlite3.connect(os.path.join(FRCSDIR,output))
+    #reload(xlw)
+    pgEng = dbconfig(user,passwd,dbname, echo_i=True)
+    print(pgEng)
     tDir = tf.mkdtemp()
     frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
     frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
-    print frcsIn
     xlw.App(visible=False)
     shutil.copy(os.path.join(FRCSDIR,frcsModel),
                 tDir)
     
-    shutil.copy(os.path.join(FRCSDIR,batchFile),
+    shutil.copy(batchFile,
                 tDir)
-    os.rename(os.path.join(tDir,batchFile),
+    os.rename(batchFile,
               frcsIn)
     frcsObj = xlw.Book(frcs)
+    print('created frcs model for run in: %s'%(frcs))
+    sys.stdout.flush()
     batchImport = frcsObj.app.macro(batchLoadMacro)
     batchProcess = frcsObj.app.macro(batchPrcMacro)
     batchImport()
+    print ('imported batch parameters for %s'%(batchFile))
+    sys.stdout.flush()
     batchProcess()
+    print( 'processed batch: %s'%(batchFile))
+    sys.stdout.flush()
     frcsObj.save()
     frcsObj.close()
     outSheet = pd.read_excel(frcs,
-                             sheetname = 'data')
+                             sheetname='data')
     outSheet.to_sql('frcs_cost',
-                    con,
-                    if_exists='append')
+                    pgEng,
+                    schema='frcs',
+                    if_exists='append',
+                    index = False)
+    print('wrote output to from {0} to database'.format(batchFile))
+    sys.stdout.flush()
     shutil.rmtree(tDir)
-    
-    
+    #con.close()
+
+def queryDB(sql, limit = 10000):
+    eng = dbconfig(user,passwd,dbname)
+    sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt from lemmav2.lemma_total'
+    if limit == None:
+        df = pd.read_sql(sql, eng)
+    else:
+        df = pd.read_sql(sql+' limit {0}'.format(limit), eng)
+    return df
+
+def clusterFRCSVariable(df, nclust=4):
+    if platform.platform().split('-')[0]=='Darwin':
+        j = 1
+    else:
+        j= -1
+    X=df.reshape(-1, 1)
+    clust = KMeans(n_clusters=nclust, n_jobs=j, random_state = 1)
+    clust.fit(X)
+    return clust.cluster_centers_

@@ -31,8 +31,8 @@ group by x, y, geom
 having count(*) = 1
 order by count(*) desc); -- 21 549 683
 
-alter table lemma_total add column pol_id;
-alter table lemma_total add column key;
+alter table lemma_total add column pol_id int;
+alter table lemma_total add column key int;
 update lemma_total set pol_id = pol_id_h[1];
 update lemma_total set key = key_h[1];
 alter table lemma_total add primary key (key, pol_id);

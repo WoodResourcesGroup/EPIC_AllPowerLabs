@@ -7,7 +7,7 @@ Created on Wed Mar 22 11:18:51 2017
 
 import cec_utils as ut
 
-runs = ut.iterateVariables(intervals=2)
+runs = ut.iterateValues(intervals=4)
 batchFiles = ut.batchForFRCS(runs,maxRows=1000)
 
 if __name__ == '__main__':

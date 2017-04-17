@@ -1,4 +1,4 @@
--- Calculate the clusters and their information 
+- Calculate the clusters and their information 
 DROP TABLE IF EXISTS lemmav2.lemma_clusters;
 CREATE TABLE lemmav2.lemma_clusters
 (key integer, pol_id integer, kmeans_cluster_number integer, D_BM_kg double precision, geom geometry);
@@ -12,8 +12,8 @@ BEGIN
   --select pol_id as i from lemmav2.lemma_clusterquantity where cluster_quantity > 1 and pol_id < 1215001688
   -- Temporary lines added to avoid problems with the abnormal polygons. The 1215001688 is based on the first group of polygons
   -- that don't present any problems. 
-select pol_id as i from lemmav2.lemma_clusterquantity 
-  where cluster_quantity > 1 and pol_id > 1215080060 and pol_id < 2016000000
+select pol_id as i from lemmav2.lemma_clusterquantity set 
+  where cluster_quantity > 1 
   except (select pol_id from lemmav2.lemma_clusterabnormal) order by i asc 
   LOOP 
     INSERT INTO lemmav2.lemma_clusters
@@ -35,8 +35,8 @@ declare
 BEGIN
   FOR i IN 
   -- this line makes sure only polygons with more than 1 cluster are crated.
-  select pol_id as i from lemmav2.lemma_clusterquantity where cluster_quantity = 1
-  except (select pol_id from lemmav2.lemma_clusterabnormal) order by i asc limit 1000
+  select pol_id as i, pol_area as area from lemmav2.lemma_clusterquantity where cluster_quantity = 1 and pol_id > 1215001580 and pol_area < 90298.6097
+  order by area desc, i asc limit 10000
   LOOP 
     RAISE NOTICE 'Created_polygon %', i;
     INSERT INTO lemmav2.lemma_clusters

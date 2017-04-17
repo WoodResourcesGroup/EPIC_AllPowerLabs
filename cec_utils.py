@@ -6,6 +6,8 @@ import xlwings as xlw
 import tempfile as tf
 import shutil, os, sys
 import sqlite3
+from sklearn.cluster import KMeans
+import platform
 
 FRCSDIR = 'FRCS'
 inputFile = 'FRCS_TestDataOffset.xlsx'
@@ -62,8 +64,8 @@ def dbconfig(user,passwd,dbname, echo_i=False):
 def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
-    product of all input variables
-    """    
+    product of all input theoretical input variables
+    """
     tpa = range(20, 500, intervals)  # all trees are chip trees
     cuFt = linspace(65.44*0.5, 65.44*1.5, intervals)  # select min(35.3147*450/("D_CONBM_kg"/"relNO")), max(35.3147*450/("D_CONBM_kg"/"relNO")), avg(35.3147*450/("D_CONBM_kg"/"relNO")), stddev(35.3147*450/("D_CONBM_kg"/"relNO")) from priority_areas where "relNO">0 and "D_CONBM_kg">0;
     resFrac = 0.8
@@ -80,6 +82,32 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 
     prod['I'] = resFrac
     prod['K'] = 60
     return prod
+
+
+def iterateValues(dbTable,intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
+    """
+    Returns a pandas dataframe with the combinatorial
+    product of all input variables derived from the input database
+    """ 
+    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac']).tolist()]
+    cuFt = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt']).tolist()]
+    resFrac = 0.8
+    slp = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['slope']).tolist()]
+    ayd = linspace(minAYD, maxAYD, intervals)
+    trtArea = linspace(1, 20, intervals)
+    elev = [0]
+    cols = ['C','D','E','F','H','J']
+    prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
+    prod['A'] = [std_name+str(i) for i in range(len(prod))]
+    prod['B'] = 'CA'
+    prod.loc[prod['C'] > 60, 'G'] = 'Cable Manual WT'
+    prod.loc[prod['C'] < 60, 'G'] = 'Ground-Based Mech WT'
+    prod['I'] = resFrac
+    prod['K'] = 60
+    return prod
+
+
+
 
 def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
     """
@@ -153,3 +181,22 @@ def runFRCS(batchFile, output='frcs.db'):
     sys.stdout.flush()
     shutil.rmtree(tDir)
     #con.close()
+
+def queryDB(sql, limit = 10000):
+    eng = dbconfig(user,passwd,dbname)
+    sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt, slope from lemmav2.lemma_total'
+    if limit == None:
+        df = pd.read_sql(sql, eng)
+    else:
+        df = pd.read_sql(sql+' limit {0}'.format(limit), eng)
+    return df
+
+def clusterFRCSVariable(df, nclust=4):
+    if platform.platform().split('-')[0]=='Darwin':
+        j = 1
+    else:
+        j= -1
+    X=df.reshape(-1, 1)
+    clust = KMeans(n_clusters=nclust, n_jobs=j, random_state = 1)
+    clust.fit(X)
+    return clust.cluster_centers_

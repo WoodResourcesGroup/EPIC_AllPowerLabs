@@ -1,5 +1,5 @@
-EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
-#EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
+#EPIC <- "C:/Users/Battles Lab/Box Sync/EPIC-Biomass" # Define where your EPIC-BIOMASS folder is located in Box Sync
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
 
 library(rgdal)
 library(raster)
@@ -48,4 +48,7 @@ plot(FS_LTMU, add=T, col="orange")
 plot(kc, add=T, col="red")
 
 setwd(paste(EPIC, "/GIS Data/units", sep=""))
+writeOGR(units, dsn="units_for_jose",layer="all_but_two", driver="ESRI Shapefile")
 save(units, file="units.Rdata")
+writeOGR(FS_LTMU, dsn="units_for_jose", layer = "LTMU", driver="ESRI Shapefile")
+writeOGR(kc, dsn="units_for_jose",layer="KCNP",driver="ESRI Shapefile")

@@ -1,9 +1,9 @@
 library(rgdal)
 library(raster)
 
-EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass"
-
-setwd("C:/Users/Carmen/Desktop/Biomass_Results")
+EPIC <- "C:/Users/Carmen/Box Sync/EPIC-Biomass/"
+setwd(EPIC)
+setwd(paste(EPIC,"GIS Data/Results/Results_wholestate",sep=""))
 load("Results_1215_WS_25_CRM.Rdata")
 spdf1215 <- spdf
 remove(spdf)
@@ -12,6 +12,7 @@ load("Table_1215_WS_25_CRM.Rdata")
 results1215 <- results
 load("Table_2016_WS_25_CRM.Rdata")
 results16 <- results
+results16 <- results16[results16$Pol.NO_TREES1 >0,]
 remove(results)
 
 ### TEST WHETHER RESULTS MATCH UNIT RESULTS

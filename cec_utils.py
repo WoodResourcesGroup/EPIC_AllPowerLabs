@@ -184,7 +184,7 @@ def runFRCS(batchFile, output='frcs.db'):
 
 def queryDB(sql, limit = 10000):
     eng = dbconfig(user,passwd,dbname)
-    sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt from lemmav2.lemma_total'
+    sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt, slope from lemmav2.lemma_total'
     if limit == None:
         df = pd.read_sql(sql, eng)
     else:

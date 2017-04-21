@@ -13,7 +13,11 @@ declare
 	pid lemmav2.lemma_clusterquantity.pol_id%TYPE;
 BEGIN
   FOR pid IN 
+<<<<<<< HEAD
   select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity < 64 order by cluster_quantity desc limit 95
+=======
+  select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity < 99 order by cluster_quantity desc limit 103
+>>>>>>> 99eb36c2b15478b3dfdc47899d0f9e84061b90f5
   LOOP 
     RAISE NOTICE 'Analyzing_polygon %', pid;
     INSERT INTO lemmav2.lemma_landingpoints
@@ -25,22 +29,23 @@ BEGIN
 		roads_data.wkb_geometry AS road_geom
 	FROM lemmav2.lemma_clusterscenter, roads_data.roads_california As roads_data
 	WHERE ST_DWithin(st_transform(lemma_clusterscenter.weighted_center_geom,5070), st_transform(roads_data.wkb_geometry,5070), 1600) 
-				and lemmav2.lemma_clusterscenter.count > 50
+				and lemmav2.lemma_clusterscenter.count > 50 
+				and lemmav2.lemma_clusterscenter.biomass_total > 25000
 				and lemma_clusterscenter.pol_id = pid
-	ORDER BY kmeans_cluster_number, pol_id, distance;  
+	ORDER BY kmeans_cluster_number, pol_id, distance; 
 
 UPDATE lemmav2.lemma_landingpoints SET landingpoint_geom = ref.point
 FROM (SELECT kmeans_cluster_number, pol_id, ST_LineInterpolatePoint(ST_transform(road_geom,5070),ST_LineLocatePoint(ST_transform(road_geom,5070), ST_transform(weighted_center_geom,5070))) AS point
-FROM lemmav2.lemma_landingpoints WHERE lemmav2.lemma_landingpoints.pol_id = 1215001051) AS ref
+FROM lemmav2.lemma_landingpoints WHERE lemmav2.lemma_landingpoints.pol_id = pid) AS ref
 WHERE lemmav2.lemma_landingpoints.pol_id = ref.pol_id and lemmav2.lemma_landingpoints.kmeans_cluster_number = ref.kmeans_cluster_number;
 
 	  END LOOP;
   RETURN;
 END; $$;
 
-	UPDATE lemmav2.lemma_landingpoints
-	SET landingpoint_geom = ref.point
-	FROM 
-	(SELECT kmeans_cluster_number, pol_id, ST_LineInterpolatePoint(ST_transform(road_geom,5070),ST_LineLocatePoint(ST_transform(road_geom,5070), ST_transform(weighted_center_geom,5070))) AS point
-	FROM lemmav2.lemma_landingpoints WHERE llemmav2.lemma_landingpoints.pol_id = pid) AS ref
-	WHERE lemma.lemmav2.lemma_landingpoints.pol_id = ref.pol_id and lemmav2.lemma_landingpoints.kmeans_cluster_number = ref.kmeans_cluster_number;
+-- Query to calculate the actual point in the road. 
+
+UPDATE lemmav2.lemma_landingpoints SET landingpoint_geom = ref.point
+FROM (SELECT kmeans_cluster_number, pol_id, ST_LineInterpolatePoint(ST_transform(road_geom,5070),ST_LineLocatePoint(ST_transform(road_geom,5070), ST_transform(weighted_center_geom,5070))) AS point
+FROM lemmav2.lemma_landingpoints) AS ref
+WHERE lemmav2.lemma_landingpoints.pol_id = ref.pol_id and lemmav2.lemma_landingpoints.kmeans_cluster_number = ref.kmeans_cluster_number;

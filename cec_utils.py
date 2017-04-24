@@ -84,7 +84,7 @@ def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 
     return prod
 
 
-def iterateValues(dbTable,intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
+def iterateValues(intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input variables derived from the input database
@@ -182,7 +182,7 @@ def runFRCS(batchFile, output='frcs.db'):
     shutil.rmtree(tDir)
     #con.close()
 
-def queryDB(sql, limit = 10000):
+def queryDB(limit = 10000):
     eng = dbconfig(user,passwd,dbname)
     sql = 'select ceil(dead_trees_acre)::int dt_ac, vpt, slope from lemmav2.lemma_total'
     if limit == None:

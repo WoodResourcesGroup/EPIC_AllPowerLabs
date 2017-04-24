@@ -13,15 +13,7 @@ declare
 	pid lemmav2.lemma_clusterquantity.pol_id%TYPE;
 BEGIN
   FOR pid IN 
-<<<<<<< HEAD
   select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity = 9 order by cluster_quantity desc
-=======
-<<<<<<< HEAD
-  select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity < 64 order by cluster_quantity desc limit 95
-=======
-  select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity < 99 order by cluster_quantity desc limit 103
->>>>>>> 99eb36c2b15478b3dfdc47899d0f9e84061b90f5
->>>>>>> 89ed1c60d3571c2f546f78bf4be36b3c2182e3e3
   LOOP 
     RAISE NOTICE 'Analyzing_polygon %', pid;
     INSERT INTO lemmav2.lemma_landingpoints

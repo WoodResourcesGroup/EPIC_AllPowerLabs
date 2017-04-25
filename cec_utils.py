@@ -61,7 +61,7 @@ def dbconfig(user,passwd,dbname, echo_i=False):
     engine = create_engine(str1,echo=echo_i)
     return engine
 
-def iterateVariables(intervals=20, maxAYD=2500, minAYD=0, state='CA',std_name = 'frcs_batch_'):
+def iterateVariables(intervals=20, maxAYD=1300, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input theoretical input variables
@@ -89,10 +89,10 @@ def iterateValues(intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_n
     Returns a pandas dataframe with the combinatorial
     product of all input variables derived from the input database
     """ 
-    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac']).tolist()]
-    cuFt = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt']).tolist()]
+    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac'].dropna()).tolist()]
+    cuFt = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt'].dropna()).tolist()]
     resFrac = 0.8
-    slp = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['slope']).tolist()]
+    slp = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['slope'].dropna()).tolist()]
     ayd = linspace(minAYD, maxAYD, intervals)
     trtArea = linspace(1, 20, intervals)
     elev = [0]
@@ -138,7 +138,7 @@ def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
     return files
 
 
-def runFRCS(batchFile, output='frcs.db'):
+def runFRCS(batchFile, existing = 'append'):
     """
     this function is meant to be multi-processed: one for each frcs_batch file
     """
@@ -175,7 +175,7 @@ def runFRCS(batchFile, output='frcs.db'):
     outSheet.to_sql('frcs_cost',
                     pgEng,
                     schema='frcs',
-                    if_exists='append',
+                    if_exists=existing,
                     index = False)
     print('wrote output to from {0} to database'.format(batchFile))
     sys.stdout.flush()
@@ -196,7 +196,7 @@ def clusterFRCSVariable(df, nclust=4):
         j = 1
     else:
         j= -1
-    X=df.reshape(-1, 1)
+    X=df.values.reshape(-1, 1)
     clust = KMeans(n_clusters=nclust, n_jobs=j, random_state = 1)
     clust.fit(X)
     return clust.cluster_centers_

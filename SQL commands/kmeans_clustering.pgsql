@@ -56,3 +56,10 @@ END; $$;
     FROM lemmav2.lemma_total
     WHERE lemmav2.lemma_total.pol_id_h[1] = 1215000001 
     ORDER BY pol_id;
+
+-- Query to fix the keys in the table lemma clusters
+set search_path = lemmav2, public; 
+UPDATE lemma_clusters 
+SET key = lemma_total.key
+from lemma_total
+where lemma_clusters.geom = lemma_total.geom;

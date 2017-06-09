@@ -4,7 +4,7 @@ CREATE TABLE lemmav2.lemma_landingclusters
 (road_id integer, pol_id integer, kmeans_cluster_number integer, road_cluster integer, landingpoint_geom geometry);
 
 INSERT INTO lemmav2.lemma_landingclusters
-select road_id, pol_id, kmeans_cluster_number, ST_ClusterDBSCAN(landingpoint_geom, eps := 125, minpoints := 3) over (partition by road_id) as cluster_n, 
+select road_id, pol_id, kmeans_cluster_number, ST_ClusterDBSCAN(landingpoint_geom, eps := 125, minpoints := 2) over (partition by road_id) as cluster_n, 
 landingpoint_geom from lemmav2.lemma_landingpoints_temp;
 
 

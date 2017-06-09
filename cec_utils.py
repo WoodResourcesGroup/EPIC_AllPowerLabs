@@ -84,17 +84,20 @@ def iterateVariables(intervals=20, maxAYD=1300, minAYD=0, state='CA',std_name = 
     return prod
 
 
-def iterateValues(intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_name = 'frcs_batch_'):
+def iterateValues(intervals=4, maxAYD=1300, minAYD=1, lmt=None, state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input variables derived from the input database
     """ 
-    tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac'].dropna()).tolist()]
-    cuFt = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt'].dropna()).tolist()]
+    #tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac'].dropna()).tolist()]
+    #cuFt = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt'].dropna()).tolist()]
+    tpa = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400]
+    cuFt = [1, 5, 10, 20, 30]
     resFrac = 0.8
-    slp = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['slope'].dropna()).tolist()]
+    #slp = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['slope'].dropna()).tolist()]
+    slp = [0.1, 5, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 40, 50, 60, 80]
     ayd = linspace(minAYD, maxAYD, intervals)
-    trtArea = linspace(1, 20, intervals)
+    trtArea = [12.5, 25.0, 50]
     elev = [0]
     cols = ['C','D','E','F','H','J']
     prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
@@ -105,8 +108,7 @@ def iterateValues(intervals=4, maxAYD=2500, minAYD=1, lmt=10000,state='CA',std_n
     prod['I'] = resFrac
     prod['K'] = 60
     return prod
-
-
+ 
 
 
 def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
@@ -182,7 +184,7 @@ def runFRCS(batchFile, existing = 'append'):
     shutil.rmtree(tDir)
     #con.close()
 
-def queryDB(limit = 10000):
+def queryDB(limit = None):
     eng = dbconfig(user,passwd,dbname)
     sql = 'select ceil(t.dead_trees_acre)::int dt_ac, t.vpt, s.slope from lemmav2.lemma_total t join lemmav2.lemma_slope s using (key,pol_id)'
     if limit == None:

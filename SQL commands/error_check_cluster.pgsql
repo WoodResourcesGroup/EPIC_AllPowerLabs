@@ -23,10 +23,11 @@ delete from lemma_total where "D_BM_kg_sum" = 0 and lemma_total.pol_id in (selec
 
 -- Correction code 1 
 set search_path  = lemmav2, public;
-select abnormal.pol_id, final_pol.pol_id from
-	(select pol_id, geom 
+create table lemmav2.abnormalfx_temp as (
+select abnormal.key, abnormal.pol_id as pol_id_o, final_pol.pol_id as pol_id_f from
+	(select key, pol_id, geom 
 	from lemma_total where lemma_total.pol_id in (select pol_id from lemma_clusterabnormal)) as abnormal
 cross join lateral
 	(select clean_lemma.pol_id from 
 		(select lemma_total.* from lemma_total where lemma_total.pol_id not in (select pol_id from lemma_clusterabnormal)) as clean_lemma
-ORDER BY abnormal.geom <-> clean_lemma.geom limit 1) as final_pol;
+ORDER BY abnormal.geom <-> clean_lemma.geom limit 1) as final_pol);

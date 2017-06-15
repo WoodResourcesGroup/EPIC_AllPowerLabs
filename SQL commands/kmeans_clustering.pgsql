@@ -63,3 +63,6 @@ UPDATE lemma_clusters
 SET key = lemma_total.key
 from lemma_total
 where lemma_clusters.geom = lemma_total.geom;
+
+-- Modified version of the query to create table 2. A
+

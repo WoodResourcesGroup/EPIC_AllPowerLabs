@@ -2,8 +2,8 @@
 -- eliminated, considering that the distance is already calculated then is more effective 
 -- to use it in the ORDER BY statement. 
 
-DROP TABLE IF EXISTS lemmav2.lemma_landingpoints2;
-CREATE TABLE lemmav2.lemma_landingpoints2
+DROP TABLE IF EXISTS lemmav2.lemma_landingpoints3;
+CREATE TABLE lemmav2.lemma_landingpoints3
 (kmeans_cluster_number integer, pol_id integer, count integer, biomass_total double precision, 
 weighted_center_geom geometry, road_id integer, distance double precision,
 road_geom geometry, landingpoint_geom geometry);
@@ -13,10 +13,10 @@ declare
 	pid lemmav2.lemma_clusterquantity.pol_id%TYPE;
 BEGIN
   FOR pid IN 
-  select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity <= 274 and cluster_quantity >= 240 order by cluster_quantity desc
+  select pol_id as pid from lemmav2.lemma_clusterquantity where cluster_quantity >= 1  order by cluster_quantity desc
   LOOP 
     RAISE NOTICE 'Analyzing_polygon %', pid;
-    INSERT INTO lemmav2.lemma_landingpoints2
+    INSERT INTO lemmav2.lemma_landingpoints3
     SELECT DISTINCT ON(kmeans_cluster_number) lemma_clusterscenter.kmeans_cluster_number as kmeans_cluster_number, lemma_clusterscenter.pol_id as pol_id, 
 		lemma_clusterscenter.count as count, lemma_clusterscenter.biomass_total as biomass_total, lemma_clusterscenter.weighted_center_geom AS weighted_center_geom, 
 		roads_data.id AS road_id, 
@@ -30,10 +30,10 @@ BEGIN
 				and lemma_clusterscenter.pol_id = pid
 	ORDER BY kmeans_cluster_number, pol_id, distance; 
 
-UPDATE lemmav2.lemma_landingpoints2 SET landingpoint_geom = ref.point
+UPDATE lemmav2.lemma_landingpoints3 SET landingpoint_geom = ref.point
 FROM (SELECT kmeans_cluster_number, pol_id, ST_LineInterpolatePoint(ST_transform(road_geom,5070),ST_LineLocatePoint(ST_transform(road_geom,5070), ST_transform(weighted_center_geom,5070))) AS point
-FROM lemmav2.lemma_landingpoints2 WHERE lemmav2.lemma_landingpoints2.pol_id = pid) AS ref
-WHERE lemmav2.lemma_landingpoints2.pol_id = ref.pol_id and lemmav2.lemma_landingpoints2.kmeans_cluster_number = ref.kmeans_cluster_number;
+FROM lemmav2.lemma_landingpoints3 WHERE lemmav2.lemma_landingpoints3.pol_id = pid) AS ref
+WHERE lemmav2.lemma_landingpoints3.pol_id = ref.pol_id and lemmav2.lemma_landingpoints3.kmeans_cluster_number = ref.kmeans_cluster_number;
 
 	  END LOOP;
   RETURN;

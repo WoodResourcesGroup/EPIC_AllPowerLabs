@@ -33,9 +33,14 @@ order by count(*) desc); -- 21 549 683
 
 alter table lemma_total add column pol_id int;
 alter table lemma_total add column key int;
+alter table lemma_total add column pol_area NUMERIC;
 update lemma_total set pol_id = pol_id_h[1];
+update lemma_total set pol_area = polygon_area_h[1];
 update lemma_total set key = key_h[1];
 alter table lemma_total add primary key (key, pol_id);
+
+-- remove pixels with 0 biomass. This justifies better the spatial filtering from k-means 
+delete from lemma_total where "D_BM_kg_sum" = 0;
 
   --- Original Query working
 

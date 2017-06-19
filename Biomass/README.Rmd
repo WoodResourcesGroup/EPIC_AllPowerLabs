@@ -86,7 +86,6 @@ Data from LEMMA and drought mortality polygons were combined to estimate dead tr
 |   `D_BM_kg`  |       Estimated biomass of dead trees in the pixel in kg | `LEMMA` & `drought` |     
 | `relNO`         | Approximate number of dead trees in pixel | Number of dead trees from `drought` (`Pol.NO_TREE`), divied up based on `relBA` (below)|
 | `relBA`         | Pixel basal area (`BA_GE_3`)  relative to sum of `BA_GE_3` of all pixels in the polygon |  `LEMMA`
-
 | `Pol.ID`        |        Polygon ID |    Analysis |
 | `Pol.x`         | X coordinate of polygon centroid | `drought` |
 | `Pol.y`         | Y coordinate of polygon centroid | `drought` |
@@ -103,15 +102,3 @@ Data from LEMMA and drought mortality polygons were combined to estimate dead tr
 | `All_Pol_NO`| Total number of trees in the polygon, from `Pol.Shap_Ar` and `THA` | `LEMMA`|
 | `All_Pol_BM`| Total trees in the polygon, from `Pol.Shap.Ar` and `All_Pol_CONBM_kgha` | `LEMMA` |
 
-# Tests
-The following tests were performed on a randomly selected polygon within `drought` in the file *R_scripts/tests/test.R* to check for accuracy of the results. When *test.R* is run, lines 82-92 should all individually return `TRUE`.
-
-1. `relBA` calculated by hand outside the for loop for a randomly selected pixel within the polygon equals `relBA` from loop results
-2. `relNO` from loop results equals `relBA` * number of dead trees in pixel calculated by hand
-3. Pixels within 50 m of the polygon's centroid have the same raster values and X and Y coordinates as those produced by the loop
-4. Biomass of dead trees in the pixel calculated by hand matches loop results
-5. `All_BM_kgha` from results matches attribute data in LEMMA
-6. `All_Pol_BM_kgha` from results equals the mean of `All_BM_kgha` for all pixels in the polygon
-7. `Pol.x` and `Pol.y` from results match `coordinates()` of the polygon
-8. `Pol.NO_TREE` from results matches the sum of `relNO` for all pixels
-9. `All_Pol_NO` from results matches the sum of per pixel calculated by hand from `TPHC_GE_3`

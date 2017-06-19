@@ -58,3 +58,8 @@ target/
 *~
 *.csv
 *.xlsx
+
+# Rhistory and .Rmd
+*.Rhistory
+*.Rmd
+

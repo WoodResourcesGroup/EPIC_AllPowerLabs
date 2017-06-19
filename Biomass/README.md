@@ -19,11 +19,11 @@ February 3, 2017
 Assumptions
 ===========
 
-1.  Aerial detection surveys (ADS) accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
-2.  LEMMA GNN accurately estimates the average size and species trees in each 30 x 30 m pixel.
-3.  Dead trees in an ADS polygon are evenly distributed across the whole polygon, excluding parts of the polygon where LEMMA GNN shows no live trees
+1.  Aerial detection surveys (ADS) accurately assess the number of dead trees > 25 cm diameter in each polygon and the size of each polygon.
+2.  LEMMA GNN accurately estimates the Component Ratio Method biomass and dominant species of trees in each 30 x 30 m pixel.
+3.  The number of dead trees in a polygon are distributed across pixels in that polygon according to the proportion of total polygon live trees (sum of all `TPH_GE_25`) in each pixel 
 4.  All dead trees in a given LEMMA GNN pixel are of the most common tree species in that pixel
-5.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant trees in that pixel, as calculated by FIA data and represented in LEMMA GNN model results.
+5.  Dead trees smaller than 25 cm in diameter are not detected by ADS
 
 Projection
 ==========
@@ -38,8 +38,8 @@ File Organization
     -   Clone of the cec\_apl git repository
 -   Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
 -   The *cec\_apl/Biomass/R\_scripts* folder contains all relevant scripts to perform the calculations, most importantly:
-    -   calculate dead tree biomass for the **whole state** from LEMMA and drought mortality data: *wholestate\_noBA.R*
-    -   calculate dead tree biomass for **individual management units**: *units\_calc\_noBA.R*
+    -   calculate dead tree biomass for the **whole state** from LEMMA and drought mortality data: *wholestate\_CRM.R*
+    -   calculate dead tree biomass for **individual management units**: *units\_calc\_CRM\_25.R*
     -   calculate **live biomass** from LEMMA GNN (representing 2012 remote sensing data): *LEMMA\_live\_units\_step1.R* and *LEMMA\_live\_units\_step2.R*
 
 Sources
@@ -129,9 +129,11 @@ Output Variables
 | `ESLF_NAME` | Land use category | `LEMMA` |
 | `TREEPLBA` | Most common tree species in the pixel according to basal area | `LEMMA` |
 | `QMD_DOM` | Quadratic mean diameter in cm of dominant and codominant trees | `LEMMA` |
+| `VPH_GE_25` | Volume of live trees >= 25 cm dbh in m^3/ha | `LEMMA` |
 | `live_ratio` | Proportion of live trees >25 cm dbh of the entire polgyon that are in this pixel | `LEMMA` |
 | `relNO` | Estimated number of dead trees in pixel | Number of dead trees from `drought` (`Pol.NO_TREE`), divied up based on `live_ratio` |
 | `BPH_abs` | Biomass of live trees >25 cm in the pixel (kg) | BPH_GE_25_CRM multiplied by .09 |
+| `VPT` | Average volume per live tree >25 cm in that pixel (m^3/tree) | VPH_GE_25 divided by TPH_GE_25|
 | `BM_tree_kg` | Estimated biomass per tree for trees >25 cm | BPH_GE_25_CRM divided by TPH_GE_25 |
 | `D_BM_kg` | Estimated biomass of dead trees in the pixel in kg | `LEMMA` & `drought` |
 | `trunc` | 1 if estimated dead biomass equals live biomass (truncated), 0 if dead biomass is less than live biomass | `LEMMA` & `drought` |

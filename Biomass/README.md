@@ -15,16 +15,15 @@ February 3, 2017
     -   [Setup specific to management units analysis](#setup-specific-to-management-units-analysis)
     -   [Dead biomass calculations](#dead-biomass-calculations)
 -   [Output Variables](#output-variables)
--   [Tests](#tests)
 
 Assumptions
 ===========
 
-1.  Aerial detection surveys (ADS) accurately assess the number of dead dominant and codiminant trees in each polygon and the size of each polygon.
-2.  LEMMA GNN accurately estimates the average size and species trees in each 30 x 30 m pixel.
-3.  Dead trees in an ADS polygon are evenly distributed across the whole polygon, excluding parts of the polygon where LEMMA GNN shows no live trees
+1.  Aerial detection surveys (ADS) accurately assess the number of dead trees > 25 cm diameter in each polygon and the size of each polygon.
+2.  LEMMA GNN accurately estimates the Component Ratio Method biomass and dominant species of trees in each 30 x 30 m pixel.
+3.  The number of dead trees in a polygon are distributed across pixels in that polygon according to the proportion of total polygon live trees (sum of all `TPH_GE_25`) in each pixel 
 4.  All dead trees in a given LEMMA GNN pixel are of the most common tree species in that pixel
-5.  The diameter of every dead tree in a pixel is equal to the quadratic mean diameter of dominant and codominant trees in that pixel, as calculated by FIA data and represented in LEMMA GNN model results.
+5.  Dead trees smaller than 25 cm in diameter are not detected by ADS
 
 Projection
 ==========
@@ -39,8 +38,8 @@ File Organization
     -   Clone of the cec\_apl git repository
 -   Source data is located in *Box Sync/EPIC-Biomass/GIS Data*
 -   The *cec\_apl/Biomass/R\_scripts* folder contains all relevant scripts to perform the calculations, most importantly:
-    -   calculate dead tree biomass for the **whole state** from LEMMA and drought mortality data: *wholestate\_noBA.R*
-    -   calculate dead tree biomass for **individual management units**: *units\_calc\_noBA.R*
+    -   calculate dead tree biomass for the **whole state** from LEMMA and drought mortality data: *wholestate\_CRM.R*
+    -   calculate dead tree biomass for **individual management units**: *units\_calc\_CRM\_25.R*
     -   calculate **live biomass** from LEMMA GNN (representing 2012 remote sensing data): *LEMMA\_live\_units\_step1.R* and *LEMMA\_live\_units\_step2.R*
 
 Sources
@@ -112,85 +111,38 @@ Dead biomass calculations
 Output Variables
 ================
 
-<table>
-<colgroup>
-<col width="22%" />
-<col width="29%" />
-<col width="48%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="left">Code</th>
-<th align="left">Description</th>
-<th align="left">Source(s) of data</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left"><code>key</code></td>
-<td align="left">Unique pixel ID</td>
-<td align="left">Analysis</td>
-</tr>
-<tr class="even">
-<td align="left"><code>PlotID</code></td>
-<td align="left">Corresponding FIA plot ID</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>x</code></td>
-<td align="left">X coordinate of pixel center</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="even">
-<td align="left"><code>y</code></td>
-<td align="left">Y coordinate of pixel center</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><code>D_BM_kg</code></td>
-<td align="left">Estimated biomass of dead trees in the pixel in kg</td>
-<td align="left"><code>LEMMA</code> &amp; <code>drought</code></td>
-</tr>
-<tr class="even">
-<td align="left"><code>relNO</code></td>
-<td align="left">Approximate number of dead trees in pixel</td>
-<td align="left">Number of dead trees from <code>drought</code> (<code>Pol.NO_TREE</code>), divied up based on <code>relBA</code> (below)</td>
-</tr>
-<tr class="odd">
-<td align="left"><code>relBA</code></td>
-<td align="left">Pixel basal area (<code>BA_GE_3</code>) relative to sum of <code>BA_GE_3</code> of all pixels in the polygon</td>
-<td align="left"><code>LEMMA</code></td>
-</tr>
-</tbody>
-</table>
-
-`Pol.ID` | Polygon ID | Analysis |
-`Pol.x` | X coordinate of polygon centroid | `drought` |
-`Pol.y` | Y coordinate of polygon centroid | `drought` |
-`RPT_YR` | Year mortality was reported | `drought` |
-`Pol.NO_TREE` | Number of dead trees in the polygon | `drought` |
-`Pol.Shap_Ar` | Area of polygon in square meters | `drought` |
-`D_Pol_BM_kg`| Polygon dead biomass in kg, sum of `D_BM_kg` of all pixels in the polygon | `LEMMA` & `drought` |
-`All_BM_kgha`| Biomass density of all trees &gt;= 2.5 cm dbh, dead or alive (`BPHC_GE_3_CRM`) |`LEMMA`|
-`All_Pol_BM_kgha` | Average density of all trees (mean `ALL_BM_kgha` of all pixels in polygon) | `LEMMA`|
-`THA` | Trees &gt;=2.5 cm dbh per hectare, dead or alive (`TPH_GE_3`) | `LEMMA`|
-`QMD_DOM` | Quadratic mean diameter in cm of dominant and codominant trees | `LEMMA`|
-`TREEPL` | Most common tree species in the pixel | `LEMMA` |
-`Av_BM_TR` | Average per-tree biomass of dead trees, in kg (`D_Pol_CONBM_k`/`Pol.NO_TREE`) | `LEMMA` & `drought` |
-`All_Pol_NO`| Total number of trees in the polygon, from `Pol.Shap_Ar` and `THA` | `LEMMA`|
-`All_Pol_BM`| Total trees in the polygon, from `Pol.Shap.Ar` and `All_Pol_CONBM_kgha` | `LEMMA` |
-
-Tests
-=====
-
-The following tests were performed on a randomly selected polygon within `drought` in the file *R\_scripts/tests/test.R* to check for accuracy of the results. When *test.R* is run, lines 82-92 should all individually return `TRUE`.
-
-1.  `relBA` calculated by hand outside the for loop for a randomly selected pixel within the polygon equals `relBA` from loop results
-2.  `relNO` from loop results equals `relBA` \* number of dead trees in pixel calculated by hand
-3.  Pixels within 50 m of the polygon's centroid have the same raster values and X and Y coordinates as those produced by the loop
-4.  Biomass of dead trees in the pixel calculated by hand matches loop results
-5.  `All_BM_kgha` from results matches attribute data in LEMMA
-6.  `All_Pol_BM_kgha` from results equals the mean of `All_BM_kgha` for all pixels in the polygon
-7.  `Pol.x` and `Pol.y` from results match `coordinates()` of the polygon
-8.  `Pol.NO_TREE` from results matches the sum of `relNO` for all pixels
-9.  `All_Pol_NO` from results matches the sum of per pixel calculated by hand from `TPHC_GE_3`
+| Code | Description | Source(s) of data |
+| :-- | :-- | :-- |
+| `key` | Unique pixel ID | Analysis |
+| `PlotID` | Corresponding FIA plot ID | `LEMMA` |
+| `x` | X coordinate of pixel center | `LEMMA` |
+| `y` | Y coordinate of pixel center | `LEMMA` |
+| `n` | Number of pixels with this pixel's PlotID in the polygon | `LEMMA` |
+| `freq` | Proportion of pixels in polygon with this pixel's PlotID | `LEMMA` |
+| `TPH_GE_3` | Number of live trees per hectare over 2.5 cm dbh | `LEMMA` |
+| `TPH_GE_25` | Number of live trees per hectare over 25 cm dbh | `LEMMA` |
+| `TPH_GE_50` | Number of live trees per hectare over 50 cm dbh | `LEMMA` |
+| `BPH_GE_3_CRM` | Biomass per hectare of live trees over 2.5 cm (kg/ha) | `LEMMA` |
+| `BPH_GE_25_CRM` | Biomass per hectare of live trees over 25 cm (kg/ha) | `LEMMA` |
+| `BPH_GE_50_CRM` | Biomass per hectare of live trees over 50 cm (kg/ha) | `LEMMA` |
+| `FORTYPBA` | Forest type according to basal area | `LEMMA` |
+| `ESLF_NAME` | Land use category | `LEMMA` |
+| `TREEPLBA` | Most common tree species in the pixel according to basal area | `LEMMA` |
+| `QMD_DOM` | Quadratic mean diameter in cm of dominant and codominant trees | `LEMMA` |
+| `VPH_GE_25` | Volume of live trees >= 25 cm dbh in m^3/ha | `LEMMA` |
+| `live_ratio` | Proportion of live trees >25 cm dbh of the entire polgyon that are in this pixel | `LEMMA` |
+| `relNO` | Estimated number of dead trees in pixel | Number of dead trees from `drought` (`Pol.NO_TREE`), divied up based on `live_ratio` |
+| `BPH_abs` | Biomass of live trees >25 cm in the pixel (kg) | BPH_GE_25_CRM multiplied by .09 |
+| `VPT` | Average volume per live tree >25 cm in that pixel (m^3/tree) | VPH_GE_25 divided by TPH_GE_25|
+| `BM_tree_kg` | Estimated biomass per tree for trees >25 cm | BPH_GE_25_CRM divided by TPH_GE_25 |
+| `D_BM_kg` | Estimated biomass of dead trees in the pixel in kg | `LEMMA` & `drought` |
+| `trunc` | 1 if estimated dead biomass equals live biomass (truncated), 0 if dead biomass is less than live biomass | `LEMMA` & `drought` |
+| `Pol.x` | X coordinate of polygon centroid | `drought` |
+| `Pol.y` | Y coordinate of polygon centroid | `drought` |
+| `Pol.ID` | Polygon ID | Analysis |
+| `D_Pol_BM_kg` | Polygon dead biomass in kg, sum of `D_BM_kg` of all pixels in the polygon | `LEMMA` & `drought` |
+| `RPT_YR` | Year mortality was reported | `drought` |
+| `Pol.NO_TREES1` | Number of dead trees in the polygon | `drought` |
+| `Pol.Shap_Ar` | Area of polygon in square meters | `drought` |
+| `Pol.Pixels` | Number of pixels in the polygon | `LEMMA` & `drought` |
+| `D_BM_kgha` | Estimated biomass of dead trees in the pixel in kg/ha | `LEMMA` & `drought` |

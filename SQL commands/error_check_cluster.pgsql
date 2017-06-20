@@ -28,7 +28,7 @@ ORDER BY abnormal.geom <-> clean_lemma.geom limit 1) as final_pol);
 
 -- Table worked out ok, now the code for the substitution
 
-select * from lemma_total, abnormalfx_temp where lemma_total.key = abnormalfx_temp.key and lemma_total.pol_id = abnormalfx_temp.pol_id_o;
+select count(*) from lemma_total, abnormalfx_temp where lemma_total.key = abnormalfx_temp.key and lemma_total.pol_id = abnormalfx_temp.pol_id_o;
 
 -- Update table query
 

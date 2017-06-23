@@ -1,7 +1,7 @@
 - Calculate the clusters and their information 
 DROP TABLE IF EXISTS lemmav2.lemma_clusters;
 CREATE TABLE lemmav2.lemma_clusters
-(key integer, pol_id integer, kmeans_cluster_number integer, D_BM_kg double precision, geom geometry);
+(pol_id integer, key integer, kmeans_cluster_number integer, D_BM_kg double precision, geom geometry);
 alter table lemmav2.lemma_clusters add primary key (key, pol_id, kmeans_cluster_number);
 
 DO $$ 
@@ -61,5 +61,4 @@ SET key = lemma_total.key
 from lemma_total
 where lemma_clusters.geom = lemma_total.geom;
 
--- Modified version of the query to create table 2. A
-
+-- Modified version of the query to create table 2. 

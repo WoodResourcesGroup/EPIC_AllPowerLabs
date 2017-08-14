@@ -2,16 +2,15 @@
 DROP TABLE IF EXISTS lemmav2.lemma_clusters;
 CREATE TABLE lemmav2.lemma_clusters
 (pol_id integer, key integer, kmeans_cluster_number integer, D_BM_kg double precision, geom geometry);
-alter table lemmav2.lemma_clusters add primary key (key, pol_id, kmeans_cluster_number);
+alter table lemmav2.lemma_clusters add primary key (pol_id, key, kmeans_cluster_number);
 
 DO $$ 
 declare 
 	i lemmav2.lemma_clusterquantity.pol_id%TYPE;
 BEGIN
   FOR i IN 
-  -- this line makes sure only polygons with more than 1 cluster are crated.
 select pol_id as i from lemmav2.lemma_clusterquantity  
-  where cluster_quantity > 1 order by i asc 
+  where cluster_quantity > 1 and pol_id <> 1215016202 order by i asc 
   LOOP 
     INSERT INTO lemmav2.lemma_clusters
     SELECT pol_id as pol_id, key as key, 

@@ -1,0 +1,6 @@
+[submodule "PNAS/supporting"]
+	path = PNAS/supporting
+	url = https://git.overleaf.com/10639513nkhgxtkwzptf
+[submodule "PNAS/paper1"]
+	path = PNAS/paper1
+	url = https://git.overleaf.com/10639511kygnbvctwwrs

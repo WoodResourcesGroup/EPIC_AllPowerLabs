@@ -20,3 +20,4 @@ GROUP BY kmeans_cluster_number, pol_id
 ORDER BY pol_id) ON CONFLICT (kmeans_cluster_number, pol_id) DO NOTHING;
 
 -- Query to add the cluster areas using the count.
+

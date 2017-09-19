@@ -4,8 +4,8 @@ from lemmav2.lemma_total;
 
 -- Standard distances calculations 
 
-DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters;
-CREATE TABLE lemmav2.lemma_dbscancenters AS
+DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters225;
+CREATE TABLE lemmav2.lemma_dbscancenters225 AS
 SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
-FROM lemmav2.lemma_dbscanclusters
+FROM lemmav2.lemma_dbscanclusters225
 GROUP BY cluster_no

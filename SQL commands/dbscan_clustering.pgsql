@@ -6,6 +6,10 @@ CREATE TABLE lemmav2.lemma_dbscanclusters210 AS
 select key, ST_ClusterDBSCAN(geom, eps := 210, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
 from lemmav2.lemma_total;
 
+CREATE TABLE lemmav2.lemma_dbscanclusters150 AS
+select key, ST_ClusterDBSCAN(geom, eps := 150, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
+from lemmav2.lemma_total;
+
 -- Standard distances calculations 
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters215;

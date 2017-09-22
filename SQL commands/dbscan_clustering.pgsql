@@ -1,13 +1,17 @@
-CREATE TABLE lemmav2.lemma_dbscanclusters AS
-select key, ST_ClusterDBSCAN(geom, eps := 60, minpoints := 50) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
+CREATE TABLE lemmav2.lemma_dbscanclusters215 AS
+select key, ST_ClusterDBSCAN(geom, eps := 215, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
+from lemmav2.lemma_total;
+
+CREATE TABLE lemmav2.lemma_dbscanclusters210 AS
+select key, ST_ClusterDBSCAN(geom, eps := 210, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
 from lemmav2.lemma_total;
 
 -- Standard distances calculations 
 
-DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters225;
-CREATE TABLE lemmav2.lemma_dbscancenters225 AS
+DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters215;
+CREATE TABLE lemmav2.lemma_dbscancenters215 AS
 SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
-FROM lemmav2.lemma_dbscanclusters225
+FROM lemmav2.lemma_dbscanclusters215
 GROUP BY cluster_no
 
 -- sum of square of distances calculation

@@ -5,7 +5,7 @@ import pandas as pd
 import xlwings as xlw
 import tempfile as tf
 import shutil, os, sys
-import sqlite3
+#import sqlite3
 from sklearn.cluster import KMeans
 import platform
 
@@ -17,8 +17,8 @@ batchLoadMacro = "Module1.LoadDataFromXLSX"
 batchPrcMacro = "Sheet32.Process_Batch_Click"
 
 dbname = 'apl_cec'
-user = 'ptittmann'
-passwd = 'biomassisfun'
+user = 'jdlara'
+passwd = 'Amadeus-2010'
 
 colIndex = {'A': 'Stand',
             'B': 'State',
@@ -84,20 +84,20 @@ def iterateVariables(intervals=20, maxAYD=1300, minAYD=0, state='CA',std_name = 
     return prod
 
 
-def iterateValues(intervals=4, maxAYD=1300, minAYD=1, lmt=None, state='CA',std_name = 'frcs_batch_'):
+def iterateValues(intervals=6, maxAYD=5280, minAYD=5, lmt=None, state='CA',std_name = 'frcs_batch_'):
     """
     Returns a pandas dataframe with the combinatorial
     product of all input variables derived from the input database
     """ 
     #tpa = [int(ceil(i[0])) for i in clusterFRCSVariable(queryDB(limit=lmt)['dt_ac'].dropna()).tolist()]
     #cuFt = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['vpt'].dropna()).tolist()]
-    tpa = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400]
-    cuFt = [1, 5, 10, 20, 30]
+    tpa =[5, 10, 20, 50, 75, 100, 125, 150, 175, 200, 250, 300, 400]
+    cuFt = [1, 10, 20, 30, 40, 50, 60, 70, 80]
     resFrac = 0.8
     #slp = [i[0] for i in clusterFRCSVariable(queryDB(limit=lmt)['slope'].dropna()).tolist()]
-    slp = [0.1, 5, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 40, 50, 60, 80]
-    ayd = linspace(minAYD, maxAYD, intervals)
-    trtArea = [12.5, 25.0, 50]
+    slp = [0, 10, 20, 30, 35, 40, 50, 60]
+    ayd = linspace(minAYD, maxAYD, intervals) #AYD is in feet, not in meters 
+    trtArea = [25.0]
     elev = [0]
     cols = ['C','D','E','F','H','J']
     prod = pd.DataFrame(list(it.product(slp, ayd, trtArea, elev, tpa, cuFt)), columns = cols)
@@ -116,7 +116,7 @@ def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
     breaks pandas dataframe into individual Excel files for digestion by FRCS
     """
     files = []
-    xlw.App(visible=False)
+    xapp = xlw.App(visible=False)
     if len(df)/maxRows == 0:
         books = [0]
     else:
@@ -137,6 +137,8 @@ def batchForFRCS(df, maxRows=10000, sname = sheetName, output='frcs_batch'):
         wb.close()
         del sht
         del wb
+    print('Done writing files')
+    xapp.kill()
     return files
 
 
@@ -151,7 +153,7 @@ def runFRCS(batchFile, existing = 'append'):
     tDir = tf.mkdtemp()
     frcs = os.path.join(tDir,frcsModel) #full path to FRCS in tempfile
     frcsIn = os.path.join(tDir,inputFile) #full path to batch input file
-    xlw.App(visible=False)
+    xapp=xlw.App(visible=False)
     shutil.copy(os.path.join(FRCSDIR,frcsModel),
                 tDir)
     
@@ -172,6 +174,7 @@ def runFRCS(batchFile, existing = 'append'):
     sys.stdout.flush()
     frcsObj.save()
     frcsObj.close()
+    print( 'Closed objects')
     outSheet = pd.read_excel(frcs,
                              sheetname='data')
     outSheet.to_sql('frcs_cost',
@@ -182,7 +185,10 @@ def runFRCS(batchFile, existing = 'append'):
     print('wrote output to from {0} to database'.format(batchFile))
     sys.stdout.flush()
     shutil.rmtree(tDir)
+    xapp.kill()
+    print( 'Killed Excel')
     #con.close()
+    return outSheet
 
 def queryDB(limit = None):
     eng = dbconfig(user,passwd,dbname)

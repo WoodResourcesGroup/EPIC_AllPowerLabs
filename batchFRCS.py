@@ -6,26 +6,17 @@ Created on Wed Mar 22 11:18:51 2017
 """
 
 import cec_utils as ut
-<<<<<<< HEAD
+#import pandas as pd
 
 if __name__ == '__main__':
-    runs = ut.iterateValues(intervals=4)
-    batchFiles = ut.batchForFRCS(runs,maxRows=1000)
-        for b in batchFiles:
-            ut.runFRCS(b)
-=======
-import pandas as pd
-
-if __name__ == '__main__':
-    runs = ut.iterateValues(intervals=10)
+    runs = ut.iterateValues(intervals=17)
     runs.to_pickle("Runsfrcs")
     #runs = pd.read_pickle("Runsfrcs")
     print("Runs Done")
-    batchFiles = ut.batchForFRCS(runs,maxRows=256)
+    batchFiles = ut.batchForFRCS(runs,maxRows=1326)
     print("batchFiles Done")
     for b in batchFiles:
-        ut.runFRCS(b)
->>>>>>> 06171b3bc06e9680c83ecf5dca3a0ff792eb993a
+        out = ut.runFRCS(b)
 #    pool = multi.Pool()
 #    pool.map(ut.runFRCS, batchFiles)
 #    pool.close() 

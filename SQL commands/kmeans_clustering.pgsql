@@ -1,3 +1,7 @@
+
+
+-- old queries using the approach based on the polygons 
+
 - Calculate the clusters and their information 
 DROP TABLE IF EXISTS lemmav2.lemma_clusters;
 CREATE TABLE lemmav2.lemma_clusters

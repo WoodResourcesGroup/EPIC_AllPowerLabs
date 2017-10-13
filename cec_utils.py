@@ -6,7 +6,7 @@ import xlwings as xlw
 import tempfile as tf
 import shutil, os, sys
 #import sqlite3
-from sklearn.cluster import KMeans
+#from sklearn.cluster import KMeans
 import platform
 
 FRCSDIR = 'FRCS'
@@ -192,7 +192,7 @@ def runFRCS(batchFile, existing = 'append'):
 
 def queryDB(limit = None):
     eng = dbconfig(user,passwd,dbname)
-    sql = 'select ceil(t.dead_trees_acre)::int dt_ac, t.vpt, s.slope from lemmav2.lemma_total t join lemmav2.lemma_slope s using (key,pol_id)'
+    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_large;'
     if limit == None:
         df = pd.read_sql(sql, eng)
     else:

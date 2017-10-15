@@ -14,11 +14,11 @@ import plotly.graph_objs as go
 frcs = ut.queryDB(limit = None);
 frcs.columns = ['slope', 'AYD', 'tpa','vpt','dgt','cdgy']
 
-frcs_tpa50_vpt30 = frcs.query('vpt > 1 and AYD >= 1226 and AYD <= 1227 and slope == 30')
+frcs_tpa50_vpt30 = frcs.query('vpt == 40 and tpa == 50 and AYD > 3')
   
 trace1 = go.Scatter3d(
-    x=frcs_tpa50_vpt30['vpt'].values,
-    y=frcs_tpa50_vpt30['tpa'].values,
+    x=frcs_tpa50_vpt30['AYD'].values,
+    y=frcs_tpa50_vpt30['slope'].values,
     z=frcs_tpa50_vpt30['dgt'].values,
     mode='markers',
     marker=dict(

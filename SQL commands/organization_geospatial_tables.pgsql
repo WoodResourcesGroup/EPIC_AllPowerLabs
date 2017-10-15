@@ -34,4 +34,17 @@ CLUSTER lemma_dbscanclusters250 USING dbscanclusters250_gix;
 CLUSTER lemma_dbscanclusters300 USING dbscanclusters300_gix;
 
 -- Find duplicates in tables A
+select "Slope", "AYD", "ft3/CT", "CT/ac", count(*) from frcs_cost_large group by "Slope", "AYD", "ft3/CT", "CT/ac" HAVING count(*)>1 order by count;
+
+DELETE FROM frcs_cost_large a USING (
+      SELECT MIN(ctid) as ctid, "Slope", "AYD", "ft3/CT", "CT/ac"
+        FROM frcs_cost_large 
+        GROUP BY "Slope", "AYD", "ft3/CT", "CT/ac" HAVING COUNT(*) > 1
+      ) b
+      WHERE a."Slope" = b."Slope" AND
+            a."AYD" = b."AYD" AND
+            a."ft3/CT" = b."ft3/CT" AND
+            a."CT/ac" = b."CT/ac"   AND 
+            a.ctid <> b.ctid
+
 select key, cluster_no, count(*) from lemma_dbscanclusters180 group by key, cluster_no HAVING count(*)>1 order by count;

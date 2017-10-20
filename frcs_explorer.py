@@ -22,6 +22,7 @@ trace1 = go.Scatter3d(
     z=frcs_tpa50_vpt30['dgt'].values,
     mode='markers',
     marker=dict(
+            
         size=12,
         color=frcs_tpa50_vpt30['dgt'].values,   # set color to an array/list of desired values
         colorscale='Viridis',   # choose a colorscale

@@ -18,11 +18,47 @@ frcs.columns = ['slope', 'AYD', 'tpa','vpt','dgt','cdgy']
 
 # Least square implementation for the frcs simulator
 
-frcs_slope40 = frcs.query('slope <= 40 and AYD > 3');
+frcs_slope40 = frcs.query('slope > 40');
 
-# build matrix A
+# build matrix A for case \sum_{i \in predictors} (x_i + x_i^2 + ... + x_i^n)
+# no cross terms in the polynomial. Really only n=2 makes much sense. 
+
+data = frcs_slope40
+predictors=['slope', 'AYD', 'tpa', 'vpt']
+for name in ['slope', 'AYD', 'tpa', 'vpt']:
+    for i in range(2,3):  #power of 1 is already there
+        colname = (name+'^_%d') %i      #new var will be x_power
+        data[colname] = frcs_slope40[name].values**i
+        predictors.extend([colname])
+print(data.head())
 
 
-# use the regresor 
-reg = linear_model.LinearRegression()
+# use the lasso
+lasso = linear_model.Lasso(alpha = 0.0001, copy_X=False, fit_intercept=True, precompute=True, normalize=True)
+y_pred_lasso = lasso.fit(data[predictors], data['dgt'])
 
+#use linear predictor
+linear = linear_model.LinearRegression(normalize=True, fit_intercept=True)
+y_pred_linear=linear.fit(data[predictors], data['dgt'])
+
+
+#Model with cross terms 
+# build matrix A for case \sum_{i \in predictors} (x_i) + (\sum_{i \in predictors} (x_i))^2
+# includes the cross terms in the polynomial or order 2. 
+
+data = frcs.query('slope > 40')
+predictors=['slope', 'AYD', 'tpa', 'vpt']
+for name1 in ['slope', 'AYD', 'tpa', 'vpt']:
+    for name2 in ['slope', 'AYD', 'tpa', 'vpt']:
+            colname = (name1+'*'+name2)
+            data[colname] = frcs_slope40[name1].values*frcs_slope40[name2].values
+            predictors.extend([colname])
+print(data.head())
+
+# use the lasso
+lasso = linear_model.Lasso(alpha = 0.001, copy_X=False, fit_intercept=True, precompute=True, normalize=True)
+y_pred_lasso = lasso.fit(data[predictors], data['dgt'])
+
+#use linear predictor
+linear = linear_model.LinearRegression(normalize=True, fit_intercept=True)
+y_pred_linear=linear.fit(data[predictors], data['dgt'])

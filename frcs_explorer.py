@@ -14,7 +14,7 @@ import plotly.graph_objs as go
 frcs = ut.queryDB(limit = None);
 frcs.columns = ['slope', 'AYD', 'tpa','vpt','dgt','cdgy']
 
-frcs_tpa50_vpt30 = frcs.query('vpt == 40 and tpa == 50 and AYD > 3')
+frcs_tpa50_vpt30 = frcs.query('vpt == 40 and tpa == 100')
   
 trace1 = go.Scatter3d(
     x=frcs_tpa50_vpt30['AYD'].values,

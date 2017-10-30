@@ -46,5 +46,3 @@ DELETE FROM frcs_cost_large a USING (
             a."ft3/CT" = b."ft3/CT" AND
             a."CT/ac" = b."CT/ac"   AND 
             a.ctid <> b.ctid
-
-select key, cluster_no, count(*) from lemma_dbscanclusters180 group by key, cluster_no HAVING count(*)>1 order by count;

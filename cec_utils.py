@@ -202,3 +202,12 @@ def queryDB(limit = None):
     else:
         df = pd.read_sql(sql+' limit {0}'.format(limit), eng)
     return df
+
+def queryDB_test(limit = None):
+    eng = dbconfig(user,passwd,dbname)
+    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_test;'
+    if limit == None:
+        df = pd.read_sql(sql, eng)
+    else:
+        df = pd.read_sql(sql+' limit {0}'.format(limit), eng)
+    return df

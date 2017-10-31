@@ -1,4 +1,6 @@
 
+select st_ClusterKMeans(geom,)
+
 
 -- old queries using the approach based on the polygons 
 

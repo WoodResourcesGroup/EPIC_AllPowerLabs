@@ -34,6 +34,7 @@ trace = go.Scatter3d(
         size=3,
         color= frcs_total_vpt['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
         colorscale='Viridis',   # choose a colorscale
+        colorbar=dict(title = 'VPT'),
         opacity=0.8
     )
 )
@@ -52,7 +53,7 @@ fig = go.Figure(data=data_vpt, layout=layout)
 py.plot(fig) 
 
 
-frcs_total_tpa = frcs.query('slope <= 40 and vpt == 20')
+frcs_total_tpa = frcs.query('slope <= 40 and vpt == 40')
 
 
 trace = go.Scatter3d(
@@ -65,6 +66,7 @@ trace = go.Scatter3d(
         size=3,
         color= frcs_total_tpa['tpa'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
         colorscale='Viridis',   # choose a colorscale
+        colorbar=dict(title = 'TPA'),
         opacity=0.8
     )
 )

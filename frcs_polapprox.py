@@ -33,7 +33,7 @@ data_train = frcs_slope40
 data_test = frcs_slope40_t;
 predictors=['slope', 'AYD', 'tpa', 'vpt']
 for name in ['slope', 'AYD', 'tpa', 'vpt']:
-    for i in range(2,3):  #power of 1 is already there
+    for i in range(2,4):  #power of 1 is already there
         colname = (name+'^_%d') %i      #new var will be x_power
         data_train[colname] = frcs_slope40[name].values**i
         data_test[colname] = frcs_slope40_t[name].values**i
@@ -76,7 +76,7 @@ print('Coefficients: \n', frcs_linear_1.coef_)
 ########
 #Plots section of the code. 
 
-trace = go.Scatter3d(
+trace1 = go.Scatter3d(
     x=data_test['AYD'].values,
     y=data_test['slope'].values,
     z=data_test['$gt'].values,
@@ -84,12 +84,27 @@ trace = go.Scatter3d(
     marker=dict(
             
         size=3,
-        color= 'red', #frcs_1['vpt'].values,   # set color to an array/list of desired values   # choose a colorscale
+        color= data_test['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
+        colorscale='Jet',   # choose a colorscale
+        opacity=0.8,
+        colorbar=dict(title = 'VPT')
+    )
+)
+
+trace2 = go.Scatter3d(
+    x=data_test['AYD'].values,
+    y=data_test['slope'].values,
+    z=cost_lasso_1,
+    mode='markers',
+    marker=dict(
+            
+        size=3,
+        color= 'blue', #frcs_1['vpt'].values,   # set color to an array/list of desired values   # choose a colorscale
         opacity=0.8
     )
 )
 
-data = [trace]
+data = [trace1]
 layout = go.Layout(
     margin=dict(
         l=0,
@@ -98,6 +113,8 @@ layout = go.Layout(
         t=0
     )
 )
+
+
     
 fig = go.Figure(data=data, layout=layout)
 py.plot(fig) 

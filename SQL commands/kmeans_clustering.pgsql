@@ -1,5 +1,18 @@
 
-select st_ClusterKMeans(geom,)
+
+alter table lemma_dbscanclusters220 drop column if exists kmeans_cluster_no;
+alter table lemma_dbscanclusters220 add column kmeans_cluster_no INT;
+UPDATE lemma_dbscanclusters220 SET kmeans_cluster_no = temp.kmeans_cluster_number
+from (SELECT key, pol_id, ST_ClusterKMeans(geom, 
+     (SELECT kmeans_cluster_quantity FROM lemma_dbscancenters220 WHERE lemma_dbscancenters220.cluster_no = lemma_dbscanclusters220.cluster_no)) OVER (partition by cluster_no order by cluster_no) 
+      as kmeans_cluster_number from lemma_dbscanclusters220 order by cluster_no) as temp 
+where lemma_dbscanclusters220.key = temp.key and lemma_dbscanclusters220.pol_id = temp.pol_id; 
+
+
+
+
+
+
 
 
 -- old queries using the approach based on the polygons 

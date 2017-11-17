@@ -1,36 +1,41 @@
--- First test without including the new geom for the cluster of landing locations. 
-Drop table lemmav2.lemma_landingclusters;
-CREATE TABLE lemmav2.lemma_landingclusters
-(road_id integer, pol_id integer, kmeans_cluster_number integer, road_cluster integer, landingpoint_geom geometry);
-alter table lemmav2.lemma_landingclusters add primary key (road_id, road_cluster);
+
+-- using cluster within A
+
+drop table lemmav2.road_cluster_test;
+create table lemmav2.road_cluster_test as (
+select row_number() over (), landing_road,
+unnest(ST_ClusterWithin(landing_point,100)) as geom_collection,
+ST_GeometryN(unnest(ST_ClusterWithin(landing_point,100)),1) as geom,
+ST_MinimumBoundingCircle(unnest(ST_ClusterWithin(landing_point,100))) AS circle
+from lemma_kmeanscenters 
+group by landing_road);
+update road_cluster_test set row_number =  temp.row_no from 
+(select ctid, row_number() over (partition by landing_road) as row_no from road_cluster_test) as TEMP
+where road_cluster_test.ctid = temp.ctid
 
 
-a 
+update lemmav2.lemma_kmeanscenters set clustered_landing_point = geom, clus_row_number = row_number from 
+road_cluster_test where ST_within(landing_point,circle);
+
+drop table lemmav2.road_cluster_test;
+create table lemmav2.road_cluster_test as (
+select landing_road, landing_point,
+ST_ClusterDBSCAN(landing_point,100,1) over (partition by landing_road) as cluster_id
+from lemma_kmeanscenters);
+
+-- Calculate the distances and lines to the landing points 
+
+update lemmav2.lemma_kmeanscenters set clustered_landing_point = geom, clus_row_number = row_number from 
+road_cluster_test where ST_within(landing_point,circle);
+update lemmav2.lemma_kmeansclustering set distance_to_road=temp.distance, line_to_road = temp.line from 
+(select lemma_kmeansclustering.*, 
+lemma_kmeanscenters.clustered_landing_point,
+ST_MakeLine(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_point) as line, 
+st_distance(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_point) as distance  
+from lemma_kmeansclustering inner join lemma_kmeanscenters using (cluster_no,kmeans_cluster_no)) as temp 
+where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
 
 
-
--- Scratch pad
-
-
-    SELECT pol_id, kmeans_cluster_number, landingpoint_geom
-	FROM lemmav2.lemma_landingpoints, roads_data.roads_california As roads_data
-	WHERE ST_DWithin(st_transform(lemma_clusterscenter.weighted_center_geom,5070), st_transform(roads_data.wkb_geometry,5070), 1600) 
-				and lemmav2.lemma_clusterscenter.count > 50 
-				and lemmav2.lemma_clusterscenter.biomass_total > 25000
-				and lemma_clusterscenter.pol_id = pid
-	ORDER BY kmeans_cluster_number, pol_id, distance; 
-
-SELECT row_number() over () AS id,
-  ST_NumGeometries(gc),
-  gc AS geom_collection,
-  ST_Centroid(gc) AS centroid,
-  ST_MinimumBoundingCircle(gc) AS circle,
-  sqrt(ST_Area(ST_MinimumBoundingCircle(gc)) / pi()) AS radius
-FROM (
-  SELECT unnest(ST_ClusterWithin(geom, 100)) gc
-  FROM rand_point
-) f;
-
-select row_number() over () as id, ST_ClusterWithin(landingpoint_geom, 100) as gc from lemmav2.lemma_landingpoints group by road_id;
-
-select road_id, count(*) as count, ST_collect(landingpoint_geom) as gc from lemmav2.lemma_landingpoints_temp group by road_id order by count desc limit 3;
+update road_cluster_test set row_number =  temp.row_no from 
+(select ctid, row_number() over (partition by landing_point) as row_no from road_cluster_test) as TEMP
+where road_cluster_test.ctid = temp.ctid

@@ -24,7 +24,8 @@ alter table lemma_dbscancenters180 add column sum_distances_sq NUMERIC;
 DROP TABLE IF EXISTS lemma_cumsum_vpt;
 CREATE TABLE lemmav2.lemma_cumsum_vpt AS
 select f.vpt_category*10, sum(f.biomass_sum) over(order by f.vpt_category) as cum_sum from (
-select ceil(VPT*35.3147/10) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 11.32 group by vpt_category) as f
+select ceil(VPT*35.3147/10) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  
+ where vpt < 11.32 group by vpt_category) as f
 order by f.vpt_category;
 
 

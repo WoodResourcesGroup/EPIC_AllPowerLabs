@@ -35,7 +35,7 @@ passwd = 'Amadeus-2010'
 engine = dbconfig(user, passwd, dbname)
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 
-df_routes = pd.read_sql_query('select "PGE".substations.lat as source_lat, "PGE".substations.lon as source_lon, "PGE".substations.subs_no as source_id, "PGE".feeders.lat as dest_lat, "PGE".feeders.lon as dest_lon, "PGE".feeders.feeder_no as dest_id FROM "PGE".feeders, "PGE".substations where st_distance("PGE".substations.geom, "PGE".feeders.geom) < 0.5 limit 10;', engine)
+df_routes = pd.read_sql_query('select ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes limit 10;', engine)
 
 biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
 biomass_coord = biomass_coord.values.tolist()
@@ -53,13 +53,11 @@ def matching(source,sink):
     db_engine = dbconfig(user, passwd, dbname)
     error = matrx_distance['rows'][0]['elements'][0]['status']
     if error != 'OK':
-        db_str = ('INSERT INTO frcs.distance_table(source, sink, distance, time) Values(' + source[1] +','+ sink[1] +', -99, -99);')
-        db_engine.execute(db_str)
         db_engine.dispose()
     else:
-        distance = 0.001 * (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
+        distance = (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
         time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
-        db_str = ('INSERT INTO frcs.distance_table(source, sink, distance, time) Values(' + str(source[1]) +','+ str(sink[1]) +','+ str(distance)+','+ str(time)+');') 
+        db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';' ) 
         db_engine.execute(db_str)
         db_engine.dispose()
     

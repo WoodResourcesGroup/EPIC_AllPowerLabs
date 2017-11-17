@@ -1,3 +1,11 @@
+
+-- Case of chinese station
+create table case_chinese_station as 
+select *, ST_distance(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_dbscanclusters220.geom) as distance from lemma_dbscanclusters220
+where ST_DWithin(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_dbscanclusters220.geom, 100000);
+
+ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326)
+
 -- Biosum inside areas 
 
 drop table sandbox.biosum_sites;

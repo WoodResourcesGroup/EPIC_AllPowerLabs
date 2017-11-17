@@ -1,3 +1,45 @@
+-- Query to calculate the pixel's distance. 
+
+update roads_california_filtered set geom = st_transform(wkb_geometry,5070);
+
+-- These queries run so much faster because they don't do conversions anymore. 
+
+UPDATE lemma_kmeanscenters SET landing_point = temp.landing_loc, distance_to_landing_point = temp.distance from
+(SELECT
+  lemma_kmeanscenters.*,
+  landing_points.ogc_fid as landing_id,
+  landing_points.point_geom as landing_loc,
+  ST_Distance(lemma_kmeanscenters.weighted_center_geom,landing_points.point_geom) AS distance
+FROM
+  lemma_kmeanscenters
+CROSS JOIN LATERAL
+  (SELECT ogc_fid, geom as geom, 
+  ST_LineInterpolatePoint(geom, ST_LineLocatePoint(geom, lemma_kmeanscenters.weighted_center_geom)) AS point_geom
+   FROM roads_data.roads_california_filtered
+   ORDER BY
+     lemma_kmeanscenters.weighted_center_geom <-> geom
+   LIMIT 1) AS landing_points) as temp where lemma_kmeanscenters.cluster_no = temp.cluster_no and lemma_kmeanscenters.kmeans_cluster_no = temp.kmeans_cluster_no; 
+
+
+-- New version to be use with the cleaner data, get the road id to the kmeans cluster 
+
+UPDATE lemma_kmeanscenters SET landing_road = temp.landing_id, distance_to_landing_road = temp.distance from
+(SELECT
+  lemma_kmeanscenters.*,
+  landing_points.ogc_fid as landing_id,
+  ST_Distance(lemma_kmeanscenters.weighted_center_geom,landing_points.geom) AS distance
+FROM
+  lemma_kmeanscenters
+CROSS JOIN LATERAL
+  (SELECT ogc_fid, geom as geom
+   FROM roads_data.roads_california_filtered
+   ORDER BY
+     lemma_kmeanscenters.weighted_center_geom <-> geom
+   LIMIT 1) AS landing_points) as temp where lemma_kmeanscenters.cluster_no = temp.cluster_no and lemma_kmeanscenters.kmeans_cluster_no = temp.kmeans_cluster_no; 
+
+
+
+
 -- New version 3 of the distance calculation query. For this query the <-> has been 
 -- eliminated, considering that the distance is already calculated then is more effective 
 -- to use it in the ORDER BY statement. 
@@ -42,7 +84,10 @@ END; $$;
 -- Query to calculate the actual point in the road. 
 
 UPDATE lemmav2.lemma_landingpoints SET landingpoint_geom = ref.point
-FROM (SELECT kmeans_cluster_number, pol_id, ST_LineInterpolatePoint(ST_transform(road_geom,5070),ST_LineLocatePoint(ST_transform(road_geom,5070), ST_transform(weighted_center_geom,5070))) AS point
+FROM (SELECT kmeans_cluster_number, pol_id, 
+ST_LineInterpolatePoint(ST_transform(road_geom,5070),
+ST_LineLocatePoint(ST_transform(road_geom,5070), 
+ST_transform(weighted_center_geom,5070))) AS point
 FROM lemmav2.lemma_landingpoints) AS ref
 WHERE lemmav2.lemma_landingpoints.pol_id = ref.pol_id and lemmav2.lemma_landingpoints.kmeans_cluster_number = ref.kmeans_cluster_number;
 

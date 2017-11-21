@@ -32,13 +32,30 @@ def matching(i):
     user = 'jdlara'
     passwd = 'Amadeus-2010'
     db_engine = dbconfig(user, passwd, dbname)
-    db_str = ('UPDATE lemmav2.lemma_dbscanclusters220 SET kmeans_cluster_no = temp.kmeans_cluster_number from (SELECT key, pol_id, ST_ClusterKMeans(geom, (SELECT kmeans_cluster_quantity FROM lemmav2.lemma_dbscancenters220 WHERE lemma_dbscancenters220.cluster_no ='+ str(i) + ')) OVER () as kmeans_cluster_number from lemmav2.lemma_dbscanclusters220 where cluster_no = ' + str(i) + ') as temp where lemma_dbscanclusters220.key = temp.key and lemma_dbscanclusters220.pol_id = temp.pol_id;')
+    db_str = ('UPDATE lemmav2.lemma_kmeansclustering SET kmeans_cluster_no = temp.kmeans_cluster_number from (SELECT key, pol_id, ST_ClusterKMeans(geom, (SELECT kmeans_cluster_quantity FROM lemmav2.lemma_dbscancenters_kmeans WHERE lemma_dbscancenters_kmeans.cluster_no ='+ str(i) + ')) OVER () as kmeans_cluster_number from lemmav2.lemma_kmeansclustering where cluster_no = ' + str(i) + ') as temp where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id = temp.pol_id;')
+    #db_str = ('Update lemmav2.lemma_dbscanclusters220 set cluster_no = temp.kmeans_cluster_number from (SELECT key, pol_id, (cluster_no*1000+ST_ClusterKMeans(geom, 10) OVER ()) as kmeans_cluster_number from lemmav2.lemma_dbscanclusters220 where cluster_no = ' + str(i) + ') as temp where lemma_dbscanclusters220.key = temp.key and lemma_dbscanclusters220.pol_id = temp.pol_id;')
+    #try: 
     db_engine.execute(db_str)
     db_engine.dispose()
+    #except:
+    #    print(i)
+    #    pass
+        
   
-Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(i) for i in range(1184,3000))
+dbname = 'apl_cec'
+user = 'jdlara'
+passwd = 'Amadeus-2010'
+db_engine = dbconfig(user, passwd, dbname)
+db_str = ('select distinct on(cluster_no) cluster_no from lemmav2.lemma_kmeansclustering where kmeans_cluster_no is null;')
+res = db_engine.execute(db_str)
+db_engine.dispose()    
+
+Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(row['cluster_no']) for row in res)
 
 
-UPDATE lemmav2.lemma_dbscanclusters220 SET kmeans_cluster_no = temp.kmeans_cluster_number from (SELECT key, pol_id, ST_ClusterKMeans(geom, 13000) OVER () as kmeans_cluster_number from lemmav2.lemma_dbscanclusters220 where cluster_no = 934) as temp where lemma_dbscanclusters220.key = temp.key and lemma_dbscanclusters220.pol_id = temp.pol_id;
+   
 
-Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(i) for i in range(1184,3000))
+
+select key, pol_id, cluster_np from lemma_dbscanclusters220 where lemma_dbscanclusters220.cluster_no in (select cluster_no from lemma_dbscancenters220 where kmeans_cluster_quantity < 1) limit 10;        
+
+;

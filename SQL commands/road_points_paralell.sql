@@ -21,3 +21,7 @@ FROM (SELECT kmeans_id,
 WHERE lemma.geometries_result_pav2.pol_id = {0}) AS ref
 WHERE lemma.geometries_result_pav2.pol_id = ref.pol_id
 and lemma.geometries_result_pav2.kmeans_id = ref.kmeans_id;
+
+select "PGE".substations.lat as source_lat, "PGE".substations.lon as source_lon, 
+        "PGE".feeders.lat as dest_lat, "PGE".feeders.lon as dest_lon 
+        FROM "PGE".feeders, "PGE".substations where st_distance("PGE".substations.geom, "PGE".feeders.geom) < 1 limit 10;

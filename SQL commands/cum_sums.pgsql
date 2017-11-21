@@ -7,7 +7,6 @@ select lemma_total.geom, lemma_total.x, lemma_total.y, lemma_total.pol_id, lemma
 alter table lemma_slope add column slope_group INT;
 UPDATE lemmav2.lemma_slope SET slope_group = ceil(slope/5)
 
-
 -- make the cum_sum for each of the clustering values 
 
 DROP TABLE IF EXISTS lemma_cumsum_slope;
@@ -29,3 +28,10 @@ select ceil(VPT*35.3147/10) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg
  where vpt < 11.32 group by vpt_category) as f
 order by f.vpt_category;
 
+
+-- cum sum by TPA
+DROP TABLE IF EXISTS lemma_cumsum_tpa;
+CREATE TABLE lemmav2.lemma_cumsum_tpa AS
+select f.vpt_category*10, sum(f.biomass_sum) over(order by f.vpt_category) as cum_sum from (
+select ceil(VPT*35.3147/10) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 11.32 group by vpt_category) as f
+order by f.vpt_category;

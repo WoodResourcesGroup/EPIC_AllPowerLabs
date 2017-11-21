@@ -16,9 +16,9 @@ alter table lemma_dbscancenters215 drop column if exists kmeans_cluster_quantity
 alter table lemma_dbscancenters215 add column kmeans_cluster_quantity INT;
 UPDATE lemmav2.lemma_dbscancenters215 SET kmeans_cluster_quantity = floor(count/112);
 
-alter table lemma_dbscancenters225 drop column if exists kmeans_cluster_quantity;
-alter table lemma_dbscancenters225 add column kmeans_cluster_quantity INT;
-UPDATE lemmav2.lemma_dbscancenters225 SET kmeans_cluster_quantity = floor(count/112);
+alter table lemma_dbscancenters220 drop column if exists kmeans_cluster_quantity;
+alter table lemma_dbscancenters220 add column kmeans_cluster_quantity INT;
+UPDATE lemmav2.lemma_dbscancenters220 SET kmeans_cluster_quantity = floor(count/112);
 
 alter table lemma_dbscancenters250 drop column if exists kmeans_cluster_quantity; 
 alter table lemma_dbscancenters250 add column kmeans_cluster_quantity INT;

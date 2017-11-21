@@ -38,11 +38,7 @@ passwd = 'Amadeus-2010'
 engine = dbconfig(user, passwd, dbname)
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 
-<<<<<<< HEAD
 df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 100;', engine)
-=======
-df_routes = pd.read_sql_query('select ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes limit 10;', engine)
->>>>>>> b220bbe793aa923f503f06bcdf8d910c56d1b9f5
 
 biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
 biomass_coord = biomass_coord.values.tolist()
@@ -64,11 +60,7 @@ def matching(source,sink):
     else:
         distance = (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
         time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
-<<<<<<< HEAD
         db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';') 
-=======
-        db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';' ) 
->>>>>>> b220bbe793aa923f503f06bcdf8d910c56d1b9f5
         db_engine.execute(db_str)
         db_engine.dispose()
     

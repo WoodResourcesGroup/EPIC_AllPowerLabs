@@ -27,7 +27,8 @@ from lemma_kmeanscenters);
 
 update lemmav2.lemma_kmeanscenters set clustered_landing_point = geom, clus_row_number = row_number from 
 road_cluster_test where ST_within(landing_point,circle);
-update lemmav2.lemma_kmeansclustering set distance_to_road=temp.distance, line_to_road = temp.line from 
+
+update lemmav2.lemma_kmeansclustering set linear_distance_to_road=temp.distance, line_to_road = temp.line from 
 (select lemma_kmeansclustering.*, 
 lemma_kmeanscenters.clustered_landing_point,
 ST_MakeLine(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_point) as line, 

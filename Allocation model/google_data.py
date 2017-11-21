@@ -11,7 +11,7 @@ import googlemaps
 from sqlalchemy import create_engine
 #from sqlalchemy import Table, Column, String, MetaData
 #import numpy as np
-import multiprocessing
+#import multiprocessing
 from joblib import Parallel, delayed
 import pandas as pd
 #import time as tm
@@ -24,9 +24,12 @@ def dbconfig(user,passwd,dbname, echo_i=False):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
-            + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
-    engine = create_engine(str1,echo=echo_i)
+    #str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
+    #        + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
+    
+    str1 = ('postgresql+psycopg2://'+user+':'+ passwd + '@switch-db2.erg.berkeley.edu:5433/'+dbname) 
+    
+    engine = create_engine(str1, connect_args={'sslmode':'require'},echo=echo_i)
     return engine
 
 dbname = 'apl_cec'
@@ -35,7 +38,11 @@ passwd = 'Amadeus-2010'
 engine = dbconfig(user, passwd, dbname)
 gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
 
+<<<<<<< HEAD
+df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 100;', engine)
+=======
 df_routes = pd.read_sql_query('select ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes limit 10;', engine)
+>>>>>>> b220bbe793aa923f503f06bcdf8d910c56d1b9f5
 
 biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
 biomass_coord = biomass_coord.values.tolist()
@@ -57,9 +64,13 @@ def matching(source,sink):
     else:
         distance = (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
         time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+<<<<<<< HEAD
+        db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';') 
+=======
         db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';' ) 
+>>>>>>> b220bbe793aa923f503f06bcdf8d910c56d1b9f5
         db_engine.execute(db_str)
         db_engine.dispose()
     
-Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(source, sink) for source in biomass_coord for sink in substation_coord)
+Parallel(n_jobs = 3)(delayed(matching)(source, sink) for source in biomass_coord for sink in substation_coord)
 

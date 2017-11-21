@@ -11,10 +11,11 @@ import googlemaps
 from sqlalchemy import create_engine
 #from sqlalchemy import Table, Column, String, MetaData
 #import numpy as np
-#import multiprocessing
+import multiprocessing
 from joblib import Parallel, delayed
 import pandas as pd
-#import time as tm
+import time as tm
+import random as rnd
 
 def dbconfig(user,passwd,dbname, echo_i=False):
     """
@@ -36,7 +37,7 @@ dbname = 'apl_cec'
 user = 'jdlara'
 passwd = 'Amadeus-2010'
 engine = dbconfig(user, passwd, dbname)
-gmaps = googlemaps.Client(key='AIzaSyAh2PIcLDrPecSSR36z2UNubqphdHwIw7M')
+gmaps = googlemaps.Client(key='AIzaSyAKlu6Ndp4RiMTgE2eiqoM3UnVZdUkZppU')
 
 df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 100;', engine)
 
@@ -49,7 +50,13 @@ substation_coord = substation_coord.values.tolist()
 substation_coord = list(zip(list(set(substation_coord)),df_routes.dest_id.tolist()))
 
 def matching(source,sink):
-    matrx_distance = gmaps.distance_matrix(source[0], sink[0], mode="driving", departure_time="now", traffic_model="pessimistic")
+    tm.sleep(1)
+    try:
+        matrx_distance = gmaps.distance_matrix(source[0], sink[0], mode="driving", departure_time="now", traffic_model="pessimistic")
+    except TimeoutError as e:
+        gmaps = googlemaps.Client(key='AIzaSyBsHQ0sqfBRF-vGoGz44lh2tJ-4I5uqYhk')
+        print(e)
+        pass
     dbname = 'apl_cec'
     user = 'jdlara'
     passwd = 'Amadeus-2010'
@@ -59,10 +66,15 @@ def matching(source,sink):
         db_engine.dispose()
     else:
         distance = (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
-        time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+        try:
+            time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration_in_traffic']['value'])
+        except KeyError:
+            time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration']['value'])
+            print("KeyError")
+            pass
         db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';') 
         db_engine.execute(db_str)
         db_engine.dispose()
     
-Parallel(n_jobs = 3)(delayed(matching)(source, sink) for source in biomass_coord for sink in substation_coord)
+Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(source, sink) for source in biomass_coord for sink in substation_coord)
 

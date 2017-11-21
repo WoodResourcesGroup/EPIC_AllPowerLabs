@@ -1,10 +1,11 @@
    
-2698060.695918  Orange                             
- 1722248.2718186  Contra Costa      0.931134105992378
- 706254.88153095  San Mateo         0.157262238250899
-149221.879695543  Solano                             
- 125296.36653145  San Joaquin      0.0650224483109936
-92774.7807709292  Sacramento                         
-84798.2106183521  Stanislaus                         
-10315.2271544609  Merced                             
-7540.16928274458  Kings                             
+County	        Raw	        db220
+Orange	        & 2.69806	&                \\
+Contra Costa	& 1.7222	&    0.931134106 \\
+San Mateo	    & 0.7706	&    0.157262238 \\
+Solano	        & 0.149221	& \\
+San Joaquin	    & 0.125296	& 0.065022448 \\
+Sacramento	    & 0.09277	& \\
+Stanislaus	    & 0.084	    & \\
+Merced	        & 0.0103	& \\
+Kings	        & 0.0754	&

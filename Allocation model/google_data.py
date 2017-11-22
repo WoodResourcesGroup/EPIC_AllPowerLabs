@@ -37,7 +37,7 @@ dbname = 'apl_cec'
 user = 'jdlara'
 passwd = 'Amadeus-2010'
 engine = dbconfig(user, passwd, dbname)
-gmaps = googlemaps.Client(key='AIzaSyAKlu6Ndp4RiMTgE2eiqoM3UnVZdUkZppU')
+gmaps = googlemaps.Client(key='AIzaSyBc1vFDH8sD9J8SKd-A6TbLM1Ny8BSDPfk')
 
 df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 100;', engine)
 
@@ -50,11 +50,10 @@ substation_coord = substation_coord.values.tolist()
 substation_coord = list(zip(list(set(substation_coord)),df_routes.dest_id.tolist()))
 
 def matching(source,sink):
-    tm.sleep(1)
+    tm.sleep(3)
     try:
         matrx_distance = gmaps.distance_matrix(source[0], sink[0], mode="driving", departure_time="now", traffic_model="pessimistic")
     except TimeoutError as e:
-        gmaps = googlemaps.Client(key='AIzaSyBsHQ0sqfBRF-vGoGz44lh2tJ-4I5uqYhk')
         print(e)
         pass
     dbname = 'apl_cec'

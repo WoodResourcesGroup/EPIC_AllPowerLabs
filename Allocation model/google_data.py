@@ -6,16 +6,15 @@ Created on Fri Nov  3 17:01:16 2017
 @author: jdlara
 """
 
-
 import googlemaps
 from sqlalchemy import create_engine
 #from sqlalchemy import Table, Column, String, MetaData
 #import numpy as np
-import multiprocessing
+#import multiprocessing
 from joblib import Parallel, delayed
 import pandas as pd
-import time as tm
-import random as rnd
+#import time as tm
+#import random as rnd
 
 def dbconfig(user,passwd,dbname, echo_i=False):
     """
@@ -33,36 +32,42 @@ def dbconfig(user,passwd,dbname, echo_i=False):
     engine = create_engine(str1, connect_args={'sslmode':'require'},echo=echo_i)
     return engine
 
-dbname = 'apl_cec'
-user = 'jdlara'
-passwd = 'Amadeus-2010'
-engine = dbconfig(user, passwd, dbname)
-gmaps = googlemaps.Client(key='AIzaSyBc1vFDH8sD9J8SKd-A6TbLM1Ny8BSDPfk')
-
-df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 100;', engine)
-
-biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
-biomass_coord = biomass_coord.values.tolist()
-biomass_coord = list(zip(list(set(biomass_coord)),df_routes.source_id.tolist()))
-
-substation_coord = df_routes.dest_lat.astype(str).str.cat(df_routes.dest_lon.astype(str), sep=',')
-substation_coord = substation_coord.values.tolist()
-substation_coord = list(zip(list(set(substation_coord)),df_routes.dest_id.tolist()))
-
-def matching(source,sink):
-    tm.sleep(3)
-    try:
-        matrx_distance = gmaps.distance_matrix(source[0], sink[0], mode="driving", departure_time="now", traffic_model="pessimistic")
-    except TimeoutError as e:
-        print(e)
-        pass
+def matching():
+    
+    gmaps = googlemaps.Client(key='AIzaSyBc1vFDH8sD9J8SKd-A6TbLM1Ny8BSDPfk')    
     dbname = 'apl_cec'
     user = 'jdlara'
     passwd = 'Amadeus-2010'
     db_engine = dbconfig(user, passwd, dbname)
+    try:
+        df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL order by linear_distance asc limit 1;', db_engine)
+    except:
+        print('db_read_error')
+        pass
+        
+    biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
+    biomass_coord = biomass_coord.values.tolist()
+    biomass_coord = list(zip(list(set(biomass_coord)),df_routes.source_id.tolist()))
+    
+    substation_coord = df_routes.dest_lat.astype(str).str.cat(df_routes.dest_lon.astype(str), sep=',')
+    substation_coord = substation_coord.values.tolist()
+    substation_coord = list(zip(list(set(substation_coord)),df_routes.dest_id.tolist()))
+    
+    try:
+        matrx_distance = gmaps.distance_matrix(biomass_coord[0][0], substation_coord[0][0], mode="driving", departure_time="now", traffic_model="pessimistic")
+    except:
+        print('Api error')
+        pass
+
     error = matrx_distance['rows'][0]['elements'][0]['status']
     if error != 'OK':
-        db_engine.dispose()
+        try:
+            db_str_e = ('UPDATE lemmav2.substation_routes set api_distance = -99, api_time = -99 where landing_no =' + str(biomass_coord[0][1]) +' and '+ 'feeder_no =' + str(substation_coord[0][1]) +';') 
+            db_engine.execute(db_str_e)
+            db_engine.dispose()
+        except:
+            print('db_write_error_not_ok')
+            pass
     else:
         distance = (matrx_distance['rows'][0]['elements'][0]['distance']['value'])
         try:
@@ -71,9 +76,13 @@ def matching(source,sink):
             time = (1 / 3600) * (matrx_distance['rows'][0]['elements'][0]['duration']['value'])
             print("KeyError")
             pass
-        db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(source[1]) +' and '+ 'feeder_no =' + str(sink[1]) +';') 
-        db_engine.execute(db_str)
-        db_engine.dispose()
+        db_str = ('UPDATE lemmav2.substation_routes set api_distance =' + str(distance)+','+ 'api_time = '+ str(time) + ' where landing_no =' + str(biomass_coord[0][1]) +' and '+ 'feeder_no =' + str(substation_coord[0][1]) +';') 
+        try:
+            db_engine.execute(db_str)
+            db_engine.dispose()
+        except:
+            print('db_write_error_ok')
+            pass           
     
-Parallel(n_jobs = multiprocessing.cpu_count())(delayed(matching)(source, sink) for source in biomass_coord for sink in substation_coord)
+Parallel(n_jobs = 1)(delayed(matching)() for i in range(1,5))
 

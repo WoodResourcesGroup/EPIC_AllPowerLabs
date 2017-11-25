@@ -23,6 +23,18 @@ select landing_road, landing_point,
 ST_ClusterDBSCAN(landing_point,100,1) over (partition by landing_road) as cluster_id
 from lemma_kmeanscenters);
 
+
+alter table lemma_kmeansclustering add column yarding_distance numeric;
+update lemma_kmeansclustering set yarding_distance = temp.distance FROM
+(select lemma_kmeansclustering.pol_id, 
+lemma_kmeansclustering.key, 
+lemma_kmeansclustering.linear_distance_to_road,
+lemma_slope.slope,
+lemma_kmeansclustering.linear_distance_to_road*sqrt(1+(lemma_slope.slope/100)^2) as distance
+from lemma_kmeansclustering inner join lemma_slope using (key,pol_id)) as temp 
+where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
+
+
 -- Calculate the distances and lines to the landing points 
 
 update lemmav2.lemma_kmeanscenters set clustered_landing_point = geom, clus_row_number = row_number from 

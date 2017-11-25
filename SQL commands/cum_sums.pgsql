@@ -4,8 +4,8 @@ INSERT INTO lemma_slope
 select lemma_total.geom, lemma_total.x, lemma_total.y, lemma_total.pol_id, lemma_total.key, lemma_slope.slope, lemma_slope.slope_group from lemma_total left join lemma_slope using(key, pol_id) where slope is NULL
 
 -- create the categories
-alter table lemma_slope add column slope_group INT;
-UPDATE lemmav2.lemma_slope SET slope_group = ceil(slope/5)
+alter table lemma_kmeanscenters add column biomass_group INT;
+UPDATE lemma_kmeanscenters SET slope_group = ceil(biomass_total/5)
 
 -- make the cum_sum for each of the clustering values 
 

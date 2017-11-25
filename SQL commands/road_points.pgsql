@@ -37,7 +37,9 @@ CROSS JOIN LATERAL
      lemma_kmeanscenters.weighted_center_geom <-> geom
    LIMIT 1) AS landing_points) as temp where lemma_kmeanscenters.cluster_no = temp.cluster_no and lemma_kmeanscenters.kmeans_cluster_no = temp.kmeans_cluster_no; 
 
+-- Query to add the correction for slope in the AYD
 
+update lemma_slope set ayd_corr_factor = sqrt(1+(slope/100)^2);
 
 
 -- New version 3 of the distance calculation query. For this query the <-> has been 

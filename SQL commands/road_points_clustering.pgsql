@@ -48,7 +48,30 @@ st_distance(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_po
 from lemma_kmeansclustering inner join lemma_kmeanscenters using (cluster_no,kmeans_cluster_no)) as temp 
 where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
 
+update lemma_kmeansclustering set yarding_distance = temp.ayd from 
+(select lemma_kmeansclustering.key, lemma_kmeansclustering.pol_id,
+lemma_kmeansclustering.linear_distance_to_road,
+(lemma_kmeansclustering.linear_distance_to_road)*lemma_slope.ayd_corr_factor as ayd from lemma_kmeansclustering 
+inner join lemma_slope using (key,pol_id) ) as temp 
+where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
+
 
 update road_cluster_test set row_number =  temp.row_no from 
 (select ctid, row_number() over (partition by landing_point) as row_no from road_cluster_test) as TEMP
 where road_cluster_test.ctid = temp.ctid
+
+
+-- Make the correction for yarding distances in the distance tables 
+
+update lemma_kmeansclustering set yarding_distance = temp.ayd from 
+(select lemma_kmeansclustering.key, lemma_kmeansclustering.pol_id,
+lemma_kmeansclustering.linear_distance_to_road,
+(lemma_kmeansclustering.linear_distance_to_road)*lemma_slope.ayd_corr_factor as ayd from lemma_kmeansclustering 
+inner join lemma_slope using (key,pol_id) ) as temp 
+where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
+
+select * from substation_routes where (landing_road, landing_point) 
+not in (select landing_road, clus_row_number from lemma_kmeanscenters where count is not null group by landing_road, clus_row_number) limi 10;
+
+update substation_routes set center_ok = -1 where (landing_road, landing_point) 
+not in (select landing_road, clus_row_number from lemma_kmeanscenters where count is not null group by landing_road, clus_row_number);

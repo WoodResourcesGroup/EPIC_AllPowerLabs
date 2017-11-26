@@ -36,3 +36,8 @@ select ceil(VPT*35.3147/10) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg
 order by f.vpt_category;
 
 select sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 0.29
+
+
+-- cum sum by AYD
+DROP TABLE IF EXISTS lemma_cumsum_ayd;
+CREATE TABLE lemmav2.lemma_cumsum_ AS

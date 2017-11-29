@@ -54,10 +54,13 @@ def dbconfig(user,passwd,dbname, echo_i=False):
     name = name of the PostgreSQL database
     echoCmd = True/False wheather sqlalchemy echos commands
     """
-    str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
-            + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
-    engine = create_engine(str1,echo=echo_i)
-    return engine
+    #str1 = ('postgresql+pg8000://' + user +':' + passwd + '@switch-db2.erg.berkeley.edu:5433/' 
+    #        + dbname + '?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
+    
+    str1 = ('postgresql+psycopg2://'+user+':'+ passwd + '@switch-db2.erg.berkeley.edu:5433/'+dbname) 
+    
+    eng = create_engine(str1, connect_args={'sslmode':'require'},echo=echo_i, isolation_level="AUTOCOMMIT")
+    return eng
 
 def iterateVariables(intervals=40, maxAYD=5280, minAYD=0, state='CA',std_name = 'frcs_batch_'):
     """
@@ -196,7 +199,7 @@ def runFRCS(batchFile, existing = 'append'):
 
 def queryDB(limit = None):
     eng = dbconfig(user,passwd,dbname)
-    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_large;'
+    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_large order by random() limit 400000;'
     if limit == None:
         df = pd.read_sql(sql, eng)
     else:

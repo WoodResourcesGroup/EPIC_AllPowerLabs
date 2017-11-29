@@ -16,6 +16,7 @@ import os
 import warnings
 from sqlalchemy import event
 from sqlalchemy import exc
+import time as tm
 
 def add_engine_pidguard(engine):
     """Add multiprocessing guards.
@@ -71,7 +72,7 @@ def read_db():
     add_engine_pidguard(engine2)  
     with engine2.connect() as conn:
         try:
-            df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL and center_ok is NULL and linear_distance < 30000 order by RANDOM() limit 1;', conn)
+            df_routes = pd.read_sql_query('select  ST_Y(ST_Transform(landing_geom,4326)) as source_lat, ST_X(ST_Transform(landing_geom,4326)) as source_lon, landing_no as source_id, ST_Y(ST_Transform(feeder_geom,4326)) as dest_lat, ST_X(ST_Transform(feeder_geom,4326)) as dest_lon, feeder_no as dest_id FROM lemmav2.substation_routes where api_distance is NULL and center_ok is NULL and linear_distance < 70000 order by RANDOM() limit 1;', conn)
             biomass_coord = df_routes.source_lat.astype(str).str.cat(df_routes.source_lon.astype(str), sep=',')
             biomass_coord = biomass_coord.values.tolist()
             biomass_coord = list(zip(list(set(biomass_coord)),df_routes.source_id.tolist()))
@@ -124,6 +125,6 @@ def task():
    #print(x,y)
    matching(x,y)     
    
-   
-Parallel(n_jobs = 2)(delayed(task)() for i in range(100000))
+#tm.sleep(6*3600)   
+Parallel(n_jobs = 2)(delayed(task)() for i in range(25000))
 

@@ -199,7 +199,7 @@ def runFRCS(batchFile, existing = 'append'):
 
 def queryDB(limit = None):
     eng = dbconfig(user,passwd,dbname)
-    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_large order by random() limit 400000;'
+    sql = 'select "Slope", "AYD", "CT/ac", "ft3/CT", "All Costs, $/GT", "CT Chips, $/GT" from frcs.frcs_cost_large order by "Slope" asc, "AYD" asc;'
     if limit == None:
         df = pd.read_sql(sql, eng)
     else:

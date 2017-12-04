@@ -11,8 +11,7 @@ import numpy as np
 import pandas as pd 
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import plotly.plotly as py
-import plotly.graph_objs as go
+from matplotlib import pyplot as plt
 
 
 frcs = ut.queryDB(limit = None);
@@ -22,8 +21,8 @@ frcs_t.columns = ['slope', 'AYD', 'tpa','vpt','$gt','cdgy']
 
 # Least square implementation for the frcs simulator
 
-frcs_slope40 = frcs.query('slope <= 40');
-frcs_slope40_t = frcs_t.query('slope <= 40');
+frcs_slope40 = frcs.query('slope > 40 and cdgy < 100');
+frcs_slope40_t = frcs_t.query('slope > 40 and cdgy < 100');
 
 #Model with cross terms 
 # build matrix A for case \sum_{i \in predictors} (x_i) + (\sum_{i \in predictors} (x_i))^2
@@ -71,49 +70,8 @@ print("Mean squared error linear 2 over test data: %.2f"
       % mean_squared_error(data_test['$gt'], cost_linear_2))
 print('Coefficients: \n', frcs_linear_2.coef_)
 
+plt.scatter(data_test['AYD'].values, data_test['$gt'].values)
+plt.show()
 
-########
-#Plots section of the code. 
-
-trace1 = go.Scatter3d(
-    x=data_test['AYD'].values,
-    y=data_test['slope'].values,
-    z=data_test['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= data_test['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Jet',   # choose a colorscale
-        opacity=0.8,
-        colorbar=dict(title = 'VPT')
-    )
-)
-
-trace2 = go.Scatter3d(
-    x=data_test['AYD'].values,
-    y=data_test['slope'].values,
-    z=cost_lasso_2,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= 'blue', #frcs_1['vpt'].values,   # set color to an array/list of desired values   # choose a colorscale
-        opacity=0.8
-    )
-)
-
-data = [trace1]
-layout = go.Layout(
-    margin=dict(
-        l=0,
-        r=0,
-        b=0,
-        t=0
-    )
-)
-
-
-    
-fig = go.Figure(data=data, layout=layout)
-py.plot(fig) 
+plt.scatter(data_test['AYD'].values, cost_lasso_2)
+plt.show()

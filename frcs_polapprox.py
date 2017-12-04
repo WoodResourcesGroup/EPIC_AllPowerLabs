@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd 
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import plotly.plotly as py
-import plotly.graph_objs as go
+from matplotlib import pyplot as plt
+
 
 
 frcs = ut.queryDB(limit = None);
@@ -22,18 +22,18 @@ frcs_t.columns = ['slope', 'AYD', 'tpa','vpt','$gt','cdgy']
 
 # Least square implementation for the frcs simulator
 
-frcs_slope40 = frcs.query('slope <= 40');
-frcs_slope40_t = frcs_t.query('slope <= 40');
+frcs_slope40 = frcs.query('slope > 40 and cdgy < 100');
+frcs_slope40_t = frcs_t.query('slope > 40 and cdgy < 100');
 
 
 # build matrix A for case \sum_{i \in predictors} (x_i + x_i^2 + ... + x_i^n)
 # no cross terms in the polynomial. Really only n=2 makes much sense. 
 
 data_train = frcs_slope40
-data_test = frcs_slope40_t;
+data_test = frcs_slope40_t
 predictors=['slope', 'AYD', 'tpa', 'vpt']
 for name in ['slope', 'AYD', 'tpa', 'vpt']:
-    for i in range(2,4):  #power of 1 is already there
+    for i in range(2,10):  #power of 1 is already there
         colname = (name+'^_%d') %i      #new var will be x_power
         data_train[colname] = frcs_slope40[name].values**i
         data_test[colname] = frcs_slope40_t[name].values**i
@@ -73,48 +73,8 @@ print("Mean squared error linear 1 over test data: %.2f"
       % mean_squared_error(data_test['$gt'], cost_linear_1))
 print('Coefficients: \n', frcs_linear_1.coef_)
 
-########
-#Plots section of the code. 
+plt.scatter(data_test['AYD'].values, data_test['$gt'].values)
+plt.show()
 
-trace1 = go.Scatter3d(
-    x=data_test['AYD'].values,
-    y=data_test['slope'].values,
-    z=data_test['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= data_test['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Jet',   # choose a colorscale
-        opacity=0.8,
-        colorbar=dict(title = 'VPT')
-    )
-)
-
-trace2 = go.Scatter3d(
-    x=data_test['AYD'].values,
-    y=data_test['slope'].values,
-    z=cost_lasso_1,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= 'blue', #frcs_1['vpt'].values,   # set color to an array/list of desired values   # choose a colorscale
-        opacity=0.8
-    )
-)
-
-data = [trace1]
-layout = go.Layout(
-    margin=dict(
-        l=0,
-        r=0,
-        b=0,
-        t=0
-    )
-)
-
-
-    
-fig = go.Figure(data=data, layout=layout)
-py.plot(fig) 
+plt.scatter(data_test['AYD'].values, cost_lasso_1)
+plt.show()

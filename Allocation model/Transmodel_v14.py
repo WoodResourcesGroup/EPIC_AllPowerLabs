@@ -10,9 +10,7 @@ from pyomo.opt import SolverFactory
 from sqlalchemy import create_engine
 import numpy as np
 import pandas as pd
-import os
-import ast
-import time as tm
+from matplotlib import pyplot as plt 
 # Conventions for naming model components:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
@@ -35,7 +33,9 @@ The workflow is as follows:
 engine = create_engine('postgresql+pg8000://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5433/apl_cec?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
 e = create_engine("postgresql+psycopg2://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5433/apl_cec", 
                    connect_args={'sslmode':'require'})
-df_routes = pd.read_sql_query('select landing_no, feeder_no, api_distance from lemmav2.substation_routes where api_distance is not null;', e)
+df_routes = pd.read_sql_query('select landing_no, feeder_no, api_distance, linear_distance from lemmav2.substation_routes where api_distance > 0 and api_distance is not null and center_ok is NULL;', e)
+plt.hist(df_routes['api_distance']/1000, 100)
+plt.hist(df_routes['linear_distance']/1000, 100)
 
 
 """

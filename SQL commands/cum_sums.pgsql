@@ -12,7 +12,8 @@ UPDATE lemma_kmeanscenters SET slope_group = ceil(biomass_total/5)
 DROP TABLE IF EXISTS lemma_cumsum_slope;
 CREATE TABLE lemmav2.lemma_cumsum_slope AS
 select f.slope_group*5, sum(f.biomass_sum) over(order by f.slope_group) as cum_sum from (
-select lemma_slope.slope_group , sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_slope using(key, pol_id) group by lemma_slope.slope_group) as f 
+select lemma_slope.slope_group , sum(lemma_dbscanclusters220.d_bm_kg*1.102/(1000000*1000)) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_slope using(key, pol_id) inner join lemma_total using(key,pol_id) where vpt < 11.32 and wilderness_area is null 
+group by lemma_slope.slope_group) as f 
 order by f.slope_group;
 
 alter table lemma_dbscancenters180 drop column if exists sum_distances_sq;
@@ -24,7 +25,7 @@ alter table lemma_dbscancenters180 add column sum_distances_sq NUMERIC;
 DROP TABLE IF EXISTS lemma_cumsum_vpt;
 CREATE TABLE lemmav2.lemma_cumsum_vpt AS
 select f.vpt_category, sum(f.biomass_sum) over(order by f.vpt_category) as cum_sum from (
-select ceil(VPT) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 13 group by vpt_category) as f
+select ceil(VPT) as vpt_category, sum(lemma_dbscanclusters220.d_bm_kg*1.102/1000000) as biomass_sum  from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 11.32 and wilderness_area is null group by vpt_category) as f
 order by f.vpt_category;
 
 
@@ -39,5 +40,9 @@ select sum(lemma_dbscanclusters220.d_bm_kg/1000000) as biomass_sum  from lemma_d
 
 
 -- cum sum by AYD
+alter table lemma_kmeansclustering add column yarding_distance_group numeric;
+update lemma_kmeansclustering set yarding_distance_group = 100*ceil(yarding_distance/100);
+
 DROP TABLE IF EXISTS lemma_cumsum_ayd;
 CREATE TABLE lemmav2.lemma_cumsum_ AS
+

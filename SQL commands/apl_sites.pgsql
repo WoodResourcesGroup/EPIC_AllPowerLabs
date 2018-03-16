@@ -2,8 +2,12 @@
 -- Case of chinese station
 drop table case_chinese_station;
 create table case_chinese_station as 
-select *, ST_distance(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_kmeansclustering.geom) as linear_distance from lemma_kmeansclustering
+select lemma_kmeansclustering, vpt, lemma_slope.slope, lemma_slope.slope_group, ST_distance(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_kmeansclustering.geom) as linear_distance 
+from lemma_kmeansclustering inner join lemma_slope using (key,pol_id) inner join lemma_total using(key,pol_id) 
 where ST_DWithin(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_kmeansclustering.geom, 100000);
+
+
+
 
 -- Case of rio bravo station
 drop table case_rio_bravo;

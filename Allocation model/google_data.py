@@ -126,5 +126,5 @@ def task():
    matching(x,y)     
    
 #tm.sleep(6*3600)   
-Parallel(n_jobs = 2)(delayed(task)() for i in range(25000))
+Parallel(n_jobs = 4)(delayed(task)() for i in range(25000))
 

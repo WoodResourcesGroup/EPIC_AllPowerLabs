@@ -33,17 +33,28 @@ data_train = frcs_slope40
 data_test = frcs_slope40_t
 predictors=['slope', 'AYD', 'tpa', 'vpt']
 for name in ['slope', 'AYD', 'tpa', 'vpt']:
+<<<<<<< HEAD
     for i in range(2,10):  #power of 1 is already there
         colname = (name+'^_%d') %i      #new var will be x_power
+=======
+    for i in range(2,5):  #power of 1 is already there
+        colname = (name+'^%d') %i      #new var will be x_power
+>>>>>>> 6f57965e701154840de3853589767efc38d81138
         data_train[colname] = frcs_slope40[name].values**i
         data_test[colname] = frcs_slope40_t[name].values**i
         predictors.extend([colname])
+        
+for name in ['AYD', 'vpt']:
+    for i in range(-5,0):  #power of 1 is already there
+        colname = (name+'^%d') %i      #new var will be x_power
+        data_train[colname] = (1.0*frcs_slope40[name].values)**i
+        data_test[colname] = (1.0*frcs_slope40_t[name].values)**i
+        predictors.extend([colname])  
 print(data_train[predictors].head())
-
-
+        
 # use the lasso predictor
 # Step 1, define the model type
-lasso_1 = linear_model.Lasso(alpha = 0.0001, fit_intercept=True, precompute=True, normalize=True)
+lasso_1 = linear_model.Lasso(alpha = 0.00001, fit_intercept=True, precompute=True, normalize=True)
 # Step 2, fit the model
 frcs_lasso_1 = lasso_1.fit(data_train[predictors], data_train['$gt'])
 #step 3, use the model with the test data
@@ -51,8 +62,12 @@ cost_lasso_1 = frcs_lasso_1.predict(data_test[predictors])
 
 
 # The mean squared error
-print("Mean squared error lasso 1: %.2f"
+print("Mean absolute error lasso 1 over train data: %.2f"
       % mean_absolute_error(data_train['$gt'], frcs_lasso_1.predict(data_train[predictors])))
+print("Mean squared error lasso 1 over train data: %.2f"
+      % mean_squared_error(data_train['$gt'], frcs_lasso_1.predict(data_train[predictors])))
+print("Mean absolute error lasso 1 over test data: %.2f"
+      % mean_absolute_error(data_test['$gt'], cost_lasso_1))
 print("Mean squared error lasso 1 over test data: %.2f"
       % mean_squared_error(data_test['$gt'], cost_lasso_1))
 print('Coefficients: \n', frcs_lasso_1.coef_)
@@ -71,6 +86,7 @@ print("Mean squared error linear 1 : %.2f"
       % mean_absolute_error(data_train['$gt'], frcs_linear_1.predict(data_train[predictors])))
 print("Mean squared error linear 1 over test data: %.2f"
       % mean_squared_error(data_test['$gt'], cost_linear_1))
+<<<<<<< HEAD
 print('Coefficients: \n', frcs_linear_1.coef_)
 
 plt.scatter(data_test['AYD'].values, data_test['$gt'].values)
@@ -78,3 +94,10 @@ plt.show()
 
 plt.scatter(data_test['AYD'].values, cost_lasso_1)
 plt.show()
+=======
+print('Coefficients: \n', frcs_linear_1.coef_) 
+
+
+plt.hist((data_test['$gt'] - cost_lasso_1),50)
+
+>>>>>>> 6f57965e701154840de3853589767efc38d81138

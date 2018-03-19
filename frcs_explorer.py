@@ -6,7 +6,6 @@ Created on Thu Oct 12 10:49:27 2017
 @author: jdlara
 """
 import cec_utils as ut
-#import numpy as np 
 import plotly.plotly as py
 import plotly.graph_objs as go
 
@@ -15,113 +14,117 @@ frcs = ut.queryDB(limit = None);
 frcs.columns = ['slope', 'AYD', 'tpa','vpt','$gt','cdgy']
 # Least square implementation for the frcs simulator
 
-frcs_slope40 = frcs.query('slope <= 40 and tpa == 100');
-frcs_slope80 = frcs.query('slope > 40');
+#frcs_slope40 = frcs.query('slope <= 40 and tpa == 100');
+#frcs_slope80 = frcs.query('slope > 40');
 
 # Plots <= 40%
 
-frcs_vpt = go.Scatter3d(
-    x=frcs.query('slope <= 40 and tpa == 100')['AYD'].values,
-    y=frcs.query('slope <= 40 and tpa == 100')['slope'].values,
-    z=frcs.query('slope <= 40 and tpa == 100')['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= frcs.query('slope <= 40 and tpa == 100')['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Viridis',   # choose a colorscale
-        colorbar=dict(title = 'VPT'),
-        opacity=0.8
-    )
+
+
+frcs_vpt1 = go.Mesh3d(
+    x=frcs.query('slope <= 40 and tpa == 100 and vpt == 5')['AYD'].values,
+    y=frcs.query('slope <= 40 and tpa == 100 and vpt == 5')['slope'].values,
+    z=frcs.query('slope <= 40 and tpa == 100 and vpt == 5')['$gt'].values,
+    opacity=0.60, color = '#1F77B4'
 )
 
-fig_vpt = [frcs_vpt]
+frcs_vptleg1 = go.Scatter3d(
+    x=0,
+    y=0,
+    z=100,
+    opacity=1,
+    mode = 'markers',
+    marker = dict(color =  '#1F77B4'),
+    name = 'tpa == 100 and vpt == 5'
+)
+
+frcs_vpt2 = go.Mesh3d(
+    x=frcs.query('slope <= 40 and tpa == 100 and vpt == 20')['AYD'].values,
+    y=frcs.query('slope <= 40 and tpa == 100 and vpt == 20')['slope'].values,
+    z=frcs.query('slope <= 40 and tpa == 100 and vpt == 20')['$gt'].values,
+    opacity=0.60, color = '#FF7F0E'
+)
+
+frcs_vptleg2 = go.Scatter3d(
+    x=0,
+    y=0,
+    z=100,
+    opacity=1,
+    mode = 'markers',
+    marker = dict(color =  '#FF7F0E'),
+    name = 'tpa == 100 and vpt == 5'
+)
+    
+frcs_vpt3 = go.Mesh3d(
+    x=frcs.query('slope <= 40 and tpa == 100 and vpt == 50')['AYD'].values,
+    y=frcs.query('slope <= 40 and tpa == 100 and vpt == 50')['slope'].values,
+    z=frcs.query('slope <= 40 and tpa == 100 and vpt == 50')['$gt'].values,
+    opacity=0.60, color =   '#2CA02C'
+) 
+
+frcs_vptleg3 = go.Scatter3d(
+    x=0,
+    y=0,
+    z=100,
+    opacity=1,
+    mode = 'markers',
+    marker = dict(color =  '#2CA02C'),
+    name = 'tpa == 100 and vpt == 50'
+)
+
+frcs_vpt4 = go.Mesh3d(
+    x=frcs.query('slope <= 40 and tpa == 100 and vpt == 80')['AYD'].values,
+    y=frcs.query('slope <= 40 and tpa == 100 and vpt == 80')['slope'].values,
+    z=frcs.query('slope <= 40 and tpa == 100 and vpt == 80')['$gt'].values,
+    opacity=0.60, color = '#D62728'
+)    
+
+frcs_vptleg4 = go.Scatter3d(
+    x=0,
+    y=0,
+    z=100,
+    opacity=1,
+    mode = 'markers',
+    marker = dict(color =  '#D62728'),
+    name = 'tpa == 100 and vpt == 80'
+)
+
+frcs_vpt5 = go.Mesh3d(
+    x=frcs.query('slope <= 40 and tpa == 100 and vpt == 10')['AYD'].values,
+    y=frcs.query('slope <= 40 and tpa == 100 and vpt == 10')['slope'].values,
+    z=frcs.query('slope <= 40 and tpa == 100 and vpt == 10')['$gt'].values,
+    opacity=0.60, color = '#9467BD'
+)    
+
+frcs_vptleg5 = go.Scatter3d(
+    x=0,
+    y=0,
+    z=100,
+    opacity=1,
+    mode = 'markers',
+    marker = dict(color =  '#9467BD'),
+    name = 'tpa == 100 and vpt == 10'
+)
+
+fig_vpt = [frcs_vpt1, frcs_vptleg1, frcs_vpt5, frcs_vptleg5, frcs_vpt2, frcs_vptleg2, frcs_vpt3,  frcs_vpt4, frcs_vptleg4]
 layout = go.Layout(
                     scene = dict(
                     xaxis = dict(
-                        title='Yarding Distance [ft]'),
+                        title='Yarding \n Distance [ft]'),
                     yaxis = dict(
                         title='slope [%]'),
                     zaxis = dict(
-                        title='Cost [$/gt]'),),
-                    width=700,
+                        title='Cost [$/gt]',
+                        range = [0,45])),
+                    width=2000,
                     margin=dict(
-                    r=20, b=10,
-                    l=10, t=10)
-                  )
+                    r=20, b=20,
+                    l=20, t=20),
+                    showlegend=True,
+                    legend=dict(orientation="h",
+                                font=dict(size=16)
+                        )
+                     )
     
 fig = go.Figure(data=fig_vpt, layout=layout)
 py.plot(fig) 
-
-trace2 = go.Scatter3d(
-    x=frcs.query('slope <= 40 and vpt == 40')['AYD'].values,
-    y=frcs.query('slope <= 40 and vpt == 40')['slope'].values,
-    z=frcs.query('slope <= 40 and vpt == 40')['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= frcs.query('slope <= 40 and vpt == 40')['tpa'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Viridis',   # choose a colorscale
-        colorbar=dict(title = 'TPA'),
-        opacity=0.8
-    )
-)
-
-data_slope40 = [trace2]
-    
-fig = go.Figure(data=data_slope40, layout=layout)
-py.plot(fig) 
-
-# Plots > 40%
-
-trace3 = go.Scatter3d(
-    x=frcs_slope80['AYD'].values,
-    y=frcs_slope80['slope'].values,
-    z=frcs_slope80['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= frcs_slope80['vpt'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Viridis',   # choose a colorscale
-        colorbar=dict(title = 'VPT'),
-        opacity=0.8
-    )
-)
-
-data_slope80 = [trace1]
-layout = go.Layout(
-    margin=dict(
-        l=0,
-        r=0,
-        b=0,
-        t=0
-    )
-)
-    
-fig = go.Figure(data=data_slope80, layout=layout)
-py.plot(fig) 
-
-trace2 = go.Scatter3d(
-    x=frcs_slope80['AYD'].values,
-    y=frcs_slope80['slope'].values,
-    z=frcs_slope80['$gt'].values,
-    mode='markers',
-    marker=dict(
-            
-        size=3,
-        color= frcs_slope80['tpa'].values, #frcs_1['vpt'].values,   # set color to an array/list of desired values
-        colorscale='Viridis',   # choose a colorscale
-        colorbar=dict(title = 'TPA'),
-        opacity=0.8
-    )
-)
-
-data_slope80 = [trace2]
-    
-fig = go.Figure(data=data_slope80, layout=layout)
-py.plot(fig) 
-
-
-

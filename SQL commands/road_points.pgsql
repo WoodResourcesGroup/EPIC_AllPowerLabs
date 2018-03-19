@@ -20,7 +20,8 @@ CROSS JOIN LATERAL
      lemma_kmeanscenters.weighted_center_geom <-> geom
    LIMIT 1) AS landing_points) as temp where lemma_kmeanscenters.cluster_no = temp.cluster_no and lemma_kmeanscenters.kmeans_cluster_no = temp.kmeans_cluster_no; 
 
-
+select sum(lemma_kmeansclusters.biomass_total) as total_biomass, substation_routes.landing_no, landing_road, row_number from road_points_clusters 
+inner join lemma_kmeanscenters  inner join substation_routes using kmeans_centers_pk;
 -- New version to be use with the cleaner data, get the road id to the kmeans cluster 
 
 UPDATE lemma_kmeanscenters SET landing_road = temp.landing_id, distance_to_landing_road = temp.distance from

@@ -2,8 +2,12 @@
 -- Case of chinese station
 drop table case_chinese_station;
 create table case_chinese_station as 
-select *, ST_distance(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_kmeansclustering.geom) as linear_distance from lemma_kmeansclustering
-where ST_DWithin(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), lemma_kmeansclustering.geom, 100000);
+select  f.*, ST_distance(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), f.geom) as linear_distance 
+from (select t.*, lemma_slope.slope_group, lemma_slope.slope from (select lemma_total.vpt, lemma_dbscanclusters220.* from lemma_dbscanclusters220 
+inner join lemma_total using(key, pol_id) where vpt < 11.32 and wilderness_area is null and county is not null) as t inner join lemma_slope using(key, pol_id) ) as f 
+where ST_DWithin(st_transform(ST_SetSRID(ST_MakePoint(-120.475927, 37.844249),4326),5070), f.geom, 100000);
+
+select ceil(VPT) as vpt_category, sum(case_chinese_station.biomass*1.102/1000000) as biomass_sum  from case_chinese_station inner join lemma_total using(key, pol_id) where vpt < 13 and linear_distance < 30000 group by vpt_category
 
 -- Case of rio bravo station
 drop table case_rio_bravo;

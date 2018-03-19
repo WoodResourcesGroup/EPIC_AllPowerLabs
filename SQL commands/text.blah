@@ -1,11 +1,20 @@
-   
-County	        Raw	        db220
-Orange	        & 2.69806	&                \\
-Contra Costa	& 1.7222	&    0.931134106 \\
-San Mateo	    & 0.7706	&    0.157262238 \\
-Solano	        & 0.149221	& \\
-San Joaquin	    & 0.125296	& 0.065022448 \\
-Sacramento	    & 0.09277	& \\
-Stanislaus	    & 0.084	    & \\
-Merced	        & 0.0103	& \\
-Kings	        & 0.0754	&
+vpt cost_color  cum_sum_220
+0.29 1    
+1	 1    8.570
+2	 1    29.778
+2.27 99   
+3 99 43.425
+4 99 49.749
+5 99 53.703
+6 99 55.668
+7 99 57.557
+8 99 57.772
+9 99 58.846
+10 99 58.899
+11 99 59.249
+12 99 59.262
+13 99 59.853
+
+
+select sum(t.d_bm_kg*1.102/1000000) as biomass_sum  from 
+(select lemma_dbscanclusters220.* from lemma_dbscanclusters220 inner join lemma_total using(key, pol_id) where vpt < 2.27 and nps_area is null and wilderness_area is null and county is not null) as t inner join lemma_slope using(key, pol_id) where slope <= 40;

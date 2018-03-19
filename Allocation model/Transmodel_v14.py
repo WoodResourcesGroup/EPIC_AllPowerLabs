@@ -10,9 +10,7 @@ from pyomo.opt import SolverFactory
 from sqlalchemy import create_engine
 import numpy as np
 import pandas as pd
-import os
-import ast
-import time as tm
+from matplotlib import pyplot as plt 
 # Conventions for naming model components:
 #   SETS_ALL_CAPS
 #   VarsCamelCase
@@ -35,7 +33,9 @@ The workflow is as follows:
 engine = create_engine('postgresql+pg8000://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5433/apl_cec?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory')
 e = create_engine("postgresql+psycopg2://jdlara:Amadeus-2010@switch-db2.erg.berkeley.edu:5433/apl_cec", 
                    connect_args={'sslmode':'require'})
-df_routes = pd.read_sql_query('select landing_no, feeder_no, api_distance from lemmav2.substation_routes where api_distance is not null;', e)
+df_routes = pd.read_sql_query('select landing_no, feeder_no, api_distance, linear_distance from lemmav2.substation_routes where api_distance > 0 and api_distance is not null and center_ok is NULL;', e)
+plt.hist(df_routes['api_distance']/1000, 100)
+plt.hist(df_routes['linear_distance']/1000, 100)
 
 
 """
@@ -80,23 +80,30 @@ model.transport_cost = Param(initialize=0.1343,
 
 # Limits related parameters, read from the database/files
 
-biomass_prod = pd.DataFrame(biomass_list)
-biomass_prod['production'] = biomass_df.production
-biomass_prod = biomass_prod.set_index(0).to_dict()['production']
+def biomass_max(model, b):
+    temp = pd.read_sql_query(('select sum(d_bm_kg) from lemmav2.lemma_kmeansclustering where landing_no = ' + str(b) + ';'),e);
+    return temp
+
 model.source_biomass_max = Param(model.SOURCES,
-                                 initialize=biomass_prod,
+                                 initialize=biomass_max,
                                  doc='Capacity of supply in tons')
 
 # TO BE READ FROM DATABASE IN THE NEAR FUTURE
-substation_capacity = pd.DataFrame(substation_list)
-substation_capacity['sbs_cap'] = substation_df.limit
-substation_capacity = substation_capacity.set_index(0).to_dict()['sbs_cap']
+
+def subs_max(model,s):
+    temp = pd.read_sql_query(('select uniform_generation_feederlimit_machine from "PGE".feeders_limits_data where feeder_no = '+ str(s) + ';'), e)
+    if temp.values.tolist()[0][0] < 0:
+        return 1
+    else:
+        return temp.values.tolist()[0][0]
+
 model.max_capacity = Param(model.SUBSTATIONS,
-                           initialize=substation_capacity,
+                           initialize=subs_max,
                            doc='Max installation per site kW')
 model.min_capacity = Param(model.SUBSTATIONS,
                            initialize=150,
                            doc='Min installation per site kW')
+
 
 biomass_price = pd.DataFrame(biomass_list)
 biomass_price['price_trgt'] = biomass_df.price_trgt

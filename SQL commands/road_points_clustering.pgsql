@@ -40,11 +40,10 @@ where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=te
 update lemmav2.lemma_kmeanscenters set clustered_landing_point = geom, clus_row_number = row_number from 
 road_cluster_test where ST_within(landing_point,circle);
 
-update lemmav2.lemma_kmeansclustering set linear_distance_to_road=temp.distance, line_to_road = temp.line from 
+alter table lemma_kmeansclustering add colum landing_no INTEGER;
+update lemmav2.lemma_kmeansclustering set landing_no=temp.landing_point from 
 (select lemma_kmeansclustering.*, 
-lemma_kmeanscenters.clustered_landing_point,
-ST_MakeLine(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_point) as line, 
-st_distance(lemma_kmeansclustering.geom,lemma_kmeanscenters.clustered_landing_point) as distance  
+(lemma_kmeanscenters.landing_road*1000 + lemma_kmeanscenters.clus_row_number) as landing_point
 from lemma_kmeansclustering inner join lemma_kmeanscenters using (cluster_no,kmeans_cluster_no)) as temp 
 where lemma_kmeansclustering.key = temp.key and lemma_kmeansclustering.pol_id=temp.pol_id;  
 

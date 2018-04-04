@@ -3,11 +3,11 @@ set search_path = lemmav2, general_gis_data, public;
 SELECT key, pol_id, county from "California_counties", lemma_total
 	where st_within(lemma_total.geom, st_transform("California_counties".the_geom,5070)) limit 10; 
 
-alter table lemmav2.lemma_total drop column if exists county;
-alter table lemmav2.lemma_total add column county text;
-UPDATE lemmav2.lemma_total SET county = temp.county 
-from (SELECT key, pol_id, "California_counties".county from "California_counties", lemma_total
-	where st_within(lemma_total.geom, st_transform("California_counties".the_geom,5070))) as temp where lemmav2.lemma_total.key = temp.key and lemmav2.lemma_total.pol_id = temp.pol_id; 
+alter table lemmav2.lemma_totalv2 drop column if exists county;
+alter table lemmav2.lemma_totalv2 add column county text;
+UPDATE lemmav2.lemma_totalv2 SET county = temp.county 
+from (SELECT key, pol_id, "California_counties".county from "California_counties", lemma_totalv2
+	where st_within(lemma_totalv2.geom, st_transform("California_counties".the_geom,5070))) as temp where lemmav2.lemma_totalv2.key = temp.key and lemmav2.lemma_totalv2.pol_id = temp.pol_id; 
 
 
 UPDATE lemmav2.lemma_dbscancluster220 SET cluster_no = temp.county, kmeans_cluster_no 
@@ -26,17 +26,17 @@ where temp1.cluster_no <> lemma_dbscanclusters220.cluster_no AND ST_DWithin(temp
 
 
 
-alter table lemmav2.lemma_kmeansclustering drop column if exists nps_area;
-alter table lemmav2.lemma_kmeansclustering add column nps_area text;
-UPDATE lemmav2.lemma_kmeansclustering SET nps_area = temp.nps_area 
-from (SELECT key, pol_id, nps_boundary_california.unit_name as nps_area from nps_boundary_california, lemma_kmeansclustering
-	where st_within(lemma_kmeansclustering.geom, nps_boundary_california.geom) )as temp where lemmav2.lemma_kmeansclustering.key = temp.key and lemmav2.lemma_kmeansclustering.pol_id = temp.pol_id; 
+alter table lemmav2.lemma_totalv2 drop column if exists nps_area;
+alter table lemmav2.lemma_totalv2 add column nps_area text;
+UPDATE lemmav2.lemma_totalv2 SET nps_area = temp.nps_area 
+from (SELECT key, pol_id, nps_boundary_california.unit_name as nps_area from nps_boundary_california, lemma_totalv2
+	where st_within(lemma_totalv2.geom, nps_boundary_california.geom) )as temp where lemmav2.lemma_totalv2.key = temp.key and lemmav2.lemma_totalv2.pol_id = temp.pol_id; 
 
-alter table lemmav2.lemma_kmeansclustering drop column if exists wilderness_area;
-alter table lemmav2.lemma_kmeansclustering add column wilderness_area text;
-UPDATE lemmav2.lemma_kmeansclustering SET wilderness_area = temp.wilderness_area 
-from (SELECT key, pol_id, wilderness_areas_california.name as wilderness_area from wilderness_areas_california, lemma_kmeansclustering
-	where st_within(lemma_kmeansclustering.geom, wilderness_areas_california.geom) )as temp where lemmav2.lemma_kmeansclustering.key = temp.key and lemmav2.lemma_kmeansclustering.pol_id = temp.pol_id; 
+alter table lemmav2.lemma_totalv2 drop column if exists wilderness_area;
+alter table lemmav2.lemma_totalv2 add column wilderness_area text;
+UPDATE lemmav2.lemma_totalv2 SET wilderness_area = temp.wilderness_area 
+from (SELECT key, pol_id, wilderness_areas_california.name as wilderness_area from wilderness_areas_california, lemma_totalv2
+	where st_within(lemma_totalv2.geom, wilderness_areas_california.geom) )as temp where lemmav2.lemma_totalv2.key = temp.key and lemmav2.lemma_totalv2.pol_id = temp.pol_id; 
 
 alter table lemmav2.lemma_total drop column if exists wilderness_area;
 alter table lemmav2.lemma_total add column wilderness_area text;

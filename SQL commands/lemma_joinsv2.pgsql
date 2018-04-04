@@ -32,8 +32,8 @@ select x, y, array_agg(key order by "RPT_YR" desc, "Pol.Shap_Ar" desc) as key_h,
   sum("D_BM_kg3J")*(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT + max("D_BM_kg3J")*(1-(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT) > max("bm_liveJ_3_kg") as check3j, 
 count(*)
 from (select * from lemma1215v2 union select * from lemma2016v2 union select * from lemma2017v2) as foo
-group by x, y having count(*) > 1
-order by count(*) desc limit 5; -- 6 511 279
+group by x, y 
+order by count(*) desc; -- 6 511 279
 
 alter table lemma_totalv2 add column pol_id int;
 alter table lemma_totalv2 add column key int;
@@ -43,6 +43,9 @@ alter table lemma_totalv2 add primary key (key, pol_id);
 alter table lemma_totalv2 drop column if exists geom;
 SELECT AddGeometryColumn ('lemmav2','lemma_totalv2','geom',5070,'POINT',2);
 UPDATE lemma_totalv2 set geom = ST_SetSRID(st_makepoint(x, y), 5070)::geometry;
+VACUUM ANALYZE lemma_totalv2;
+CREATE INDEX lemmatotalv2_gix ON lemma_totalv2 USING GIST (geom);
+CLUSTER lemma_totalv2 USING lemmatotalv2_gix;
 
 
 INSERT INTO lemma_total (

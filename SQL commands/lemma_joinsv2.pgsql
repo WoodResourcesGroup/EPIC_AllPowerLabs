@@ -15,9 +15,9 @@ select x, y, array_agg(key order by "RPT_YR" desc, "Pol.Shap_Ar" desc) as key_h,
   max("VPT") as vpt_25,
   -- Biomass Estimates
   sum("D_BM_kg25CRM")*(sum("D_BM_kg25CRM") <= max("bm_liveCRM_25_kg"))::INT + max("D_BM_kg25CRM")*(1-(sum("D_BM_kg25CRM") <= max("bm_liveCRM_25_kg"))::INT) as "D_BM_kgsum_25CRM", 
-  sum("D_BM_kg3CRM")*(sum("D_BM_kg3CRM") <= max("bm_liveCRM_3_kg"))::INT + max("D_BM_kg3CRM")*(1-(sum("D_BM_kg3CRM") <= max("bm_liveCRM_3_kg"))::INT) as "D_BM_kgsum_3CRM", 
-  sum("D_BM_kg25J")*(sum("D_BM_kg25J") <= max("bm_liveJ_25_kg"))::INT + max("D_BM_kg25J")*(1-(sum("D_BM_kg25J") <= max("bm_liveJ_25_kg"))::INT) as "D_BMkg_sum25J", 
-  sum("D_BM_kg3J")*(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT + max("D_BM_kg3J")*(1-(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT) as "D_BMkg_sum3J",  
+  sum("D_BM_kg3CRM")*(sum("D_BM_kg3CRM") <= max("bm_liveCRM_3_kg"))::INT + max("D_BM_kg3CRM")*(1-(sum("D_BM_kg3CRM") <= max("bm_liveCRM_3_kg"))::INT)       as "D_BM_kgsum_3CRM", 
+  sum("D_BM_kg25J")*(sum("D_BM_kg25J") <= max("bm_liveJ_25_kg"))::INT + max("D_BM_kg25J")*(1-(sum("D_BM_kg25J") <= max("bm_liveJ_25_kg"))::INT)             as "D_BMkg_sum25J", 
+  sum("D_BM_kg3J")*(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT + max("D_BM_kg3J")*(1-(sum("D_BM_kg3J") <= max("bm_liveJ_3_kg"))::INT)                   as "D_BMkg_sum3J",  
   -- Recording of the max
   max("D_BM_kg25CRM") as "D_BM_kg25CRM_max", max("D_BM_kg3CRM") as "D_BM_kg3CRM_max", max("D_BM_kg25J") as "D_BM_kg25J_max", max("D_BM_kg3J") as "D_BM_kg3J_max",
   -- Truncation

@@ -1,64 +1,73 @@
 -- Create the clusters
 DROP TABLE IF EXISTS lemma_dbscanclusters180;
 CREATE TABLE lemmav2.lemma_dbscanclusters180 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 180, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 180, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters180 where cluster_no is NULL;
 alter table lemma_dbscanclusters180 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters200;
 CREATE TABLE lemmav2.lemma_dbscanclusters200 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 200, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 200, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters200 where cluster_no is NULL;
 alter table lemma_dbscanclusters200 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters210;
 CREATE TABLE lemmav2.lemma_dbscanclusters210 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 210, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 210, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters210 where cluster_no is NULL;
 alter table lemma_dbscanclusters210 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters215;
 CREATE TABLE lemmav2.lemma_dbscanclusters215 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 215, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 215, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters215 where cluster_no is NULL;
 alter table lemma_dbscanclusters215 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters220;
 CREATE TABLE lemmav2.lemma_dbscanclusters220 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 220, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 220, minpoints := 112) over () AS cluster_no, 
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters220 where cluster_no is NULL;
 alter table lemma_dbscanclusters220 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters225;
 CREATE TABLE lemmav2.lemma_dbscanclusters225 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 225, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 225, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters225 where cluster_no is NULL;
 alter table lemma_dbscanclusters225 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters250;
 CREATE TABLE lemmav2.lemma_dbscanclusters250 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 250, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 250, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters250 where cluster_no is NULL;
 alter table lemma_dbscanclusters250 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters300;
 CREATE TABLE lemmav2.lemma_dbscanclusters300 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 300, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 300, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters300 where cluster_no is NULL;
 alter table lemma_dbscanclusters300 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemma_dbscanclusters400;
 CREATE TABLE lemmav2.lemma_dbscanclusters400 AS
-select key, pol_id, ST_ClusterDBSCAN(geom, eps := 400, minpoints := 112) over () AS cluster_no, "D_BM_kg_sum" as D_BM_kg, geom
-from lemmav2.lemma_total;
+select key, pol_id, ST_ClusterDBSCAN(geom, eps := 400, minpoints := 112) over () AS cluster_no,
+"D_BM_kgsum_25CRM", "D_BM_kgsum_3CRM", "D_BMkg_sum25J", "D_BMkg_sum3J", geom
+from lemmav2.lemma_totalv2 where county is not NULL;
 delete from lemmav2.lemma_dbscanclusters400 where cluster_no is NULL;
 alter table lemma_dbscanclusters400 add primary key (key, pol_id, cluster_no);
 
@@ -66,55 +75,91 @@ alter table lemma_dbscanclusters400 add primary key (key, pol_id, cluster_no);
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters180;
 CREATE TABLE lemmav2.lemma_dbscancenters180 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters180
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters200;
 CREATE TABLE lemmav2.lemma_dbscancenters200 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters200
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters210;
 CREATE TABLE lemmav2.lemma_dbscancenters210 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters210
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters215;
 CREATE TABLE lemmav2.lemma_dbscancenters215 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters215
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters220;
 CREATE TABLE lemmav2.lemma_dbscancenters220 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters220
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters230;
 CREATE TABLE lemmav2.lemma_dbscancenters230 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters230
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters250;
 CREATE TABLE lemmav2.lemma_dbscancenters250 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters250
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters300;
 CREATE TABLE lemmav2.lemma_dbscancenters300 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters300
 GROUP BY cluster_no;
 
 DROP TABLE IF EXISTS lemmav2.lemma_dbscancenters400;
 CREATE TABLE lemmav2.lemma_dbscancenters400 AS
-SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, sum(d_bm_kg) AS biomass_total
+SELECT cluster_no, count(*), ST_Centroid(ST_Collect(geom)) AS center_geom, 
+sum("D_BM_kgsum_25CRM") as biomass_total25crm, 
+sum("D_BM_kgsum_3CRM") as biomass_total3crm, 
+sum("D_BMkg_sum25J") as biomass_total25j, 
+sum("D_BMkg_sum3J") AS biomass_total3j
 FROM lemmav2.lemma_dbscanclusters400
 GROUP BY cluster_no;
 
